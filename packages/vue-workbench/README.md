@@ -12,22 +12,17 @@ Vue 3 工作台外壳包，提供桌面/移动端布局、导航、菜单、toas
 npm install vue lucide-vue-next
 ```
 
-当前仓库内通过源码 alias 使用：
+推荐通过 `workbench-kit` submodule 和 `file:` 依赖使用：
 
 ```json
 {
-  "paths": {
-    "@workbench-kit/vue-workbench": ["../packages/vue-workbench/src/index.ts"],
-    "@workbench-kit/vue-workbench/runtime": ["../packages/vue-workbench/src/runtime-api.ts"]
+  "dependencies": {
+    "@workbench-kit/vue-workbench": "file:../vendor/workbench-kit/packages/vue-workbench"
   }
 }
 ```
 
-迁出独立仓库并发布后，业务项目应改为普通依赖：
-
-```bash
-npm install @workbench-kit/vue-workbench
-```
+完整接入方式见仓库根目录的 `docs/usage.md`。
 
 ## 样式接入
 
@@ -101,10 +96,10 @@ html[data-theme="dark"] {
 Tailwind v4 只会为扫描到的 class 生成 CSS。源码包位于业务项目源码目录之外时，必须在 CSS 入口声明 source：
 
 ```css
-@source "../../../packages/vue-workbench/src";
+@source "../../../vendor/workbench-kit/packages/vue-workbench/src";
 ```
 
-路径以当前 CSS 文件位置为准。本仓库的 `webui/src/style/main.css` 位于 `webui/src/style/`，所以使用 `../../../packages/vue-workbench/src`。
+路径以当前 CSS 文件位置为准。以 `webui/src/style/main.css` 为例，`vendor/workbench-kit` 位于项目根目录时使用 `../../../vendor/workbench-kit/packages/vue-workbench/src`。
 
 如果包来自 `node_modules`，路径通常类似：
 

@@ -12,21 +12,17 @@
 npm install vue lucide-vue-next @workbench-kit/vue-workbench
 ```
 
-当前仓库内通过源码 alias 使用：
+推荐通过 `workbench-kit` submodule 和 `file:` 依赖使用：
 
 ```json
 {
-  "paths": {
-    "@workbench-kit/vue-file-workspace": ["../packages/vue-file-workspace/src/index.ts"]
+  "dependencies": {
+    "@workbench-kit/vue-file-workspace": "file:../vendor/workbench-kit/packages/vue-file-workspace"
   }
 }
 ```
 
-迁出独立仓库并发布后，业务项目应改为普通依赖：
-
-```bash
-npm install @workbench-kit/vue-file-workspace
-```
+完整接入方式见仓库根目录的 `docs/usage.md`。
 
 ## 样式和 Tailwind source
 
@@ -42,7 +38,7 @@ npm install @workbench-kit/vue-file-workspace
 如果本包以源码包形式位于业务源码目录之外，还需要把包源码加入 Tailwind source：
 
 ```css
-@source "../../../packages/vue-file-workspace/src";
+@source "../../../vendor/workbench-kit/packages/vue-file-workspace/src";
 ```
 
 如果包来自 `node_modules`，路径通常类似：
