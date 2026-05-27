@@ -26,16 +26,27 @@ npm install vue lucide-vue-next
 
 ## 样式接入
 
-业务项目必须先定义主题 token，再引入 Tailwind 和 workbench 基础样式：
+业务项目可以直接选择内置主题模板，再引入 Tailwind 和 workbench 基础样式：
 
 ```css
-@import "./theme.css";
+@import "@workbench-kit/vue-workbench/theme/midnight.css";
+@import "./theme-overrides.css";
 @import "tailwindcss";
 @import "tailwindcss-safe-area";
 @import "@workbench-kit/vue-workbench/style.css";
 ```
 
-`theme.css` 至少需要提供这些 token：
+`theme-overrides.css` 是项目侧可选覆盖文件。简单项目可以不写覆盖；需要微调时，只覆盖少量变量即可：
+
+```css
+:root,
+html[data-theme="dark"] {
+  --accent: #2dd4bf;
+  --accent-hover: #5eead4;
+}
+```
+
+如果项目完全自定义主题，则需要提供这些 token：
 
 ```css
 :root,

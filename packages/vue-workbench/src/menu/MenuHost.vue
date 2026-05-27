@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, watch, type ComponentPublicInstance } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, watch } from "vue";
 import MenuList from "./MenuList.vue";
 import { useMenuRuntime } from "./useMenuRuntime";
 
@@ -16,12 +16,13 @@ const menuOffsets = computed(() =>
   )
 );
 
-function setSurfaceElement(menuId: string, element: Element | ComponentPublicInstance | null) {
+function setSurfaceElement(menuId: string, element: unknown) {
+  const maybeComponentElement = (element as { $el?: unknown } | null)?.$el;
   const resolvedElement =
     element instanceof HTMLElement
       ? element
-      : element && "$el" in element && element.$el instanceof HTMLElement
-        ? element.$el
+      : maybeComponentElement instanceof HTMLElement
+        ? maybeComponentElement
         : null;
 
   if (!(resolvedElement instanceof HTMLElement)) {
@@ -168,7 +169,7 @@ onBeforeUnmount(() => {
     <div
       v-for="menu in openMenus"
       :key="menu.id"
-      :ref="(element: Element | null) => setSurfaceElement(menu.id, element)"
+      :ref="(element: unknown) => setSurfaceElement(menu.id, element)"
       class="pointer-events-auto absolute rounded-md border border-border-default bg-surface-panel shadow-xl"
       data-menu-surface="true"
       :style="menuOffsets[menu.id]"

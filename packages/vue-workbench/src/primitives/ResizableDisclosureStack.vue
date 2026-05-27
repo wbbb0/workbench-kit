@@ -95,15 +95,23 @@ function sectionContentStyle(sectionId: string) {
 }
 
 function setSectionContentElement(sectionId: string, element: unknown) {
-  if (element instanceof HTMLElement) {
-    sectionContentElements.set(sectionId, element);
+  const maybeComponentElement = (element as { $el?: unknown } | null)?.$el;
+  const resolvedElement =
+    element instanceof HTMLElement
+      ? element
+      : maybeComponentElement instanceof HTMLElement
+        ? maybeComponentElement
+        : null;
+
+  if (resolvedElement instanceof HTMLElement) {
+    sectionContentElements.set(sectionId, resolvedElement);
     return;
   }
   sectionContentElements.delete(sectionId);
 }
 
 function sectionContentRef(sectionId: string) {
-  return (element: Element | null) => setSectionContentElement(sectionId, element);
+  return (element: unknown) => setSectionContentElement(sectionId, element);
 }
 
 function onSectionHeaderClick(sectionId: string) {

@@ -44,10 +44,31 @@ The consuming app must also install the peer dependencies:
 
 ## Styles
 
-Import the workbench base styles once from the app stylesheet:
+Import one theme template first, then the workbench base styles once from the app stylesheet:
 
 ```css
+@import "@workbench-kit/vue-workbench/theme/midnight.css";
 @import "@workbench-kit/vue-workbench/style.css";
+```
+
+`midnight.css` is the default dark/light template extracted from the original llm-onebot WebUI.
+
+Apps can override any token by importing a local file after the template:
+
+```css
+@import "@workbench-kit/vue-workbench/theme/midnight.css";
+@import "./theme-overrides.css";
+@import "@workbench-kit/vue-workbench/style.css";
+```
+
+Example override:
+
+```css
+:root,
+html[data-theme="dark"] {
+  --accent: #2dd4bf;
+  --accent-hover: #5eead4;
+}
 ```
 
 When using Tailwind CSS, include the source package files so utility classes used by the source packages are generated:
@@ -60,9 +81,8 @@ When using Tailwind CSS, include the source package files so utility classes use
 
 Adjust the relative path to match the app stylesheet location.
 
-## Theme Contract
+## Theme Templates And Contract
 
-The consuming app owns its final theme values. `@workbench-kit/vue-workbench/style.css` expects the app to provide the workbench theme tokens used by the shell and primitives, including surface, border, text, accent, state, safe-area, and workbench sizing variables.
+The consuming app owns its final theme values, but it does not need to define every token from scratch. Import a template when the default look is good enough, and override only the variables that differ.
 
-In `llm-onebot`, these values are provided by `webui/src/style/theme.css`.
-
+`@workbench-kit/vue-workbench/style.css` expects the resolved CSS variables to include surface, border, text, accent, state, scrollbar, font, and workbench sizing tokens. Templates provide those variables. A custom app theme can either replace the template entirely or inherit from it with overrides.

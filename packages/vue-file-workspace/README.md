@@ -26,10 +26,10 @@ npm install vue lucide-vue-next @workbench-kit/vue-workbench
 
 ## 样式和 Tailwind source
 
-本包的 `FileTree` 依赖 `@workbench-kit/vue-workbench` 的 `TreeNodeShell` 和基础样式。业务项目必须先完成 workbench 样式接入：
+本包的 `FileTree` 依赖 `@workbench-kit/vue-workbench` 的 `TreeNodeShell` 和基础样式。业务项目必须先完成 workbench 样式接入，可以直接使用内置主题模板：
 
 ```css
-@import "./theme.css";
+@import "@workbench-kit/vue-workbench/theme/midnight.css";
 @import "tailwindcss";
 @import "tailwindcss-safe-area";
 @import "@workbench-kit/vue-workbench/style.css";
