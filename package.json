@@ -1,0 +1,19 @@
+{
+  "name": "workbench-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "lucide-vue-next": "^1.0.0",
+    "typescript": "^5.9.3",
+    "vue": "^3.5.32",
+    "vue-tsc": "^3.2.6"
+  }
+}
+
