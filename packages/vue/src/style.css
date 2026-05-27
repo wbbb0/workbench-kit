@@ -1,0 +1,6 @@
+@import "../../vue-workbench/src/style.css";
+
+@source "../../vue-workbench/src";
+@source "../../vue-resource-editor/src";
+@source "../../vue-file-workspace/src";
+

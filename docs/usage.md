@@ -1,6 +1,6 @@
 # Usage
 
-`workbench-kit` is intended to be consumed as a git-managed source dependency. The recommended setup is to add this repository to each application as a submodule and reference its packages with `file:` dependencies.
+`workbench-kit` is intended to be consumed as a git-managed source dependency. The recommended setup is to add this repository to each application as a submodule and reference the aggregate Vue package with a `file:` dependency.
 
 ## Add As Submodule
 
@@ -18,9 +18,7 @@ If the frontend package lives at `webui/`, add dependencies relative to that pac
 ```json
 {
   "dependencies": {
-    "@workbench-kit/vue-workbench": "file:../vendor/workbench-kit/packages/vue-workbench",
-    "@workbench-kit/vue-resource-editor": "file:../vendor/workbench-kit/packages/vue-resource-editor",
-    "@workbench-kit/vue-file-workspace": "file:../vendor/workbench-kit/packages/vue-file-workspace"
+    "@workbench-kit/vue": "file:../vendor/workbench-kit/packages/vue"
   }
 }
 ```
@@ -44,11 +42,11 @@ The consuming app must also install the peer dependencies:
 
 ## Styles
 
-Import one theme template first, then the workbench base styles once from the app stylesheet:
+Import one theme template first, then the aggregate workbench styles once from the app stylesheet:
 
 ```css
-@import "@workbench-kit/vue-workbench/theme/midnight.css";
-@import "@workbench-kit/vue-workbench/style.css";
+@import "@workbench-kit/vue/theme/midnight.css";
+@import "@workbench-kit/vue/style.css";
 ```
 
 `midnight.css` is the default dark/light template extracted from the original llm-onebot WebUI.
@@ -56,9 +54,9 @@ Import one theme template first, then the workbench base styles once from the ap
 Apps can override any token by importing a local file after the template:
 
 ```css
-@import "@workbench-kit/vue-workbench/theme/midnight.css";
+@import "@workbench-kit/vue/theme/midnight.css";
 @import "./theme-overrides.css";
-@import "@workbench-kit/vue-workbench/style.css";
+@import "@workbench-kit/vue/style.css";
 ```
 
 Example override:
@@ -71,12 +69,10 @@ html[data-theme="dark"] {
 }
 ```
 
-When using Tailwind CSS, include the source package files so utility classes used by the source packages are generated:
+`@workbench-kit/vue/style.css` includes the Tailwind `@source` directives for all workbench-kit Vue packages. If a custom build pipeline does not process imported `@source` directives, use this single fallback source path from the app stylesheet:
 
 ```css
-@source "../../../vendor/workbench-kit/packages/vue-workbench/src";
-@source "../../../vendor/workbench-kit/packages/vue-resource-editor/src";
-@source "../../../vendor/workbench-kit/packages/vue-file-workspace/src";
+@source "../../../vendor/workbench-kit/packages";
 ```
 
 Adjust the relative path to match the app stylesheet location.
@@ -85,4 +81,4 @@ Adjust the relative path to match the app stylesheet location.
 
 The consuming app owns its final theme values, but it does not need to define every token from scratch. Import a template when the default look is good enough, and override only the variables that differ.
 
-`@workbench-kit/vue-workbench/style.css` expects the resolved CSS variables to include surface, border, text, accent, state, scrollbar, font, and workbench sizing tokens. Templates provide those variables. A custom app theme can either replace the template entirely or inherit from it with overrides.
+`@workbench-kit/vue/style.css` expects the resolved CSS variables to include surface, border, text, accent, state, scrollbar, font, and workbench sizing tokens. Templates provide those variables. A custom app theme can either replace the template entirely or inherit from it with overrides.

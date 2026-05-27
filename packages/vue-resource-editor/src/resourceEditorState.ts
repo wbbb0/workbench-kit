@@ -1,6 +1,6 @@
 import { computed, ref, watch, type ComputedRef, type Ref } from "vue";
-import { useEditorDraftState } from "./useEditorDraftState";
-import type { EditorModel, EditorResourceSummary, ResourceEditorClient } from "./types";
+import { useEditorDraftState } from "./useEditorDraftState.js";
+import type { EditorModel, EditorResourceSummary, ResourceEditorClient } from "./types.js";
 
 export type ResourceEditorNotification = {
   type: "success" | "error";

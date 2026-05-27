@@ -1,5 +1,5 @@
 import { shallowRef } from "vue";
-import type { ResourceEditorClient } from "./types";
+import type { ResourceEditorClient } from "./types.js";
 
 const activeResourceEditorClient = shallowRef<ResourceEditorClient | null>(null);
 

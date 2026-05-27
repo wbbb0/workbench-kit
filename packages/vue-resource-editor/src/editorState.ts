@@ -1,5 +1,5 @@
-import { deepMerge } from "./deepMerge";
-import type { EditorModel, EditorUnsetMode } from "./types";
+import { deepMerge } from "./deepMerge.js";
+import type { EditorModel, EditorUnsetMode } from "./types.js";
 
 export type PathSegment = string | number;
 
@@ -93,6 +93,9 @@ export function removeValueAtPathAndPrune<T>(value: T, path: PathSegment[]): T |
   let current: unknown = cloned;
   for (let index = 0; index < path.length - 1; index += 1) {
     const segment = path[index];
+    if (segment === undefined) {
+      return cloned;
+    }
     if (typeof segment === "number") {
       if (!Array.isArray(current) || segment < 0 || segment >= current.length) {
         return cloned;
@@ -106,6 +109,9 @@ export function removeValueAtPathAndPrune<T>(value: T, path: PathSegment[]): T |
     current = current[segment];
   }
   const lastSegment = path[path.length - 1];
+  if (lastSegment === undefined) {
+    return cloned;
+  }
   if (typeof lastSegment === "number") {
     if (!Array.isArray(current) || lastSegment < 0 || lastSegment >= current.length) {
       return cloned;
