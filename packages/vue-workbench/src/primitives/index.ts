@@ -7,6 +7,8 @@ export { default as WorkbenchIconButton } from "./WorkbenchIconButton.vue";
 export { default as WorkbenchKeyValueDetails } from "./WorkbenchKeyValueDetails.vue";
 export { default as WorkbenchListItem } from "./WorkbenchListItem.vue";
 export { default as WorkbenchSidebarListPane } from "./WorkbenchSidebarListPane.vue";
+export { default as WorkbenchTabStrip } from "./WorkbenchTabStrip.vue";
+export type { WorkbenchTabStripItem } from "./tabStripTypes.js";
 export { default as TreeNodeShell } from "./TreeNodeShell.vue";
 export { default as ResponsiveSplitPane } from "./ResponsiveSplitPane.vue";
 export { default as PagedListPane } from "./PagedListPane.vue";
