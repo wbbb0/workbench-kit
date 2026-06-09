@@ -1,0 +1,85 @@
+/* Compact VS Code-like semantic theme tokens */
+:root,
+html[data-theme="dark"] {
+  --surface-app: #1e1e1e;
+  --surface-sidebar: #252526;
+  --surface-panel: #1e1e1e;
+  --surface-input: #2d2d30;
+  --surface-muted: #333333;
+  --surface-hover: #2a2d2e;
+  --surface-active: #37373d;
+  --surface-selected: #04395e;
+  --surface-selected-muted: #2a3a4a;
+
+  --border-subtle: color-mix(in srgb, #3c3c3c 70%, transparent);
+  --border-default: #3c3c3c;
+  --border-strong: #515151;
+  --border-focus: #007acc;
+  --border-input: #3c3c3c;
+
+  --text-primary: #cccccc;
+  --text-secondary: #eeeeee;
+  --text-muted: #a0a0a0;
+  --text-subtle: #7a7a7a;
+  --text-accent: #4fc1ff;
+  --text-on-accent: #ffffff;
+
+  --accent: #007acc;
+  --accent-hover: #1688d1;
+  --accent-active: #006bb3;
+  --success: #89d185;
+  --warning: #cca700;
+  --danger: #f48771;
+  --info: #75beff;
+
+  --surface-success: color-mix(in srgb, var(--success) 16%, var(--surface-panel));
+  --surface-warning: color-mix(in srgb, var(--warning) 15%, var(--surface-panel));
+  --surface-danger: color-mix(in srgb, var(--danger) 14%, var(--surface-panel));
+  --surface-info: color-mix(in srgb, var(--info) 14%, var(--surface-panel));
+  --surface-backdrop: #252526;
+  --surface-backdrop-soft: #2d2d30;
+  --border-backdrop: #3c3c3c;
+  --text-backdrop: #a0a0a0;
+  --text-backdrop-strong: #cccccc;
+  --surface-backdrop-badge: #333333;
+
+  --scrollbar-bg: transparent;
+  --scrollbar-thumb: #424242;
+  --scrollbar-thumb-hover: #5a5a5a;
+
+  --activity-bar-width: 48px;
+  --font-size-ui: 13px;
+  --font-size-small: 11px;
+  --font-size-mono: 12px;
+  --line-height-ui: 1.35;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+}
+
+html[data-theme="light"] {
+  --surface-app: #ffffff;
+  --surface-sidebar: #f3f3f3;
+  --surface-panel: #ffffff;
+  --surface-input: #f3f3f3;
+  --surface-muted: #e8e8e8;
+  --surface-hover: #e8e8e8;
+  --surface-active: #dcdcdc;
+  --surface-selected: #0078d4;
+  --surface-selected-muted: #e4f2ff;
+
+  --border-subtle: color-mix(in srgb, #d4d4d4 75%, transparent);
+  --border-default: #d4d4d4;
+  --border-strong: #c8c8c8;
+  --border-focus: #0078d4;
+  --border-input: #cecece;
+
+  --text-primary: #3b3b3b;
+  --text-secondary: #1e1e1e;
+  --text-muted: #616161;
+  --text-subtle: #8a8a8a;
+  --text-accent: #006ab1;
+  --text-on-accent: #ffffff;
+
+  --scrollbar-thumb: #c1c1c1;
+  --scrollbar-thumb-hover: #a8a8a8;
+}
