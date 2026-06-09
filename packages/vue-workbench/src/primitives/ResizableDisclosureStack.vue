@@ -180,11 +180,13 @@ function onSectionResize(event: PointerEvent) {
   const minHeight = Math.min(props.minSectionSize, totalHeight / 2);
   const previousHeight = clamp(active.previousStartHeight + delta, minHeight, totalHeight - minHeight);
   const previousRatio = previousHeight / totalHeight;
-  if (sectionLayout[active.previousSectionId]) {
-    sectionLayout[active.previousSectionId].weight = roundWeight(totalWeight * previousRatio);
+  const previousLayout = sectionLayout[active.previousSectionId];
+  if (previousLayout) {
+    previousLayout.weight = roundWeight(totalWeight * previousRatio);
   }
-  if (sectionLayout[active.sectionId]) {
-    sectionLayout[active.sectionId].weight = roundWeight(totalWeight * (1 - previousRatio));
+  const currentLayout = sectionLayout[active.sectionId];
+  if (currentLayout) {
+    currentLayout.weight = roundWeight(totalWeight * (1 - previousRatio));
   }
   emitLayout();
 }
