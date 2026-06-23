@@ -20,10 +20,22 @@ const renderedWindows = computed(() => (props.isMobile ? mobileWindows.value : d
 const activeModalWindow = computed(() => (
   [...renderedWindows.value].reverse().find((window) => window.definition.modal) ?? null
 ));
+const activeModalWindowId = computed(() => activeModalWindow.value?.id ?? null);
+const backdropStyle = computed(() => ({
+  zIndex: String(activeModalWindow.value ? (activeModalWindow.value.order * 2) - 1 : 1)
+}));
 const dialogControllers = new Map<string, WorkbenchWindowDialogController>();
 
 const inactiveWindowIds = computed(() => {
   const ids = new Set<string>();
+  const modalWindowId = activeModalWindowId.value;
+  if (modalWindowId) {
+    for (const window of renderedWindows.value) {
+      if (window.id !== modalWindowId) {
+        ids.add(window.id);
+      }
+    }
+  }
   for (const window of desktopWindows.value) {
     if (window.parentId) {
       ids.add(window.parentId);
@@ -134,7 +146,7 @@ onBeforeUnmount(() => {
       v-if="activeModalWindow"
       data-test="window-backdrop"
       class="pointer-events-auto fixed inset-0"
-      :style="{ zIndex: '1' }"
+      :style="backdropStyle"
       @click="handleBackdropClick"
     />
     <WindowSurface
