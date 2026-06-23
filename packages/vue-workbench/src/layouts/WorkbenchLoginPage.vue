@@ -33,7 +33,7 @@ const props = withDefaults(defineProps<{
   subtitle: "",
   usernameLabel: "Username",
   passwordLabel: "Password",
-  usernameAutocomplete: "username",
+  usernameAutocomplete: "username webauthn",
   passwordAutocomplete: "current-password",
   submitText: "Sign in",
   pendingText: "Signing in...",
