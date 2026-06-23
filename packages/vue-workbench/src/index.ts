@@ -1,4 +1,5 @@
 export { default as WorkbenchRoot } from "./WorkbenchRoot.vue";
+export { default as WorkbenchRuntimeRoot } from "./WorkbenchRuntimeRoot.vue";
 export { default as WorkbenchShell } from "./WorkbenchShell.vue";
 
 export * from "./primitives/index.js";

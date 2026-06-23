@@ -36,6 +36,27 @@ git add vendor/workbench-kit
 git commit -m "Update workbench kit"
 ```
 
+If the app needs a reusable primitive, implement it in `workbench-kit` first and push it before committing the app-level submodule pointer. Other projects can then pull the same workbench commit directly instead of receiving copied local components.
+
+Reusable layout or auth UI should follow the root split:
+
+- Put shared controller/window/toast/menu requirements behind `WorkbenchRuntimeRoot`.
+- Extend complex workbench applications through `WorkbenchRoot`.
+- Extend ordinary route-based applications through `WorkbenchPageRoot`.
+- Keep login and authentication UI business-agnostic. Components such as `WorkbenchLoginPage` should expose props and events, while API routes, session probes, redirect confirmation, and permissions stay in the consuming app.
+
+When changing common primitives or style contracts, run:
+
+```bash
+cd vendor/workbench-kit
+npm run typecheck
+
+cd ../..
+npm run typecheck
+```
+
+For application repositories that require tests before commit, also run that app's full test suite.
+
 ## Updating Another App
 
 When another application pulls a commit that changes the submodule pointer:
@@ -73,4 +94,3 @@ Applications should lock a concrete commit or tag through the submodule pointer 
 ## Why Not npm Registry
 
 This setup avoids publishing to the npm registry while still giving every application a reproducible dependency version. It also keeps source-level debugging simple because the shared package code lives inside each app checkout.
-

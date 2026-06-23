@@ -100,6 +100,7 @@ type WorkbenchDialogLeafField<TValues extends Record<string, unknown>> =
       kind: "custom";
       key: keyof TValues & string;
       label?: string;
+      defaultValue?: unknown;
       component: Component;
       props?: Record<string, unknown>;
     };

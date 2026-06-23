@@ -50,6 +50,9 @@ function isPlainRecord(value: unknown): value is DialogValues {
 }
 
 function clonePlain<T>(input: T): T {
+  if (input === undefined) {
+    return input;
+  }
   if (typeof structuredClone === "function") {
     return structuredClone(input);
   }
@@ -99,7 +102,7 @@ function createDefaultValue(field: WorkbenchDialogField<DialogValues>) {
     case "group":
       return reconcileFields(field.fields, {});
     case "custom":
-      return undefined;
+      return "defaultValue" in field ? clonePlain(field.defaultValue) : undefined;
   }
 }
 

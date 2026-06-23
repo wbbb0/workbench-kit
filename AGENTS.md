@@ -20,6 +20,13 @@
 - 能通过 props、事件、composable、client adapter 注入的能力可以进入共享包；必须知道具体业务字段或接口路径的逻辑留在业务项目。
 - 主题模板放在 `packages/vue-workbench/src/themes/`，并通过 `packages/vue` 聚合入口暴露；业务项目应能选择模板、局部 override，或完全自定义 token。
 - CSS/Tailwind 接入应尽量保持单入口；常规项目优先导入 `@workbench-kit/vue/style.css`，避免要求业务项目手写多个 `@source`。
+- `WorkbenchRuntimeRoot` 是 controller、menu、toast、window host 的共享 runtime 根。需要 `useWorkbenchWindows()`、toast 或菜单服务的页面必须挂在它或其包装 root 下。
+- `WorkbenchRoot` 是复杂类 VSCode 工作台 shell，适合 mizune-core 这类多区域、多窗口、多菜单应用；不要把它用于普通网页布局。
+- `WorkbenchPageRoot` 是普通 Nuxt/Vue 管理页的轻量 root，负责主题背景、header、内部滚动容器和 runtime host。简单后台页优先用它，再组合 `WorkbenchCardStack`、`WorkbenchFeatureCard`、`WorkbenchDialog` 等组件。
+- 窗口移动、缩放、最大化和边界限制的唯一实现应是 `windows/WindowSurface.vue`。不要在 `WorkbenchDialog`、业务项目弹窗或其它 primitive 里复制 pointer move/resize 逻辑；需要移动/缩放时使用 `useWorkbenchWindows().openDialog()` 并传 `movable`/`resizable`。
+- `WorkbenchDialog` 是固定位置的兼容弹窗 primitive，保持简单 `v-model` 接口，不承载 runtime window 能力。
+- `WorkbenchLoginPage` 是可复用登录 UI，不包含 API、路由、session、跳转或权限语义；业务项目通过受控 props 和 `submit`/`passkey` 事件接入自己的认证逻辑。
+- `@workbench-kit/vue/style.css` 会设置 `html, body, #app, #__nuxt { height: 100%; overflow: hidden; }`。消费项目必须由 shell 或页面 layout 提供内部滚动容器，例如 `h-dvh flex flex-col overflow-hidden` 加 `main.scrollbar-thin.flex-1.overflow-auto`。
 - 修改组件、CSS 入口或导出契约后，至少运行 `npm run typecheck`。
 
 ## Git 工作流
@@ -27,4 +34,3 @@
 - 本仓库可以在业务项目的 `vendor/workbench-kit` submodule 内直接修改。
 - 修改完成后先在本仓库提交并推送，再回到业务项目提交 submodule 指针更新。
 - 公开仓库地址当前为 `https://github.com/wbbb0/workbench-kit`。
-

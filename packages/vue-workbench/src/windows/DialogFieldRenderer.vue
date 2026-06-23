@@ -148,10 +148,12 @@ function resolveComponentReference(component: unknown) {
     />
   </fieldset>
 
-  <component
-    v-else-if="field.kind === 'custom'"
-    :is="resolveComponentReference(field.component)"
-    v-bind="resolveCustomFieldProps(field)"
-    @update:modelValue="setValueAtPath(fieldPath, $event)"
-  />
+  <label v-else-if="field.kind === 'custom'" class="flex flex-col gap-1.5 text-small text-text-muted">
+    <span v-if="field.label">{{ field.label }}</span>
+    <component
+      :is="resolveComponentReference(field.component)"
+      v-bind="resolveCustomFieldProps(field)"
+      @update:modelValue="setValueAtPath(fieldPath, $event)"
+    />
+  </label>
 </template>
