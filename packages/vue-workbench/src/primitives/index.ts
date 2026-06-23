@@ -1,8 +1,15 @@
 export { default as WorkbenchAreaHeader } from "./WorkbenchAreaHeader.vue";
 export { default as WorkbenchCard } from "./WorkbenchCard.vue";
 export { default as WorkbenchDataTable } from "./WorkbenchDataTable.vue";
+export { default as WorkbenchDialog } from "./WorkbenchDialog.vue";
 export { default as WorkbenchDisclosure } from "./WorkbenchDisclosure.vue";
 export { default as WorkbenchEmptyState } from "./WorkbenchEmptyState.vue";
+export { default as WorkbenchConfirmDialog } from "./WorkbenchConfirmDialog.vue";
+export { default as WorkbenchFormField } from "./WorkbenchFormField.vue";
+export { default as WorkbenchMultiSelect } from "./WorkbenchMultiSelect.vue";
+export type { WorkbenchMultiSelectOption } from "./multiSelectTypes.js";
+export { default as WorkbenchSelect } from "./WorkbenchSelect.vue";
+export { default as WorkbenchTextInput } from "./WorkbenchTextInput.vue";
 export { default as WorkbenchIconButton } from "./WorkbenchIconButton.vue";
 export { default as WorkbenchKeyValueDetails } from "./WorkbenchKeyValueDetails.vue";
 export { default as WorkbenchListItem } from "./WorkbenchListItem.vue";

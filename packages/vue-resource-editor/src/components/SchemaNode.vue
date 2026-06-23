@@ -394,6 +394,7 @@ function moveRecordEntry(key: string, offset: -1 | 1) {
   const targetIndex = index + offset;
   if (index < 0 || targetIndex < 0 || targetIndex >= entries.length) return;
   const [entry] = entries.splice(index, 1);
+  if (!entry) return;
   entries.splice(targetIndex, 0, entry);
   emit("update:modelValue", Object.fromEntries(entries));
 }
