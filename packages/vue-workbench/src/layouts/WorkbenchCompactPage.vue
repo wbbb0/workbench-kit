@@ -19,7 +19,7 @@ withDefaults(defineProps<{
       <a
         v-if="homeHref"
         :href="homeHref"
-        class="flex h-7 items-center rounded px-2 text-small text-text-muted hover:bg-surface-hover hover:text-text-primary"
+        class="flex h-6 items-center px-2 text-small text-text-muted hover:bg-surface-hover hover:text-text-primary"
       >
         {{ homeLabel }}
       </a>

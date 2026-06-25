@@ -7,13 +7,15 @@ const props = withDefaults(defineProps<{
   defaultStackedPrimarySize?: number;
   minPrimarySize?: number;
   minSecondarySize?: number;
+  primaryPosition?: "start" | "end";
   storageKey?: string;
 }>(), {
   breakpoint: 760,
   defaultPrimarySize: 360,
   defaultStackedPrimarySize: 240,
   minPrimarySize: 240,
-  minSecondarySize: 240
+  minSecondarySize: 240,
+  primaryPosition: "start"
 });
 
 type ResizeAxis = "x" | "y";
@@ -30,11 +32,23 @@ const horizontalSize = ref(readStoredSize("horizontal", props.defaultPrimarySize
 const verticalSize = ref(readStoredSize("vertical", props.defaultStackedPrimarySize));
 const stacked = computed(() => containerWidth.value > 0 && containerWidth.value < props.breakpoint);
 const currentSize = computed(() => stacked.value ? verticalSize.value : horizontalSize.value);
-const gridStyle = computed(() => (
-  stacked.value
-    ? { gridTemplateRows: `${clampVerticalSize(verticalSize.value)}px 1px minmax(0, 1fr)` }
-    : { gridTemplateColumns: `${clampHorizontalSize(horizontalSize.value)}px 1px minmax(0, 1fr)` }
+const resizeDirection = computed(() => props.primaryPosition === "start" ? 1 : -1);
+const primarySlot = computed(() => ({ name: "primary" as const, primary: true }));
+const secondarySlot = computed(() => ({ name: "secondary" as const, primary: false }));
+const orderedSlots = computed(() => (
+  props.primaryPosition === "start"
+    ? [primarySlot.value, secondarySlot.value]
+    : [secondarySlot.value, primarySlot.value]
 ));
+const gridStyle = computed(() => {
+  const primarySize = stacked.value ? clampVerticalSize(verticalSize.value) : clampHorizontalSize(horizontalSize.value);
+  const template = props.primaryPosition === "start"
+    ? `${primarySize}px 1px minmax(0, 1fr)`
+    : `minmax(0, 1fr) 1px ${primarySize}px`;
+  return stacked.value
+    ? { gridTemplateRows: template }
+    : { gridTemplateColumns: template };
+});
 
 let observer: ResizeObserver | null = null;
 let activeResize: ActiveResize | null = null;
@@ -99,7 +113,7 @@ function pointerPosition(event: PointerEvent, axis: ResizeAxis) {
 
 function resize(event: PointerEvent) {
   if (!activeResize) return;
-  const delta = pointerPosition(event, activeResize.axis) - activeResize.startPointer;
+  const delta = (pointerPosition(event, activeResize.axis) - activeResize.startPointer) * resizeDirection.value;
   setPrimarySize(activeResize.startSize + delta);
 }
 
@@ -142,19 +156,19 @@ function onKeydown(event: KeyboardEvent) {
   if (stacked.value) {
     if (event.key === "ArrowUp") {
       event.preventDefault();
-      resizeBy(-16);
+      resizeBy(-16 * resizeDirection.value);
     } else if (event.key === "ArrowDown") {
       event.preventDefault();
-      resizeBy(16);
+      resizeBy(16 * resizeDirection.value);
     }
     return;
   }
   if (event.key === "ArrowLeft") {
     event.preventDefault();
-    resizeBy(-16);
+    resizeBy(-16 * resizeDirection.value);
   } else if (event.key === "ArrowRight") {
     event.preventDefault();
-    resizeBy(16);
+    resizeBy(16 * resizeDirection.value);
   }
 }
 
@@ -177,24 +191,25 @@ watch(() => props.storageKey, () => {
 
 <template>
   <div ref="rootRef" class="grid h-full min-h-0" :style="gridStyle">
-    <div class="min-h-0 min-w-0 overflow-hidden">
-      <slot name="primary" :stacked="stacked" />
-    </div>
-    <div
-      class="z-20 bg-transparent hover:bg-accent/25 focus:bg-accent/25 focus:outline-none"
-      :class="stacked
-        ? 'h-1 cursor-row-resize border-t border-border-default bg-surface-sidebar'
-        : 'relative -mx-0.5 w-1 cursor-col-resize before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-border-default'"
-      role="separator"
-      :aria-orientation="stacked ? 'horizontal' : 'vertical'"
-      :aria-valuenow="currentSize"
-      tabindex="0"
-      @pointerdown="startResize"
-      @dblclick="resetSize"
-      @keydown="onKeydown"
-    />
-    <div class="min-h-0 min-w-0 overflow-hidden">
-      <slot name="secondary" :stacked="stacked" />
-    </div>
+    <template v-for="(pane, index) in orderedSlots" :key="pane.name">
+      <div class="min-h-0 min-w-0 overflow-hidden">
+        <slot v-if="pane.primary" name="primary" :stacked="stacked" />
+        <slot v-else name="secondary" :stacked="stacked" />
+      </div>
+      <div
+        v-if="index === 0"
+        class="z-20 bg-transparent hover:bg-accent/25 focus:bg-accent/25 focus:outline-none"
+        :class="stacked
+          ? 'h-1 cursor-row-resize border-t border-border-default bg-surface-sidebar'
+          : 'relative -mx-0.5 w-1 cursor-col-resize before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-border-default'"
+        role="separator"
+        :aria-orientation="stacked ? 'horizontal' : 'vertical'"
+        :aria-valuenow="currentSize"
+        tabindex="0"
+        @pointerdown="startResize"
+        @dblclick="resetSize"
+        @keydown="onKeydown"
+      />
+    </template>
   </div>
 </template>
