@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { StyleValue } from "vue";
 import WorkbenchRuntimeRoot from "./WorkbenchRuntimeRoot.vue";
 import WorkbenchShell from "./WorkbenchShell.vue";
 import type { WorkbenchStatusbarItem, WorkbenchTopbarMenu } from "./chrome";
@@ -17,6 +18,10 @@ type WorkbenchRootProps = {
   topbarMenus: WorkbenchTopbarMenu[];
   /** 状态栏组件项。 */
   statusbarItems: WorkbenchStatusbarItem[];
+  /** 桌面状态栏附加 class。业务项目可传 Tailwind class 或普通 CSS class。 */
+  statusbarClass?: string;
+  /** 桌面状态栏附加 inline style。适合直接指定颜色或 CSS 变量。 */
+  statusbarStyle?: StyleValue;
   /** 是否使用移动端布局。媒体查询或 store 由业务项目维护。 */
   isMobile: boolean;
 };
@@ -38,6 +43,8 @@ const emit = defineEmits<{
         :active-nav-item-id="activeNavItemId"
         :topbar-menus="topbarMenus"
         :statusbar-items="statusbarItems"
+        :statusbar-class="statusbarClass"
+        :statusbar-style="statusbarStyle"
         :is-mobile="isMobile"
         @navigate="emit('navigate', $event)"
       />

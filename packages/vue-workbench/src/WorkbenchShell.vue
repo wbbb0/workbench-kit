@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { StyleValue } from "vue";
 import DesktopWorkbench from "./DesktopWorkbench.vue";
 import MobileWorkbench from "./MobileWorkbench.vue";
 import type { WorkbenchStatusbarItem, WorkbenchTopbarMenu } from "./chrome";
@@ -13,6 +14,8 @@ const props = defineProps<{
   activeNavItemId: string;
   topbarMenus: WorkbenchTopbarMenu[];
   statusbarItems: WorkbenchStatusbarItem[];
+  statusbarClass?: string;
+  statusbarStyle?: StyleValue;
   isMobile: boolean;
 }>();
 
@@ -30,6 +33,8 @@ const emit = defineEmits<{
     :active-nav-item-id="activeNavItemId"
     :topbar-menus="topbarMenus"
     :statusbar-items="statusbarItems"
+    :statusbar-class="statusbarClass"
+    :statusbar-style="statusbarStyle"
     @navigate="emit('navigate', $event)"
   />
   <MobileWorkbench

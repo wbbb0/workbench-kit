@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted } from "vue";
+import type { StyleValue } from "vue";
 import WorkbenchActivityBar from "./WorkbenchActivityBar.vue";
 import TopBar from "./TopBar.vue";
 import StatusBar from "./StatusBar.vue";
@@ -15,6 +16,8 @@ const props = defineProps<{
   activeNavItemId: string;
   topbarMenus: WorkbenchTopbarMenu[];
   statusbarItems: WorkbenchStatusbarItem[];
+  statusbarClass?: string;
+  statusbarStyle?: StyleValue;
 }>();
 
 const emit = defineEmits<{
@@ -185,7 +188,7 @@ onUnmounted(stopDesktopAreaResize);
           </aside>
         </div>
       </div>
-      <StatusBar :items="statusbarItems" />
+      <StatusBar :items="statusbarItems" :statusbar-class="statusbarClass" :statusbar-style="statusbarStyle" />
     </div>
   </div>
 </template>

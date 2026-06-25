@@ -5,6 +5,8 @@ const props = withDefaults(defineProps<{
   breakpoint?: number;
   defaultPrimarySize?: number;
   defaultStackedPrimarySize?: number;
+  fixedPane?: "primary" | "secondary";
+  orientation?: "responsive" | "horizontal" | "vertical";
   minPrimarySize?: number;
   minSecondarySize?: number;
   storageKey?: string;
@@ -12,6 +14,8 @@ const props = withDefaults(defineProps<{
   breakpoint: 760,
   defaultPrimarySize: 360,
   defaultStackedPrimarySize: 240,
+  fixedPane: "primary",
+  orientation: "responsive",
   minPrimarySize: 240,
   minSecondarySize: 240
 });
@@ -28,12 +32,12 @@ const containerWidth = ref(0);
 const containerHeight = ref(0);
 const horizontalSize = ref(readStoredSize("horizontal", props.defaultPrimarySize));
 const verticalSize = ref(readStoredSize("vertical", props.defaultStackedPrimarySize));
-const stacked = computed(() => containerWidth.value > 0 && containerWidth.value < props.breakpoint);
+const stacked = computed(() => props.orientation === "vertical" || (props.orientation === "responsive" && containerWidth.value > 0 && containerWidth.value < props.breakpoint));
 const currentSize = computed(() => stacked.value ? verticalSize.value : horizontalSize.value);
 const gridStyle = computed(() => (
   stacked.value
-    ? { gridTemplateRows: `${clampVerticalSize(verticalSize.value)}px 1px minmax(0, 1fr)` }
-    : { gridTemplateColumns: `${clampHorizontalSize(horizontalSize.value)}px 1px minmax(0, 1fr)` }
+    ? gridTemplate("rows", clampVerticalSize(verticalSize.value))
+    : gridTemplate("columns", clampHorizontalSize(horizontalSize.value))
 ));
 
 let observer: ResizeObserver | null = null;
@@ -74,13 +78,24 @@ function syncSize() {
 }
 
 function clampHorizontalSize(value: number) {
-  const max = Math.max(props.minPrimarySize, containerWidth.value - props.minSecondarySize);
-  return Math.min(max, Math.max(props.minPrimarySize, value));
+  const minFixedSize = props.fixedPane === "primary" ? props.minPrimarySize : props.minSecondarySize;
+  const minFlexibleSize = props.fixedPane === "primary" ? props.minSecondarySize : props.minPrimarySize;
+  const max = Math.max(minFixedSize, containerWidth.value - minFlexibleSize);
+  return Math.min(max, Math.max(minFixedSize, value));
 }
 
 function clampVerticalSize(value: number) {
-  const max = Math.max(props.minPrimarySize, containerHeight.value - props.minSecondarySize);
-  return Math.min(max, Math.max(props.minPrimarySize, value));
+  const minFixedSize = props.fixedPane === "primary" ? props.minPrimarySize : props.minSecondarySize;
+  const minFlexibleSize = props.fixedPane === "primary" ? props.minSecondarySize : props.minPrimarySize;
+  const max = Math.max(minFixedSize, containerHeight.value - minFlexibleSize);
+  return Math.min(max, Math.max(minFixedSize, value));
+}
+
+function gridTemplate(axis: "columns" | "rows", size: number) {
+  const template = props.fixedPane === "primary"
+    ? `${size}px 1px minmax(0, 1fr)`
+    : `minmax(0, 1fr) 1px ${size}px`;
+  return axis === "columns" ? { gridTemplateColumns: template } : { gridTemplateRows: template };
 }
 
 function setPrimarySize(value: number) {
@@ -100,7 +115,7 @@ function pointerPosition(event: PointerEvent, axis: ResizeAxis) {
 function resize(event: PointerEvent) {
   if (!activeResize) return;
   const delta = pointerPosition(event, activeResize.axis) - activeResize.startPointer;
-  setPrimarySize(activeResize.startSize + delta);
+  setPrimarySize(activeResize.startSize + (props.fixedPane === "primary" ? delta : -delta));
 }
 
 function stopResize() {
@@ -135,7 +150,7 @@ function resetSize() {
 }
 
 function resizeBy(delta: number) {
-  setPrimarySize(currentSize.value + delta);
+  setPrimarySize(currentSize.value + (props.fixedPane === "primary" ? delta : -delta));
 }
 
 function onKeydown(event: KeyboardEvent) {
