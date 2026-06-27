@@ -74,7 +74,7 @@ function menuIcon(item: MenuNode) {
     <template v-for="item in items" :key="item.id">
       <button
         v-if="item.kind === 'action' || item.kind === 'submenu'"
-        class="flex min-h-8 w-full items-center justify-between rounded-md px-2.5 py-1 text-left text-[13px] text-text-primary transition-colors duration-120 outline-none hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:text-text-primary"
+        class="flex min-h-8 w-full items-center justify-between rounded-sm px-2.5 py-1 text-left text-[13px] text-text-primary transition-colors duration-120 outline-none hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:text-text-primary"
         data-menu-item="true"
         :data-menu-kind="item.kind"
         @click="onSelect(item, $event)"
@@ -87,10 +87,10 @@ function menuIcon(item: MenuNode) {
         </span>
         <span v-if="item.kind === 'submenu'" class="shrink-0">›</span>
       </button>
-      <div v-else-if="item.kind === 'separator'" class="my-1.5 border-t border-border-default/80" />
+      <div v-else-if="item.kind === 'separator'" class="border-t border-border-default/80" />
       <button
         v-else-if="item.kind === 'toggle'"
-        class="flex min-h-8 w-full items-center justify-between rounded-md px-2.5 py-1 text-left text-[13px] text-text-primary transition-colors duration-120 outline-none hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:text-text-primary"
+        class="flex min-h-8 w-full items-center justify-between rounded-sm px-2.5 py-1 text-left text-[13px] text-text-primary transition-colors duration-120 outline-none hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:text-text-primary"
         data-menu-item="true"
         :data-menu-kind="item.kind"
         @click="onSelect(item, $event)"
@@ -100,7 +100,7 @@ function menuIcon(item: MenuNode) {
       </button>
       <button
         v-else-if="item.kind === 'radio'"
-        class="flex min-h-8 w-full items-center justify-between rounded-md px-2.5 py-1 text-left text-[13px] text-text-primary transition-colors duration-120 outline-none hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:text-text-primary"
+        class="flex min-h-8 w-full items-center justify-between rounded-sm px-2.5 py-1 text-left text-[13px] text-text-primary transition-colors duration-120 outline-none hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:text-text-primary"
         data-menu-item="true"
         :data-menu-kind="item.kind"
         @click="onSelect(item, $event)"

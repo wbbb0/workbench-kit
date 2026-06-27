@@ -70,17 +70,19 @@ const contentShellClass = computed(() => {
       <header v-if="showHeader" class="shrink-0 border-b border-border-default bg-surface-sidebar">
         <div :class="headerShellClass">
           <div class="flex min-w-0 items-baseline gap-3">
-            <WorkbenchBreadcrumbs :items="breadcrumbs" />
-            <a
-              v-if="!breadcrumbs.length && homeHref"
-              :href="homeHref"
-              class="shrink-0 text-ui font-semibold text-text-secondary hover:text-text-primary"
-            >
-              {{ homeLabel }}
-            </a>
-            <h1 class="truncate text-ui font-semibold text-text-secondary">
-              {{ title }}
-            </h1>
+            <div class="flex min-w-0 items-baseline gap-1">
+              <WorkbenchBreadcrumbs :items="breadcrumbs" />
+              <a
+                v-if="!breadcrumbs.length && homeHref"
+                :href="homeHref"
+                class="shrink-0 text-ui font-semibold text-text-secondary hover:text-text-primary"
+              >
+                {{ homeLabel }}
+              </a>
+              <h1 class="truncate text-ui font-semibold text-text-secondary">
+                {{ title }}
+              </h1>
+            </div>
             <span v-if="subtitle" class="hidden truncate text-small text-text-subtle sm:inline">
               {{ subtitle }}
             </span>
