@@ -63,6 +63,10 @@ function onLeave(item: MenuNode) {
     clearPendingSubmenu();
   }
 }
+
+function menuIcon(item: MenuNode) {
+  return item.kind === "action" || item.kind === "submenu" ? item.icon : undefined;
+}
 </script>
 
 <template>
@@ -77,8 +81,11 @@ function onLeave(item: MenuNode) {
         @mouseenter="onHover(item, $event)"
         @mouseleave="onLeave(item)"
       >
-        <span>{{ item.label }}</span>
-        <span v-if="item.kind === 'submenu'">›</span>
+        <span class="flex min-w-0 items-center gap-2">
+          <component :is="menuIcon(item)" v-if="menuIcon(item)" class="size-4 shrink-0 text-text-subtle" aria-hidden="true" />
+          <span class="truncate">{{ item.label }}</span>
+        </span>
+        <span v-if="item.kind === 'submenu'" class="shrink-0">›</span>
       </button>
       <div v-else-if="item.kind === 'separator'" class="my-1.5 border-t border-border-default/80" />
       <button
