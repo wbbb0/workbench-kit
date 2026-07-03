@@ -7,6 +7,7 @@ import type {
   WorkbenchWindowMaximizePayload,
   WorkbenchWindowResult
 } from "./types";
+import { WORKBENCH_RUNTIME_LAYERS } from "../runtime/layers";
 import DialogRenderer from "./DialogRenderer.vue";
 import WindowSurface from "./WindowSurface.vue";
 
@@ -21,6 +22,9 @@ const activeModalWindow = computed(() => (
   [...renderedWindows.value].reverse().find((window) => window.definition.modal) ?? null
 ));
 const activeModalWindowId = computed(() => activeModalWindow.value?.id ?? null);
+const hostStyle = {
+  zIndex: WORKBENCH_RUNTIME_LAYERS.windowHost
+};
 const backdropStyle = computed(() => ({
   zIndex: String(activeModalWindow.value ? (activeModalWindow.value.order * 2) - 1 : 1)
 }));
@@ -141,7 +145,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="pointer-events-none fixed inset-0 z-60 overflow-hidden">
+  <div class="pointer-events-none fixed inset-0 overflow-hidden" :style="hostStyle">
     <div
       v-if="activeModalWindow"
       data-test="window-backdrop"

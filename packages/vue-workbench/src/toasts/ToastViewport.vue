@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { AlertCircle, CheckCircle2, Info } from "lucide-vue-next";
+import { WORKBENCH_RUNTIME_LAYERS } from "../runtime/layers";
 import { useWorkbenchToasts } from "./useWorkbenchToasts";
 
 const toast = useWorkbenchToasts();
 
 const toasts = computed(() => toast.items.value);
+const hostStyle = {
+  zIndex: WORKBENCH_RUNTIME_LAYERS.toastHost
+};
 
 function iconFor(type: "success" | "error" | "info") {
   if (type === "success") return CheckCircle2;
@@ -25,7 +29,7 @@ function toneClassFor(type: "success" | "error" | "info") {
 </script>
 
 <template>
-  <div class="pointer-events-none fixed inset-x-0 top-0 z-60 flex justify-center px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]">
+  <div class="pointer-events-none fixed inset-x-0 top-0 flex justify-center px-3 pt-[calc(env(safe-area-inset-top,0px)+0.75rem)]" :style="hostStyle">
     <div class="flex w-full max-w-xl flex-col gap-2">
       <button
         v-for="item in toasts"

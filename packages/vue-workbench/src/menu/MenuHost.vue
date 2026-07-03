@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, watch } from "vue";
+import { WORKBENCH_RUNTIME_LAYERS } from "../runtime/layers";
 import MenuList from "./MenuList.vue";
 import { useMenuRuntime } from "./useMenuRuntime";
 
 const { openMenus, closeAllMenus, closeMenu } = useMenuRuntime();
 
 const surfaceElements = new Map<string, HTMLElement>();
+const hostStyle = {
+  zIndex: WORKBENCH_RUNTIME_LAYERS.menuHost
+};
 
 const menuOffsets = computed(() =>
   Object.fromEntries(
@@ -165,7 +169,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="pointer-events-none fixed inset-0 z-50">
+  <div class="pointer-events-none fixed inset-0" :style="hostStyle">
     <div
       v-for="menu in openMenus"
       :key="menu.id"
