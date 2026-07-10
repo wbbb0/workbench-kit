@@ -9,6 +9,7 @@ export type MenuNode =
       icon?: Component;
       shortcut?: string;
       danger?: boolean;
+      disabled?: boolean;
       onSelect: () => void;
     }
   | {
@@ -52,6 +53,9 @@ export type MenuNode =
 /** 菜单定位锚点。可使用固定坐标，也可绑定到触发元素。 */
 export type MenuAnchor = { x: number; y: number } | { element: HTMLElement | null };
 
+/** 菜单相对锚点的首选展开方向；空间不足时运行时会自动翻转并保持在安全区域内。 */
+export type MenuPlacement = "bottom-start" | "bottom-end" | "right-start" | "left-start";
+
 /** 菜单来源，用于移动端整合、定位策略和行为测试。 */
 export type MenuSource = "mobile-workbench" | "topbar" | "statusbar" | "contextmenu";
 
@@ -61,5 +65,6 @@ export type MenuStackEntry = {
   items: MenuNode[];
   anchor: MenuAnchor;
   source: MenuSource;
+  placement?: MenuPlacement;
   parentId?: string;
 };

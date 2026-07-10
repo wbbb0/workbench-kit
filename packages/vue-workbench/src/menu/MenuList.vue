@@ -77,6 +77,7 @@ function menuIcon(item: MenuNode) {
         class="flex min-h-8 w-full items-center justify-between rounded-sm px-2.5 py-1 text-left text-[13px] text-text-primary transition-colors duration-120 outline-none hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:text-text-primary"
         data-menu-item="true"
         :data-menu-kind="item.kind"
+        :disabled="item.kind === 'action' && item.disabled"
         @click="onSelect(item, $event)"
         @mouseenter="onHover(item, $event)"
         @mouseleave="onLeave(item)"

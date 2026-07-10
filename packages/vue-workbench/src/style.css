@@ -196,6 +196,71 @@ body {
   background: var(--surface-hover);
 }
 
+.workbench-button.btn-primary {
+  color: var(--workbench-button-text, var(--text-on-accent));
+  background: var(--workbench-button-background, var(--accent));
+  border-color: var(--workbench-button-border, var(--accent));
+}
+.workbench-button.btn-primary:hover:not(:disabled) {
+  color: var(--workbench-button-hover-text, var(--workbench-button-text, var(--text-on-accent)));
+  background: var(--workbench-button-hover-background, var(--accent-hover));
+  border-color: var(--workbench-button-hover-border, var(--workbench-button-border, var(--accent-hover)));
+}
+.workbench-button.btn-secondary {
+  color: var(--workbench-button-text, var(--text-primary));
+  background: var(--workbench-button-background, transparent);
+  border-color: var(--workbench-button-border, var(--border-default));
+}
+.workbench-button.btn-secondary:hover:not(:disabled),
+.workbench-button.btn-ghost:hover:not(:disabled) {
+  color: var(--workbench-button-hover-text, var(--workbench-button-text, var(--text-primary)));
+  background: var(--workbench-button-hover-background, var(--surface-hover));
+  border-color: var(--workbench-button-hover-border, var(--workbench-button-border, var(--border-default)));
+}
+.workbench-button.btn-danger {
+  color: var(--workbench-button-text, var(--danger));
+  background: var(--workbench-button-background, var(--surface-danger));
+  border-color: var(--workbench-button-border, color-mix(in srgb, var(--danger) 45%, transparent));
+}
+.workbench-button.btn-danger:hover:not(:disabled) {
+  color: var(--workbench-button-hover-text, var(--workbench-button-text, var(--danger)));
+  background: var(--workbench-button-hover-background, color-mix(in srgb, var(--danger) 18%, var(--surface-panel)));
+  border-color: var(--workbench-button-hover-border, color-mix(in srgb, var(--danger) 60%, transparent));
+}
+.workbench-button.btn-ghost {
+  color: var(--workbench-button-text, var(--text-muted));
+  background: var(--workbench-button-background, transparent);
+  border-color: var(--workbench-button-border, transparent);
+}
+.workbench-button:active:not(:disabled) {
+  color: var(--workbench-button-active-text, var(--workbench-button-hover-text, var(--workbench-button-text)));
+  background: var(--workbench-button-active-background, var(--workbench-button-hover-background));
+  border-color: var(--workbench-button-active-border, var(--workbench-button-hover-border));
+}
+.workbench-button:disabled {
+  color: var(--workbench-button-disabled-text, var(--text-subtle));
+  background: var(--workbench-button-disabled-background, var(--surface-muted));
+  border-color: var(--workbench-button-disabled-border, var(--border-subtle));
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+.workbench-split-button > .workbench-button {
+  border-radius: 0;
+}
+.workbench-split-button > .workbench-split-button-main {
+  border-radius: 2px 0 0 2px;
+}
+.workbench-split-button > .workbench-split-button-menu {
+  min-width: 2rem;
+  justify-content: center;
+  padding-inline: 0.45rem;
+  border-left-color: color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: 0 2px 2px 0;
+}
+.workbench-split-button-menu > span {
+  display: none;
+}
+
 .panel-header,
 .toolbar-header,
 .sticky-toolbar {

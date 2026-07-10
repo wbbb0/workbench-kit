@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { Component } from "vue";
+import WorkbenchButton from "./WorkbenchButton.vue";
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   icon?: Component;
   label?: string;
   title?: string;
@@ -31,26 +32,39 @@ defineEmits<{
 </script>
 
 <template>
-  <button
-    :type="type"
-    :title="title || label"
-    :aria-label="label || title"
-    :aria-pressed="active || undefined"
-    :disabled="disabled"
+  <WorkbenchButton
+    v-if="$slots.default"
+    :label="props.label"
+    :title="props.title"
+    :disabled="props.disabled"
+    :active="props.active"
+    :variant="props.variant"
+    :type="props.type"
     :class="[
-      variant === 'ghost' ? 'btn-ghost' : 'btn btn-secondary',
-      size === 'sm' ? 'h-7 w-7' : '',
-      active ? 'bg-surface-selected-muted text-text-secondary' : ''
+      'workbench-icon-button',
+      props.size === 'sm' ? 'h-7 w-7' : '',
+      props.active ? 'bg-surface-selected-muted text-text-secondary' : ''
     ]"
     @click="$emit('click', $event)"
   >
-    <slot>
-      <component
-        v-if="icon"
-        :is="icon"
-        :size="iconSize"
-        :stroke-width="strokeWidth"
-      />
-    </slot>
-  </button>
+    <slot />
+  </WorkbenchButton>
+  <WorkbenchButton
+    v-else
+    :icon="props.icon"
+    :label="props.label"
+    :title="props.title"
+    :disabled="props.disabled"
+    :active="props.active"
+    :variant="props.variant"
+    :icon-size="props.iconSize"
+    :stroke-width="props.strokeWidth"
+    :type="props.type"
+    :class="[
+      'workbench-icon-button',
+      props.size === 'sm' ? 'h-7 w-7' : '',
+      props.active ? 'bg-surface-selected-muted text-text-secondary' : ''
+    ]"
+    @click="$emit('click', $event)"
+  />
 </template>
