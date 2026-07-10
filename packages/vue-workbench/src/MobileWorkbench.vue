@@ -123,7 +123,10 @@ onUnmounted(() => {
 
 <template>
   <div class="fixed inset-0 flex h-full w-full overflow-hidden bg-surface-app text-text-primary">
-    <div v-if="hasMobileRootArea" class="absolute inset-0 flex flex-col bg-surface-app transition-transform duration-220 ease-[ease]">
+    <div
+      :ref="hasMobileRootArea ? undefined : runtime.mainRegionRef"
+      class="absolute inset-0 flex flex-col bg-surface-app transition-transform duration-220 ease-[ease]"
+    >
       <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
         <header class="pt-safe flex h-[calc(44px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border-default bg-surface-sidebar px-3">
           <span class="flex-1 font-semibold text-text-secondary">{{ routeLabel }}</span>
@@ -162,6 +165,7 @@ onUnmounted(() => {
       </div>
     </div>
     <div
+      v-if="hasMobileRootArea"
       ref="runtime.mainRegionRef"
       class="absolute inset-0 z-10 flex flex-col bg-surface-app transition-transform duration-220 ease-[ease]"
       :class="isActiveMobileAreaVisible ? 'translate-x-0' : 'pointer-events-none translate-x-full'"
