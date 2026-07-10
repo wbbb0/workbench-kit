@@ -1,4 +1,4 @@
-import { onUnmounted, readonly, ref, watch, type Ref } from "vue";
+import { onMounted, onUnmounted, readonly, ref, watch, type Ref } from "vue";
 
 /** 响应式 viewport 判定器。业务可在应用启动时注册自己的实现。 */
 export type WorkbenchViewportDetector = {
@@ -38,18 +38,22 @@ export function configureWorkbenchViewportDetector(detector?: WorkbenchViewportD
 export function useWorkbenchViewport(): { isMobile: Readonly<Ref<boolean>> } {
   const isMobile = ref(false);
   let unsubscribe = () => {};
+  let stopWatching = () => {};
 
-  watch(activeWorkbenchViewportDetector, (detector) => {
-    unsubscribe();
-    const sync = () => {
-      isMobile.value = detector.isMobile();
-    };
-    sync();
-    unsubscribe = detector.subscribe(sync);
-  }, { immediate: true });
+  onMounted(() => {
+    stopWatching = watch(activeWorkbenchViewportDetector, (detector) => {
+      unsubscribe();
+      const sync = () => {
+        isMobile.value = detector.isMobile();
+      };
+      sync();
+      unsubscribe = detector.subscribe(sync);
+    }, { immediate: true });
+  });
 
   onUnmounted(() => {
     unsubscribe();
+    stopWatching();
   });
 
   return { isMobile: readonly(isMobile) };
