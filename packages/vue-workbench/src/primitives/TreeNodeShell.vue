@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { ChevronRight, ChevronDown, Folder, FolderOpen } from "lucide-vue-next";
+import { useDefaultWorkbenchSelectionNavigation } from "../runtime/workbenchAreaContext.js";
 
 const props = withDefaults(defineProps<{
   collapsible?: boolean;
@@ -15,10 +16,17 @@ const props = withDefaults(defineProps<{
   indentPx: 0
 });
 
-defineEmits<{
+const emit = defineEmits<{
   toggle: [];
   select: [];
 }>();
+
+const navigateAfterSelection = useDefaultWorkbenchSelectionNavigation();
+
+function select() {
+  emit("select");
+  navigateAfterSelection();
+}
 
 const collapsibleIcon = computed(() => {
   if (props.iconMode === "files") {
@@ -38,7 +46,7 @@ const collapsibleIcon = computed(() => {
         v-if="collapsible"
         class="min-w-0 flex flex-1 cursor-pointer items-center bg-transparent text-left hover:text-text-secondary"
         :style="props.indentPx > 0 ? { paddingLeft: `${props.indentPx}px` } : undefined"
-        @click="$emit('toggle')"
+        @click="emit('toggle')"
       >
         <div class="tree-head min-w-0">
           <component :is="collapsibleIcon" :size="13" :stroke-width="2" class="tree-chevron shrink-0 text-text-muted" />
@@ -51,7 +59,7 @@ const collapsibleIcon = computed(() => {
         v-else
         class="min-w-0 flex flex-1 cursor-pointer items-center bg-transparent text-left hover:text-text-secondary"
         :style="props.indentPx > 0 ? { paddingLeft: `${props.indentPx}px` } : undefined"
-        @click="$emit('select')"
+        @click="select"
       >
         <div class="tree-head min-w-0">
           <slot name="icon" />

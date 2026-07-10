@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import WorkbenchAreaScope from "./WorkbenchAreaScope.vue";
 import { createStatusbarMenuNodes, type WorkbenchStatusbarItem, type WorkbenchTopbarMenu } from "./chrome";
 import type { WorkbenchNavItem } from "./navigation";
 import { useMenuTrigger } from "./menu/useMenuTrigger";
@@ -158,7 +159,7 @@ onUnmounted(() => {
             </button>
           </nav>
         </header>
-        <component :is="mobileRootArea" />
+        <WorkbenchAreaScope :area-id="mobileRootAreaId" :component="mobileRootArea" />
       </div>
     </div>
     <div
@@ -176,7 +177,7 @@ onUnmounted(() => {
         <component :is="mobileHeader" v-if="view.areas.mobileHeader" />
       </header>
       <div class="min-h-0 flex-1 overflow-hidden">
-        <component :is="activeMobileArea" />
+        <WorkbenchAreaScope :area-id="runtime.activeMobileAreaId.value" :component="activeMobileArea" />
       </div>
     </div>
   </div>

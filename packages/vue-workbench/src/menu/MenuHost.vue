@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, watch } from "vue";
-import { WORKBENCH_RUNTIME_LAYERS } from "../runtime/layers";
+import { WORKBENCH_RUNTIME_LAYERS } from "../runtime/layers.js";
 import MenuList from "./MenuList.vue";
 import { useMenuRuntime } from "./useMenuRuntime";
 

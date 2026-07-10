@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted } from "vue";
 import WorkbenchActivityBar from "./WorkbenchActivityBar.vue";
+import WorkbenchAreaScope from "./WorkbenchAreaScope.vue";
 import TopBar from "./TopBar.vue";
 import StatusBar from "./StatusBar.vue";
 import type { DesktopAreaId, WorkbenchRuntime } from "./runtime/workbenchRuntime";
@@ -129,7 +130,7 @@ onUnmounted(stopDesktopAreaResize);
           :style="primarySidebarStyle"
         >
           <aside class="scrollbar-thin h-full overflow-x-hidden overflow-y-auto">
-            <component :is="primarySidebar" />
+            <WorkbenchAreaScope area-id="primarySidebar" :component="primarySidebar" />
           </aside>
           <div
             class="absolute inset-y-0 -right-0.5 z-20 w-1 cursor-col-resize bg-transparent before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-border-default hover:bg-accent/25 focus:bg-accent/25 focus:outline-none"
@@ -144,7 +145,7 @@ onUnmounted(stopDesktopAreaResize);
         </div>
         <section class="flex min-w-0 flex-1 flex-col overflow-hidden">
           <main ref="runtime.mainRegionRef" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pr-safe">
-            <component :is="mainArea" />
+            <WorkbenchAreaScope area-id="mainArea" :component="mainArea" />
           </main>
           <div
             v-if="hasBottomPanel"
@@ -162,7 +163,7 @@ onUnmounted(stopDesktopAreaResize);
             class="scrollbar-thin shrink-0 overflow-auto border-t border-border-default bg-surface-panel"
             :style="bottomPanelStyle"
           >
-            <component :is="bottomPanel" />
+            <WorkbenchAreaScope area-id="bottomPanel" :component="bottomPanel" />
           </aside>
         </section>
         <div
@@ -181,7 +182,7 @@ onUnmounted(stopDesktopAreaResize);
             @keydown="onVerticalResizeKeydown('secondarySidebar', -1, $event)"
           />
           <aside class="scrollbar-thin h-full overflow-x-hidden overflow-y-auto">
-            <component :is="secondarySidebar" />
+            <WorkbenchAreaScope area-id="secondarySidebar" :component="secondarySidebar" />
           </aside>
         </div>
       </div>

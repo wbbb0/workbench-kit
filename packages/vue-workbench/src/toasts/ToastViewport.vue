@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { AlertCircle, CheckCircle2, Info } from "lucide-vue-next";
-import { WORKBENCH_RUNTIME_LAYERS } from "../runtime/layers";
+import { WORKBENCH_RUNTIME_LAYERS } from "../runtime/layers.js";
 import { useWorkbenchToasts } from "./useWorkbenchToasts";
 
 const toast = useWorkbenchToasts();

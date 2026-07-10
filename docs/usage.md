@@ -125,6 +125,14 @@ Use the lightest workbench component that matches the application shape:
 - Use `WorkbenchCompactPage`, `WorkbenchCardStack`, `WorkbenchFeatureCard`, `WorkbenchCard`, and primitives inside a root. `WorkbenchCompactPage` is a visual layout helper, not a runtime provider.
 - Keep product-specific routing, API calls, permissions, and stores in the consuming application.
 
+## Workbench Mobile Areas
+
+`defineWorkbenchView()` uses `primarySidebar` as the default mobile root area. On desktop, the sidebar and `mainArea` remain visible together. On mobile, the sidebar becomes the first-level page and `mainArea` opens as a second-level page with built-in back and browser-history behavior.
+
+Selections emitted by `WorkbenchListItem` and non-collapsible `TreeNodeShell` instances inside that default root sidebar open `mainArea` automatically. The consuming application still handles the original selection event to update its own state, but it does not need to call `useWorkbenchNavigation().showArea("mainArea")` for ordinary sidebar selections.
+
+Keep explicit navigation calls for programmatic flows such as creating an item, or for non-default targets such as opening `secondarySidebar`. Views that override `layout.mobile.rootArea` do not receive the default `primarySidebar` selection navigation.
+
 ## Login Pages
 
 Use `WorkbenchLoginPage` for shared login UI. It is intentionally UI-only: the consuming application owns session checks, password/passkey APIs, redirects, and confirmation dialogs.

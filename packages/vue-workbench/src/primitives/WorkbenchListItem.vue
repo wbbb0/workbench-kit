@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useDefaultWorkbenchSelectionNavigation } from "../runtime/workbenchAreaContext.js";
+
 withDefaults(defineProps<{
   selected?: boolean;
   title?: string;
@@ -15,9 +17,16 @@ withDefaults(defineProps<{
   multiline: false
 });
 
-defineEmits<{
+const emit = defineEmits<{
   select: [];
 }>();
+
+const navigateAfterSelection = useDefaultWorkbenchSelectionNavigation();
+
+function select() {
+  emit("select");
+  navigateAfterSelection();
+}
 </script>
 
 <template>
@@ -29,7 +38,7 @@ defineEmits<{
       multiline ? 'justify-start' : 'justify-between'
     ]"
     type="button"
-    @click="$emit('select')"
+    @click="select"
   >
     <slot name="leading" />
     <div class="min-w-0 flex-1">

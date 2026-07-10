@@ -7,7 +7,7 @@ import type {
   WorkbenchWindowMaximizePayload,
   WorkbenchWindowResult
 } from "./types";
-import { WORKBENCH_RUNTIME_LAYERS } from "../runtime/layers";
+import { WORKBENCH_RUNTIME_LAYERS } from "../runtime/layers.js";
 import DialogRenderer from "./DialogRenderer.vue";
 import WindowSurface from "./WindowSurface.vue";
 
