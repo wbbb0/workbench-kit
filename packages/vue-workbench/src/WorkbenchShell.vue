@@ -4,6 +4,7 @@ import MobileWorkbench from "./MobileWorkbench.vue";
 import type { WorkbenchStatusbarItem, WorkbenchTopbarMenu } from "./chrome";
 import type { WorkbenchNavItem } from "./navigation";
 import type { WorkbenchRuntime } from "./runtime/workbenchRuntime";
+import { useWorkbenchViewport } from "./runtime/workbenchViewport";
 import type { WorkbenchView } from "./types";
 
 const props = defineProps<{
@@ -13,8 +14,9 @@ const props = defineProps<{
   activeNavItemId: string;
   topbarMenus: WorkbenchTopbarMenu[];
   statusbarItems: WorkbenchStatusbarItem[];
-  isMobile: boolean;
 }>();
+
+const { isMobile } = useWorkbenchViewport();
 
 const emit = defineEmits<{
   navigate: [itemId: string];

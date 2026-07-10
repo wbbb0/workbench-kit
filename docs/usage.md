@@ -129,9 +129,23 @@ Use the lightest workbench component that matches the application shape:
 
 `defineWorkbenchView()` uses `primarySidebar` as the default mobile root area. On desktop, the sidebar and `mainArea` remain visible together. On mobile, the sidebar becomes the first-level page and `mainArea` opens as a second-level page with built-in back and browser-history behavior.
 
+When a view has no `primarySidebar`, `mainArea` becomes the first-level mobile page. Mobile page headers are generated from the active view title; statusbar items remain available from the mobile workbench menu. `mobileHeader` is not part of the view contract.
+
 Selections emitted by `WorkbenchListItem` and non-collapsible `TreeNodeShell` instances inside that default root sidebar open `mainArea` automatically. The consuming application still handles the original selection event to update its own state, but it does not need to call `useWorkbenchNavigation().showArea("mainArea")` for ordinary sidebar selections.
 
 Keep explicit navigation calls for programmatic flows such as creating an item, or for non-default targets such as opening `secondarySidebar`. Views that override `layout.mobile.rootArea` do not receive the default `primarySidebar` selection navigation.
+
+`WorkbenchRoot` detects the mobile viewport internally with `matchMedia("(max-width: 767px)")`; do not pass an `isMobile` prop. Applications that need a different policy can register a detector before mounting a workbench root:
+
+```ts
+import { watch } from "vue";
+import { configureWorkbenchViewportDetector } from "@workbench-kit/vue";
+
+configureWorkbenchViewportDetector({
+  isMobile: () => customResponsiveStore.compact,
+  subscribe: (listener) => watch(() => customResponsiveStore.compact, listener)
+});
+```
 
 ## Login Pages
 

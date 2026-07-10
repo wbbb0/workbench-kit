@@ -33,7 +33,6 @@ export type WorkbenchViewAreas = {
   mainArea: Component;
   secondarySidebar?: Component;
   bottomPanel?: Component;
-  mobileHeader?: Component;
 };
 
 /** WorkbenchRoot 的核心页面描述。业务项目通常通过 defineWorkbenchView 创建。 */

@@ -15,7 +15,6 @@ const props = withDefaults(defineProps<{
   subtitle?: string;
   breadcrumbs?: WorkbenchBreadcrumbItem[];
   view?: WorkbenchView;
-  isMobile?: boolean;
   showHeader?: boolean;
   homeHref?: string;
   homeLabel?: string;
@@ -26,7 +25,6 @@ const props = withDefaults(defineProps<{
   subtitle: "",
   breadcrumbs: () => [],
   view: undefined,
-  isMobile: false,
   showHeader: true,
   homeHref: "",
   homeLabel: "Home",
@@ -65,7 +63,7 @@ const contentShellClass = computed(() => {
 </script>
 
 <template>
-  <WorkbenchRuntimeRoot :view="resolvedView" :is-mobile="isMobile">
+  <WorkbenchRuntimeRoot :view="resolvedView">
     <div class="flex h-dvh min-h-0 flex-col overflow-hidden bg-surface-app text-text-primary">
       <header v-if="showHeader" class="shrink-0 border-b border-border-default bg-surface-sidebar">
         <div :class="headerShellClass">

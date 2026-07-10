@@ -21,7 +21,6 @@ const emit = defineEmits<{
 }>();
 
 const mainArea = computed(() => props.view.areas.mainArea);
-const mobileHeader = computed(() => props.view.areas.mobileHeader);
 const routeLabel = computed(() => props.view.title || props.navItems.find((item) => item.id === props.activeNavItemId)?.title || "");
 const mobileNavItems = computed(() => props.navItems);
 const mobileRootAreaId = computed(() => props.runtime.mobileRootAreaId.value);
@@ -174,7 +173,7 @@ onUnmounted(() => {
           </svg>
           <span>返回</span>
         </button>
-        <component :is="mobileHeader" v-if="view.areas.mobileHeader" />
+        <span class="min-w-0 flex-1 truncate text-ui font-medium text-text-secondary">{{ routeLabel }}</span>
       </header>
       <div class="min-h-0 flex-1 overflow-hidden">
         <WorkbenchAreaScope :area-id="runtime.activeMobileAreaId.value" :component="activeMobileArea" />

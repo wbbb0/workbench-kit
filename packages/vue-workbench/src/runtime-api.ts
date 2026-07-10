@@ -1,6 +1,7 @@
 export * from "./menu/menuRuntime.js";
 export * from "./menu/types.js";
 export * from "./runtime/workbenchController.js";
+export * from "./runtime/workbenchViewport.js";
 export {
   useWorkbenchNavigation,
   useWorkbenchRuntimeContext,

@@ -8,16 +8,14 @@ import type {
   WorkbenchWindowResult
 } from "./types";
 import { WORKBENCH_RUNTIME_LAYERS } from "../runtime/layers.js";
+import { useWorkbenchViewport } from "../runtime/workbenchViewport.js";
 import DialogRenderer from "./DialogRenderer.vue";
 import WindowSurface from "./WindowSurface.vue";
 
-const props = defineProps<{
-  isMobile: boolean;
-}>();
-
 const { desktopWindows, mobileWindows, close, focus, move, setBounds, setMaximized, get } = useWorkbenchWindows();
+const { isMobile } = useWorkbenchViewport();
 
-const renderedWindows = computed(() => (props.isMobile ? mobileWindows.value : desktopWindows.value));
+const renderedWindows = computed(() => (isMobile.value ? mobileWindows.value : desktopWindows.value));
 const activeModalWindow = computed(() => (
   [...renderedWindows.value].reverse().find((window) => window.definition.modal) ?? null
 ));

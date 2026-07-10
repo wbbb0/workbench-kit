@@ -17,8 +17,6 @@ type WorkbenchRootProps = {
   topbarMenus: WorkbenchTopbarMenu[];
   /** 状态栏组件项。 */
   statusbarItems: WorkbenchStatusbarItem[];
-  /** 是否使用移动端布局。媒体查询或 store 由业务项目维护。 */
-  isMobile: boolean;
 };
 
 const props = defineProps<WorkbenchRootProps>();
@@ -29,7 +27,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <WorkbenchRuntimeRoot :view="view" :is-mobile="isMobile">
+  <WorkbenchRuntimeRoot :view="view">
     <template #default="{ runtime }">
       <WorkbenchShell
         :runtime="runtime"
@@ -38,7 +36,6 @@ const emit = defineEmits<{
         :active-nav-item-id="activeNavItemId"
         :topbar-menus="topbarMenus"
         :statusbar-items="statusbarItems"
-        :is-mobile="isMobile"
         @navigate="emit('navigate', $event)"
       />
     </template>
