@@ -126,6 +126,12 @@ export const fileApi: FileWorkspaceClient = {
 - 展开/收起目录逻辑
 - 文件预览逻辑
 
+需要 checkbox 多选时，将 `selectionMode` 设为 `multiple`，并传入受控的
+`selectedPaths` 与 `indeterminatePaths`。组件通过
+`toggleSelection(item, selected)` 报告切换意图；目录级联、半选状态计算和
+未加载子目录的数据获取仍由业务项目负责。未设置 `selectionMode` 时继续使用
+原有的 `selectedPath` / `selectItem` 单选协议。
+
 示例：
 
 ```vue

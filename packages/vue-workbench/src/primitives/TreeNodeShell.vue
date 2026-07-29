@@ -39,13 +39,24 @@ const collapsibleIcon = computed(() => {
 <template>
   <div class="w-max min-w-full">
     <div
-      class="tree-shell-header relative grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md px-1 py-0.75 pr-0"
-      :class="['w-max min-w-full', { 'tree-shell-selected': selected }]"
+      class="tree-shell-header relative grid min-w-0 items-center gap-2 rounded-md px-1 py-0.75 pr-0"
+      :class="[
+        'w-max min-w-full',
+        $slots.leading ? 'grid-cols-[auto_minmax(0,1fr)_auto]' : 'grid-cols-[minmax(0,1fr)_auto]',
+        { 'tree-shell-selected': selected }
+      ]"
     >
+      <div
+        v-if="$slots.leading"
+        class="flex shrink-0 items-center"
+        :style="props.indentPx > 0 ? { paddingLeft: `${props.indentPx}px` } : undefined"
+      >
+        <slot name="leading" />
+      </div>
       <button
         v-if="collapsible"
         class="min-w-0 flex flex-1 cursor-pointer items-center bg-transparent text-left hover:text-text-secondary"
-        :style="props.indentPx > 0 ? { paddingLeft: `${props.indentPx}px` } : undefined"
+        :style="!$slots.leading && props.indentPx > 0 ? { paddingLeft: `${props.indentPx}px` } : undefined"
         @click="emit('toggle')"
       >
         <div class="tree-head min-w-0">
@@ -58,7 +69,7 @@ const collapsibleIcon = computed(() => {
       <button
         v-else
         class="min-w-0 flex flex-1 cursor-pointer items-center bg-transparent text-left hover:text-text-secondary"
-        :style="props.indentPx > 0 ? { paddingLeft: `${props.indentPx}px` } : undefined"
+        :style="!$slots.leading && props.indentPx > 0 ? { paddingLeft: `${props.indentPx}px` } : undefined"
         @click="select"
       >
         <div class="tree-head min-w-0">
