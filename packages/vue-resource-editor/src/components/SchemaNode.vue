@@ -287,7 +287,7 @@ function addArrayItem() {
 function removeArrayItem(index: number) {
   const next = [...displayedItems.value];
   next.splice(index, 1);
-  emit("update:modelValue", next.length > 0 ? next : undefined);
+  emit("update:modelValue", next);
 }
 
 function moveArrayItem(index: number, offset: -1 | 1) {

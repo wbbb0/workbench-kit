@@ -67,6 +67,11 @@ function onEnumChange(e: Event) {
   emit("update:modelValue", (e.target as HTMLSelectElement).value);
 }
 
+function onDynamicRefChange(e: Event) {
+  const value = (e.target as HTMLSelectElement).value;
+  emit("update:modelValue", value || undefined);
+}
+
 function currentStringValue(): string {
   return displayedValue.value !== undefined ? String(displayedValue.value) : "";
 }
@@ -161,9 +166,10 @@ const readOnlyMultiline = computed(() => {
       class="input-base h-6 max-w-60 px-1.5 py-0.5"
       :value="currentStringValue()"
       :disabled="disabled"
-      @change="onEnumChange"
+      @change="onDynamicRefChange"
     >
-      <option value="">—</option>
+      <option v-if="!schema.optional && !currentStringValue()" value="" disabled>请选择</option>
+      <option v-if="schema.optional" value="">—</option>
       <option v-for="opt in dynamicOptions" :key="opt" :value="opt">{{ opt }}</option>
     </select>
     <span v-else-if="dynamicOptionsError" class="text-ui text-text-muted">
