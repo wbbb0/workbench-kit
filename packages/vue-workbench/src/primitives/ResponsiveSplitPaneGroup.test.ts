@@ -11,6 +11,20 @@ beforeAll(() => {
 });
 
 describe("ResponsiveSplitPaneGroup active pane state", () => {
+  it("keeps the horizontal grid height definite for pane-local vertical scrolling", () => {
+    const wrapper = mount(ResponsiveSplitPaneGroup, {
+      props: {
+        panes: [
+          { id: "one", label: "One" },
+          { id: "two", label: "Two" }
+        ]
+      }
+    });
+    const layout = wrapper.find(".relative.isolate.grid");
+    expect(layout.attributes("style")).toContain("height: 100%");
+    expect(layout.attributes("style")).not.toContain("min-height: 100%");
+  });
+
   it("falls back from an invalid controlled id without taking control", () => {
     const wrapper = mount(ResponsiveSplitPaneGroup, {
       props: {

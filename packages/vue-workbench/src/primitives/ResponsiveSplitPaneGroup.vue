@@ -99,12 +99,12 @@ const layoutStyle = computed(() => {
     ? {
         gridTemplateColumns: tracks,
         width: `${Math.max(containerWidth.value, layoutExtent.value)}px`,
-        minHeight: "100%"
+        height: "100%"
       }
     : {
         gridTemplateRows: tracks,
         height: `${Math.max(containerHeight.value, layoutExtent.value)}px`,
-        minWidth: "100%"
+        width: "100%"
       };
 });
 
