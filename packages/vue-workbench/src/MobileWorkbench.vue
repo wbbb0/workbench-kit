@@ -112,6 +112,10 @@ function goBack() {
   }
 }
 
+function setMainRegionRef(element: unknown) {
+  props.runtime.mainRegionRef.value = element instanceof HTMLElement ? element : null;
+}
+
 onMounted(() => {
   window.addEventListener("popstate", handlePopState);
 });
@@ -124,7 +128,7 @@ onUnmounted(() => {
 <template>
   <div class="fixed inset-0 flex h-full w-full overflow-hidden bg-surface-app text-text-primary">
     <div
-      :ref="hasMobileRootArea ? undefined : runtime.mainRegionRef"
+      :ref="hasMobileRootArea ? undefined : setMainRegionRef"
       class="absolute inset-0 flex flex-col bg-surface-app transition-transform duration-220 ease-[ease]"
     >
       <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -166,7 +170,7 @@ onUnmounted(() => {
     </div>
     <div
       v-if="hasMobileRootArea"
-      ref="runtime.mainRegionRef"
+      :ref="setMainRegionRef"
       class="absolute inset-0 z-10 flex flex-col bg-surface-app transition-transform duration-220 ease-[ease]"
       :class="isActiveMobileAreaVisible ? 'translate-x-0' : 'pointer-events-none translate-x-full'"
     >
