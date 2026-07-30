@@ -24,6 +24,7 @@
 - `WorkbenchRoot` 是复杂类 VSCode 工作台 shell，适合 mizune-core 这类多区域、多窗口、多菜单应用；不要把它用于普通网页布局。
 - `WorkbenchPageRoot` 是普通 Nuxt/Vue 管理页的轻量 root，负责主题背景、header、内部滚动容器和 runtime host。简单后台页优先用它，再组合 `WorkbenchCardStack`、`WorkbenchFeatureCard`、`WorkbenchDialog` 等组件。
 - 窗口移动、缩放、最大化和边界限制的唯一实现应是 `windows/WindowSurface.vue`。不要在 `WorkbenchDialog`、业务项目弹窗或其它 primitive 里复制 pointer move/resize 逻辑；需要移动/缩放时使用 `useWorkbenchWindows().openDialog()` 并传 `movable`/`resizable`。
+- 通用 pointer 拖动会话统一使用 `composables/usePointerDrag.ts`，由它负责 pointer capture、pointer id、取消和卸载清理；组件只保留各自的尺寸与边界算法。触摸 resize handle 必须声明 `touch-action: none`。
 - `WorkbenchDialog` 是固定位置的兼容弹窗 primitive，保持简单 `v-model` 接口，不承载 runtime window 能力。
 - `WorkbenchLoginPage` 是可复用登录 UI，不包含 API、路由、session、跳转或权限语义；业务项目通过受控 props 和 `submit`/`passkey` 事件接入自己的认证逻辑。
 - `@workbench-kit/vue/style.css` 会设置 `html, body, #app, #__nuxt { height: 100%; overflow: hidden; }`。消费项目必须由 shell 或页面 layout 提供内部滚动容器，例如 `h-dvh flex flex-col overflow-hidden` 加 `main.scrollbar-thin.flex-1.overflow-auto`。

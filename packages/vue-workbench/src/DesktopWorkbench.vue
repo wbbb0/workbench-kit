@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { computed, onUnmounted } from "vue";
+import { computed } from "vue";
 import WorkbenchActivityBar from "./WorkbenchActivityBar.vue";
 import WorkbenchAreaScope from "./WorkbenchAreaScope.vue";
 import TopBar from "./TopBar.vue";
 import StatusBar from "./StatusBar.vue";
-import type { DesktopAreaId, WorkbenchRuntime } from "./runtime/workbenchRuntime";
+import { usePointerDrag } from "./composables/usePointerDrag";
+import WorkbenchSash from "./primitives/WorkbenchSash.vue";
+import {
+  getWorkbenchDesktopAreaSizeRange,
+  type DesktopAreaId,
+  type WorkbenchRuntime
+} from "./runtime/workbenchRuntime";
 import type { WorkbenchStatusbarItem, WorkbenchTopbarMenu } from "./chrome";
 import type { WorkbenchNavItem } from "./navigation";
 import type { WorkbenchView } from "./types";
@@ -35,55 +41,41 @@ const secondarySidebarStyle = computed(() => props.runtime.getDesktopAreaStyle("
 const secondarySidebarSize = computed(() => props.runtime.getDesktopAreaSizePx("secondarySidebar"));
 const bottomPanelStyle = computed(() => props.runtime.getDesktopAreaStyle("bottomPanel"));
 const bottomPanelSize = computed(() => props.runtime.getDesktopAreaSizePx("bottomPanel"));
+const primarySidebarRange = computed(() => getDesktopAreaSizeRange("primarySidebar"));
+const secondarySidebarRange = computed(() => getDesktopAreaSizeRange("secondarySidebar"));
+const bottomPanelRange = computed(() => getDesktopAreaSizeRange("bottomPanel"));
 
 type ResizeAxis = "x" | "y";
 type ActiveResize = {
   areaId: DesktopAreaId;
   axis: ResizeAxis;
   direction: 1 | -1;
-  startPointer: number;
   startSize: number;
 };
 
-let activeResize: ActiveResize | null = null;
-
-function stopDesktopAreaResize() {
-  activeResize = null;
-  window.removeEventListener("pointermove", resizeDesktopArea);
-  window.removeEventListener("pointerup", stopDesktopAreaResize);
-  window.removeEventListener("pointercancel", stopDesktopAreaResize);
+function getDesktopAreaSizeRange(areaId: DesktopAreaId) {
+  return getWorkbenchDesktopAreaSizeRange(props.runtime, areaId);
 }
 
-function resolvePointerPosition(event: PointerEvent, axis: ResizeAxis) {
-  return axis === "x" ? event.clientX : event.clientY;
-}
-
-function resizeDesktopArea(event: PointerEvent) {
-  if (!activeResize) {
-    return;
+const desktopAreaResize = usePointerDrag<ActiveResize>({
+  cursor: (state) => state.axis === "x" ? "col-resize" : "row-resize",
+  onMove({ state, deltaX, deltaY }) {
+    const delta = state.axis === "x" ? deltaX : deltaY;
+    props.runtime.setDesktopAreaSize(
+      state.areaId,
+      state.startSize + delta * state.direction
+    );
   }
-  const delta = resolvePointerPosition(event, activeResize.axis) - activeResize.startPointer;
-  props.runtime.setDesktopAreaSize(
-    activeResize.areaId,
-    activeResize.startSize + delta * activeResize.direction
-  );
-}
+});
+const activeDesktopAreaId = computed(() => desktopAreaResize.activeState.value?.areaId ?? null);
 
 function startDesktopAreaResize(areaId: DesktopAreaId, axis: ResizeAxis, direction: 1 | -1, event: PointerEvent) {
-  if (event.button !== 0) {
-    return;
-  }
-  event.preventDefault();
-  activeResize = {
+  desktopAreaResize.start(event, {
     areaId,
     axis,
     direction,
-    startPointer: resolvePointerPosition(event, axis),
     startSize: props.runtime.getDesktopAreaSizePx(areaId)
-  };
-  window.addEventListener("pointermove", resizeDesktopArea);
-  window.addEventListener("pointerup", stopDesktopAreaResize);
-  window.addEventListener("pointercancel", stopDesktopAreaResize);
+  });
 }
 
 function resizeDesktopAreaBy(areaId: DesktopAreaId, deltaPx: number) {
@@ -111,7 +103,6 @@ function resetDesktopAreaResize(areaId: DesktopAreaId) {
   props.runtime.resetDesktopAreaSize(areaId);
 }
 
-onUnmounted(stopDesktopAreaResize);
 </script>
 
 <template>
@@ -132,35 +123,41 @@ onUnmounted(stopDesktopAreaResize);
           <aside class="scrollbar-thin h-full overflow-x-hidden overflow-y-auto">
             <WorkbenchAreaScope area-id="primarySidebar" :component="primarySidebar" />
           </aside>
-          <div
-            class="absolute inset-y-0 -right-0.5 z-20 w-1 cursor-col-resize bg-transparent before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-border-default hover:bg-accent/25 focus:bg-accent/25 focus:outline-none"
-            role="separator"
-            aria-orientation="vertical"
-            :aria-valuenow="primarySidebarSize"
-            tabindex="0"
+          <WorkbenchSash
+            orientation="vertical"
+            :active="activeDesktopAreaId === 'primarySidebar'"
+            :style="{ left: '100%' }"
+            label="Resize primary sidebar"
+            :value-now="primarySidebarSize"
+            :value-min="primarySidebarRange.min"
+            :value-max="primarySidebarRange.max"
+            :value-text="`${primarySidebarSize} pixels`"
             @pointerdown="startDesktopAreaResize('primarySidebar', 'x', 1, $event)"
             @dblclick="resetDesktopAreaResize('primarySidebar')"
             @keydown="onVerticalResizeKeydown('primarySidebar', 1, $event)"
           />
         </div>
-        <section class="flex min-w-0 flex-1 flex-col overflow-hidden">
+        <section class="relative flex min-w-0 flex-1 flex-col overflow-hidden">
           <main ref="runtime.mainRegionRef" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pr-safe">
             <WorkbenchAreaScope area-id="mainArea" :component="mainArea" />
           </main>
-          <div
+          <WorkbenchSash
             v-if="hasBottomPanel"
-            class="h-1 shrink-0 cursor-row-resize border-t border-border-default bg-surface-sidebar hover:bg-accent/25 focus:bg-accent/25 focus:outline-none"
-            role="separator"
-            aria-orientation="horizontal"
-            :aria-valuenow="bottomPanelSize"
-            tabindex="0"
+            orientation="horizontal"
+            :active="activeDesktopAreaId === 'bottomPanel'"
+            :style="{ top: `calc(100% - ${bottomPanelSize}px)` }"
+            label="Resize bottom panel"
+            :value-now="bottomPanelSize"
+            :value-min="bottomPanelRange.min"
+            :value-max="bottomPanelRange.max"
+            :value-text="`${bottomPanelSize} pixels`"
             @pointerdown="startDesktopAreaResize('bottomPanel', 'y', -1, $event)"
             @dblclick="resetDesktopAreaResize('bottomPanel')"
             @keydown="onHorizontalResizeKeydown"
           />
           <aside
             v-if="hasBottomPanel"
-            class="scrollbar-thin shrink-0 overflow-auto border-t border-border-default bg-surface-panel"
+            class="scrollbar-thin shrink-0 overflow-auto bg-surface-panel"
             :style="bottomPanelStyle"
           >
             <WorkbenchAreaScope area-id="bottomPanel" :component="bottomPanel" />
@@ -171,12 +168,15 @@ onUnmounted(stopDesktopAreaResize);
           class="relative shrink-0 bg-surface-sidebar"
           :style="secondarySidebarStyle"
         >
-          <div
-            class="absolute inset-y-0 -left-0.5 z-20 w-1 cursor-col-resize bg-transparent before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-border-default hover:bg-accent/25 focus:bg-accent/25 focus:outline-none"
-            role="separator"
-            aria-orientation="vertical"
-            :aria-valuenow="secondarySidebarSize"
-            tabindex="0"
+          <WorkbenchSash
+            orientation="vertical"
+            :active="activeDesktopAreaId === 'secondarySidebar'"
+            :style="{ left: '0px' }"
+            label="Resize secondary sidebar"
+            :value-now="secondarySidebarSize"
+            :value-min="secondarySidebarRange.min"
+            :value-max="secondarySidebarRange.max"
+            :value-text="`${secondarySidebarSize} pixels`"
             @pointerdown="startDesktopAreaResize('secondarySidebar', 'x', -1, $event)"
             @dblclick="resetDesktopAreaResize('secondarySidebar')"
             @keydown="onVerticalResizeKeydown('secondarySidebar', -1, $event)"

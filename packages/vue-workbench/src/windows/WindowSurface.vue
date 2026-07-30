@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, useTemplateRef } from "vue";
 import { X } from "lucide-vue-next";
+import { canStartPointerDrag, usePointerDrag } from "../composables/usePointerDrag";
 import { resolveWindowSizing } from "./windowSizing";
 import type {
   WorkbenchWindowBounds,
@@ -85,21 +86,15 @@ const resizeHandles: Array<{
   { key: "se", direction: { x: 1, y: 1 }, className: "bottom-0 right-0 h-2 w-2 translate-x-1/2 translate-y-1/2 cursor-se-resize" }
 ];
 
-let dragState: {
-  pointerId: number;
-  startX: number;
-  startY: number;
+type WindowDragState = {
   originX: number;
   originY: number;
-} | null = null;
+};
 
-let resizeState: {
-  pointerId: number;
-  startX: number;
-  startY: number;
+type WindowResizeState = {
   direction: ResizeDirection;
   originBounds: WorkbenchWindowSizedBounds;
-} | null = null;
+};
 
 function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) {
@@ -116,20 +111,6 @@ function handleSurfacePointerDown(event: PointerEvent) {
     return;
   }
   emit("focus");
-}
-
-function stopDragging() {
-  dragState = null;
-  window.removeEventListener("pointermove", handleWindowPointerMove);
-  window.removeEventListener("pointerup", handleWindowPointerUp);
-  window.removeEventListener("pointercancel", handleWindowPointerUp);
-}
-
-function stopResizing() {
-  resizeState = null;
-  window.removeEventListener("pointermove", handleWindowResizePointerMove);
-  window.removeEventListener("pointerup", handleWindowResizePointerUp);
-  window.removeEventListener("pointercancel", handleWindowResizePointerUp);
 }
 
 function getViewportSize() {
@@ -275,26 +256,17 @@ function restoreFromMaximize() {
   return restored;
 }
 
-function handleWindowPointerMove(event: PointerEvent) {
-  if (!dragState || event.pointerId !== dragState.pointerId) {
-    return;
+const windowDrag = usePointerDrag<WindowDragState>({
+  onMove({ state, deltaX, deltaY }) {
+    emit("move", clampPosition({
+      x: state.originX + deltaX,
+      y: state.originY + deltaY
+    }));
   }
-
-  emit("move", clampPosition({
-    x: dragState.originX + (event.clientX - dragState.startX),
-    y: dragState.originY + (event.clientY - dragState.startY)
-  }));
-}
-
-function handleWindowPointerUp(event: PointerEvent) {
-  if (!dragState || event.pointerId !== dragState.pointerId) {
-    return;
-  }
-  stopDragging();
-}
+});
 
 function handleHeaderPointerDown(event: PointerEvent) {
-  if (event.button !== 0) {
+  if (!canStartPointerDrag(event)) {
     return;
   }
   if (props.inactive) {
@@ -302,16 +274,10 @@ function handleHeaderPointerDown(event: PointerEvent) {
       return;
     }
     const restored = restoreFromMaximize();
-    dragState = {
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
+    windowDrag.start(event, {
       originX: restored?.position.x ?? props.window.position.x,
       originY: restored?.position.y ?? props.window.position.y
-    };
-    window.addEventListener("pointermove", handleWindowPointerMove);
-    window.addEventListener("pointerup", handleWindowPointerUp);
-    window.addEventListener("pointercancel", handleWindowPointerUp);
+    });
     return;
   }
 
@@ -322,45 +288,28 @@ function handleHeaderPointerDown(event: PointerEvent) {
   }
 
   const restored = restoreFromMaximize();
-  dragState = {
-    pointerId: event.pointerId,
-    startX: event.clientX,
-    startY: event.clientY,
+  windowDrag.start(event, {
     originX: restored?.position.x ?? props.window.position.x,
     originY: restored?.position.y ?? props.window.position.y
-  };
-  window.addEventListener("pointermove", handleWindowPointerMove);
-  window.addEventListener("pointerup", handleWindowPointerUp);
-  window.addEventListener("pointercancel", handleWindowPointerUp);
+  });
 }
 
-function handleWindowResizePointerMove(event: PointerEvent) {
-  if (!resizeState || event.pointerId !== resizeState.pointerId) {
-    return;
+const windowResize = usePointerDrag<WindowResizeState>({
+  onMove({ state, deltaX, deltaY }) {
+    const originEdges = resolveBoundsEdges(state.originBounds);
+    const nextEdges = {
+      left: state.direction.x < 0 ? originEdges.left + deltaX : originEdges.left,
+      right: state.direction.x > 0 ? originEdges.right + deltaX : originEdges.right,
+      top: state.direction.y < 0 ? originEdges.top + deltaY : originEdges.top,
+      bottom: state.direction.y > 0 ? originEdges.bottom + deltaY : originEdges.bottom
+    };
+
+    emit("bounds", clampBounds(createBoundsFromEdges(nextEdges, originEdges, state.direction)));
   }
-
-  const deltaX = event.clientX - resizeState.startX;
-  const deltaY = event.clientY - resizeState.startY;
-  const originEdges = resolveBoundsEdges(resizeState.originBounds);
-  const nextEdges = {
-    left: resizeState.direction.x < 0 ? originEdges.left + deltaX : originEdges.left,
-    right: resizeState.direction.x > 0 ? originEdges.right + deltaX : originEdges.right,
-    top: resizeState.direction.y < 0 ? originEdges.top + deltaY : originEdges.top,
-    bottom: resizeState.direction.y > 0 ? originEdges.bottom + deltaY : originEdges.bottom
-  };
-
-  emit("bounds", clampBounds(createBoundsFromEdges(nextEdges, originEdges, resizeState.direction)));
-}
-
-function handleWindowResizePointerUp(event: PointerEvent) {
-  if (!resizeState || event.pointerId !== resizeState.pointerId) {
-    return;
-  }
-  stopResizing();
-}
+});
 
 function handleResizePointerDown(direction: ResizeDirection, event: PointerEvent) {
-  if (!canResize.value || event.button !== 0) {
+  if (!canResize.value || !canStartPointerDrag(event)) {
     return;
   }
 
@@ -370,16 +319,10 @@ function handleResizePointerDown(direction: ResizeDirection, event: PointerEvent
   event.preventDefault();
   event.stopPropagation();
   const restored = restoreFromMaximize();
-  resizeState = {
-    pointerId: event.pointerId,
-    startX: event.clientX,
-    startY: event.clientY,
+  windowResize.start(event, {
     direction,
     originBounds: restored ?? resolveCurrentBounds()
-  };
-  window.addEventListener("pointermove", handleWindowResizePointerMove);
-  window.addEventListener("pointerup", handleWindowResizePointerUp);
-  window.addEventListener("pointercancel", handleWindowResizePointerUp);
+  });
 }
 
 function handleHeaderDoubleClick(event: MouseEvent) {
@@ -449,8 +392,6 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  stopDragging();
-  stopResizing();
   window.removeEventListener("resize", clampWindowToViewport);
 });
 
@@ -473,7 +414,7 @@ function handleFocusIn() {
     @pointerdown="handleSurfacePointerDown"
   >
     <header
-      class="flex items-start gap-3 border-b border-border-default bg-surface-sidebar px-4 py-3 select-none"
+      class="flex touch-none items-start gap-3 border-b border-border-default bg-surface-sidebar px-4 py-3 select-none"
       :class="headerCursorClass"
       @dblclick="handleHeaderDoubleClick"
       @pointerdown="handleHeaderPointerDown"
@@ -498,7 +439,7 @@ function handleFocusIn() {
       <div
         v-for="handle in resizeHandles"
         :key="handle.key"
-        class="absolute z-10 bg-transparent"
+        class="window-resize-handle absolute z-10 touch-none bg-transparent"
         :class="handle.className"
         data-window-no-focus
         :data-window-resize-handle="handle.key"
@@ -511,5 +452,25 @@ function handleFocusIn() {
 <style scoped>
 .window-inactive {
   filter: contrast(0.74) brightness(0.94);
+}
+
+@media (any-pointer: coarse) {
+  .window-resize-handle[data-window-resize-handle="n"],
+  .window-resize-handle[data-window-resize-handle="s"] {
+    height: 24px;
+  }
+
+  .window-resize-handle[data-window-resize-handle="e"],
+  .window-resize-handle[data-window-resize-handle="w"] {
+    width: 24px;
+  }
+
+  .window-resize-handle[data-window-resize-handle="ne"],
+  .window-resize-handle[data-window-resize-handle="nw"],
+  .window-resize-handle[data-window-resize-handle="se"],
+  .window-resize-handle[data-window-resize-handle="sw"] {
+    width: 24px;
+    height: 24px;
+  }
 }
 </style>

@@ -3,4 +3,6 @@ export type WorkbenchTabStripItem = {
   label: string;
   title?: string;
   disabled?: boolean;
+  tabId?: string;
+  controls?: string;
 };

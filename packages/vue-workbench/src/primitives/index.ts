@@ -23,8 +23,16 @@ export { default as WorkbenchDynamicTabs } from "./WorkbenchDynamicTabs.vue";
 export type { WorkbenchDynamicTabItem } from "./dynamicTabsTypes.js";
 export { default as WorkbenchTabStrip } from "./WorkbenchTabStrip.vue";
 export type { WorkbenchTabStripItem } from "./tabStripTypes.js";
+export { default as WorkbenchSash } from "./WorkbenchSash.vue";
 export { default as TreeNodeShell } from "./TreeNodeShell.vue";
 export { default as ResponsiveSplitPane } from "./ResponsiveSplitPane.vue";
+export { default as ResponsiveSplitPaneGroup } from "./ResponsiveSplitPaneGroup.vue";
+export type {
+  ResponsiveSplitPaneCompactMode,
+  ResponsiveSplitPaneItem,
+  ResponsiveSplitPaneOrientation,
+  ResponsiveSplitPaneSlotScope
+} from "./responsiveSplitPaneTypes.js";
 export { default as PagedListPane } from "./PagedListPane.vue";
 export { default as ResizableDisclosureStack } from "./ResizableDisclosureStack.vue";
 export type { ResizableDisclosureLayout, ResizableDisclosureSection } from "./disclosureStackTypes.js";

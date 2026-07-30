@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./composables": "./src/composables/index.ts",
     "./runtime": "./src/runtime-api.ts",
     "./theme/midnight.css": "./src/themes/midnight.css",
     "./style.css": "./src/style.css"

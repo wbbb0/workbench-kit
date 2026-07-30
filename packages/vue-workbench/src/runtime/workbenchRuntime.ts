@@ -12,12 +12,17 @@ export type DesktopAreaStyle = {
   width?: string;
   height?: string;
 };
+export type DesktopAreaSizeRange = {
+  min: number;
+  max: number;
+};
 
 export type WorkbenchRuntime = {
   view: ComputedRef<WorkbenchView>;
   mainRegionRef: Ref<HTMLElement | null>;
   keyboardAvoidanceBoundary: ComputedRef<HTMLElement | null>;
   getDesktopAreaSizePx: (areaId: DesktopAreaId) => number;
+  getDesktopAreaSizeRange?: (areaId: DesktopAreaId) => DesktopAreaSizeRange;
   getDesktopAreaStyle: (areaId: DesktopAreaId) => DesktopAreaStyle;
   clampDesktopAreaSize: (areaId: DesktopAreaId, sizePx: number) => number;
   setDesktopAreaSize: (areaId: DesktopAreaId, sizePx: number) => void;
@@ -54,6 +59,16 @@ const defaultDesktopAreaSize: Record<DesktopAreaId, { defaultSizePx: number; min
     maxSizePx: 520
   }
 };
+
+export function getWorkbenchDesktopAreaSizeRange(
+  runtime: WorkbenchRuntime,
+  areaId: DesktopAreaId
+): DesktopAreaSizeRange {
+  return runtime.getDesktopAreaSizeRange?.(areaId) ?? {
+    min: runtime.clampDesktopAreaSize(areaId, Number.MIN_SAFE_INTEGER),
+    max: runtime.clampDesktopAreaSize(areaId, Number.MAX_SAFE_INTEGER)
+  };
+}
 
 function resolveDesktopAreaStorageKey(areaId: DesktopAreaId) {
   return `${desktopAreaStoragePrefix}.${areaId}.size`;
@@ -156,6 +171,13 @@ export function createWorkbenchRuntime(view: ComputedRef<WorkbenchView>): Workbe
     return desktopAreaSizesPx[areaId];
   }
 
+  function getDesktopAreaSizeRange(areaId: DesktopAreaId): DesktopAreaSizeRange {
+    return {
+      min: resolveDesktopAreaMinSize(areaId),
+      max: resolveDesktopAreaMaxSize(areaId)
+    };
+  }
+
   function getDesktopAreaStyle(areaId: DesktopAreaId) {
     const size = `${getDesktopAreaSizePx(areaId)}px`;
     return areaId === "bottomPanel" ? { height: size } : { width: size };
@@ -227,6 +249,7 @@ export function createWorkbenchRuntime(view: ComputedRef<WorkbenchView>): Workbe
     mainRegionRef,
     keyboardAvoidanceBoundary,
     getDesktopAreaSizePx,
+    getDesktopAreaSizeRange,
     getDesktopAreaStyle,
     clampDesktopAreaSize,
     setDesktopAreaSize,

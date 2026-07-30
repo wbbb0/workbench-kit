@@ -147,6 +147,94 @@ configureWorkbenchViewportDetector({
 });
 ```
 
+## Responsive Split Panes
+
+Use `ResponsiveSplitPane` for the common two-pane shape. Its default compact behavior is a tab strip. Control the selected pane when a list selection should reveal its detail pane:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { ResponsiveSplitPane } from "@workbench-kit/vue";
+
+const activePaneId = ref<"primary" | "secondary">("primary");
+
+function selectItem() {
+  activePaneId.value = "secondary";
+}
+</script>
+
+<template>
+  <ResponsiveSplitPane
+    v-model:active-pane-id="activePaneId"
+    primary-title="Items"
+    secondary-title="Details"
+  >
+    <template #primary>...</template>
+    <template #secondary>...</template>
+  </ResponsiveSplitPane>
+</template>
+```
+
+Use `ResponsiveSplitPaneGroup` when a screen has more than two panes. Pane ids are stable slot and persistence identities. Higher size priority receives new space earlier and is compressed later; directional priorities can override that default:
+
+```vue
+<ResponsiveSplitPaneGroup
+  v-model:active-pane-id="activePaneId"
+  storage-key="project.workspace"
+  :panes="[
+    { id: 'files', label: 'Files', defaultSize: 280, minSize: 220, maxSize: 420, sizePriority: 20 },
+    { id: 'editor', label: 'Editor', minSize: 360, sizePriority: 100, grow: 1 },
+    { id: 'details', label: 'Details', defaultSize: 320, minSize: 240, maxSize: 480, sizePriority: 40 }
+  ]"
+>
+  <template #files>...</template>
+  <template #editor>...</template>
+  <template #details>...</template>
+</ResponsiveSplitPaneGroup>
+```
+
+Pane fields:
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Stable slot, active-pane, and persisted-size identity. It must be unique and non-empty. |
+| `label` | Visible compact-tab name and fallback separator name. |
+| `title` | Optional tab tooltip and preferred separator name. |
+| `tabDisabled` | Prevents this pane from becoming the active compact tab. The pane remains visible in desktop and stacked layouts. |
+| `defaultSize` | Initial preferred size in pixels on the normal layout axis. |
+| `defaultCompactSize` | Initial preferred size for vertical stacked compact layout; falls back to `defaultSize`. |
+| `minSize` / `maxSize` | Hard pane constraints in pixels. |
+| `sizePriority` | Shared grow/shrink priority when a directional override is absent. |
+| `growPriority` | Higher values receive automatically available space first. |
+| `shrinkPriority` | Higher values are protected from automatic compression longer. |
+| `grow` | Relative automatic-growth weight among panes with the same priority. `0` disables automatic growth, but does not prevent direct or cascading sash resize. |
+
+Direct sash drags resize adjacent panes first, then cascade within the same side after a pane reaches its minimum or maximum. If pane minimum sizes cannot fit, the group preserves those constraints and provides overflow on the layout axis. If pane maximum sizes consume less than the container, the remaining trailing area stays empty.
+
+Set `compact-mode="stacked"` explicitly when a compact layout should render panes vertically instead of using tabs.
+
+For two-pane layouts, `primary-title` and `secondary-title` provide the visible tab names and separator names. The primary and secondary slots remain available in both compact modes and receive `compact`, `stacked`, and `active` state.
+
+`active-pane-id` supports both controlled `v-model` and uncontrolled `default-active-pane-id` usage. Invalid or `tabDisabled` ids fall back to the first enabled tab. Calling the exposed `activatePane(id)` method follows the same validation.
+
+When `storage-key` is set, preferred horizontal and vertical sizes and the latest user-resize anchors are stored under a versioned `.splitGroup.v1` key. Container compression only affects resolved layout sizes and does not overwrite long-term preferences. A drag anchor keeps the current boundary exact while later expansion restores untouched pane preferences before distributing additional growth. Pane ids therefore need to remain stable across releases; old two-pane storage keys are intentionally not migrated.
+
+### Sash And Pointer Sessions
+
+`WorkbenchSash` is the shared visual and accessible separator primitive. It is absolutely positioned over a layout boundary, does not consume grid/flex space, and requires a complete `value-now`, `value-min`, and `value-max` range. The consumer owns size calculations and keyboard behavior.
+
+`usePointerDrag` and `canStartPointerDrag` are available from both `@workbench-kit/vue` and `@workbench-kit/vue/composables`. The composable owns pointer capture, pointer-id filtering, cancellation, lost capture, blur/unmount cleanup, and an optional global cursor. It intentionally does not own geometry or size constraints.
+
+```ts
+import { usePointerDrag } from "@workbench-kit/vue/composables";
+
+const resize = usePointerDrag({
+  cursor: "col-resize",
+  onMove: ({ deltaX }) => updateLayout(deltaX),
+  onEnd: ({ cancelled }) => finishLayout(cancelled)
+});
+```
+
 ## Login Pages
 
 Use `WorkbenchLoginPage` for shared login UI. It is intentionally UI-only: the consuming application owns session checks, password/passkey APIs, redirects, and confirmation dialogs.
@@ -219,7 +307,7 @@ const result = await openDialog<{ scopes: string[] }>({
 });
 ```
 
-`WindowSurface` is the only implementation of drag, resize, maximize, and viewport bounds. Do not implement pointer drag/resize behavior in app wrappers or primitives.
+`WindowSurface` is the only implementation of window movement, window sizing, maximize, and viewport bounds. Shared pointer-session mechanics live in `usePointerDrag`; do not duplicate window geometry behavior in app wrappers or primitives.
 
 `WorkbenchConfirmDialog` is intentionally backward-compatible with the basic confirm shape:
 

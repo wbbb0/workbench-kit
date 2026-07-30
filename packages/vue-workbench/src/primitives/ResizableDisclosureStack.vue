@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch } from "vue";
+import { usePointerDrag } from "../composables/usePointerDrag";
 import type { ResizableDisclosureLayout, ResizableDisclosureSection } from "./disclosureStackTypes";
 
 const props = withDefaults(defineProps<{
@@ -16,18 +17,16 @@ const emit = defineEmits<{
 }>();
 
 const sectionLayout = reactive<ResizableDisclosureLayout>({});
-const resizing = ref<{
+type SectionResizeState = {
   previousSectionId: string;
   sectionId: string;
-  startY: number;
   previousStartHeight: number;
   sectionStartHeight: number;
   previousStartWeight: number;
   sectionStartWeight: number;
-  pointerId: number;
-  handle: HTMLElement;
   moved: boolean;
-} | null>(null);
+};
+
 const suppressHeaderClickSectionId = ref<string | null>(null);
 const sectionContentElements = new Map<string, HTMLElement>();
 
@@ -123,9 +122,6 @@ function onSectionHeaderClick(sectionId: string) {
 }
 
 function startSectionResize(event: PointerEvent, sectionId: string) {
-  if (event.button !== 0) {
-    return;
-  }
   if (!isExpanded(sectionId)) {
     return;
   }
@@ -138,35 +134,18 @@ function startSectionResize(event: PointerEvent, sectionId: string) {
   if (!previousElement || !sectionElement) {
     return;
   }
-  const handle = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
-  if (!handle) {
-    return;
-  }
-  handle.setPointerCapture?.(event.pointerId);
-  resizing.value = {
+  sectionResize.start(event, {
     previousSectionId,
     sectionId,
-    startY: event.clientY,
     previousStartHeight: previousElement.getBoundingClientRect().height,
     sectionStartHeight: sectionElement.getBoundingClientRect().height,
     previousStartWeight: sectionLayout[previousSectionId]?.weight ?? props.defaultWeight,
     sectionStartWeight: sectionLayout[sectionId]?.weight ?? props.defaultWeight,
-    pointerId: event.pointerId,
-    handle,
     moved: false
-  };
-  window.addEventListener("pointermove", onSectionResize);
-  window.addEventListener("pointerup", stopSectionResize, { once: true });
-  window.addEventListener("pointercancel", stopSectionResize, { once: true });
-  window.addEventListener("blur", stopSectionResize, { once: true });
+  });
 }
 
-function onSectionResize(event: PointerEvent) {
-  const active = resizing.value;
-  if (!active) {
-    return;
-  }
-  const delta = event.clientY - active.startY;
+function onSectionResize(active: SectionResizeState, delta: number) {
   if (Math.abs(delta) >= 3) {
     active.moved = true;
     suppressHeaderClickSectionId.value = active.sectionId;
@@ -174,7 +153,6 @@ function onSectionResize(event: PointerEvent) {
   if (!active.moved) {
     return;
   }
-  event.preventDefault();
   const totalHeight = active.previousStartHeight + active.sectionStartHeight;
   const totalWeight = active.previousStartWeight + active.sectionStartWeight;
   const minHeight = Math.min(props.minSectionSize, totalHeight / 2);
@@ -191,24 +169,25 @@ function onSectionResize(event: PointerEvent) {
   emitLayout();
 }
 
-function stopSectionResize() {
-  const active = resizing.value;
-  if (active?.handle.hasPointerCapture?.(active.pointerId)) {
-    active.handle.releasePointerCapture(active.pointerId);
-  }
-  if (active?.moved) {
+function finishSectionResize(active: SectionResizeState) {
+  if (active.moved) {
     window.setTimeout(() => {
       if (suppressHeaderClickSectionId.value === active.sectionId) {
         suppressHeaderClickSectionId.value = null;
       }
     }, 0);
   }
-  resizing.value = null;
-  window.removeEventListener("pointermove", onSectionResize);
-  window.removeEventListener("pointerup", stopSectionResize);
-  window.removeEventListener("pointercancel", stopSectionResize);
-  window.removeEventListener("blur", stopSectionResize);
 }
+
+const sectionResize = usePointerDrag<SectionResizeState>({
+  onMove({ state, deltaY }) {
+    onSectionResize(state, deltaY);
+  },
+  onEnd({ state }) {
+    finishSectionResize(state);
+  }
+});
+const resizing = sectionResize.activeState;
 
 function emitLayout() {
   emit("update:layout", Object.fromEntries(
@@ -232,9 +211,6 @@ function roundWeight(value: number) {
   return Math.max(0.1, Math.round(value * 1000) / 1000);
 }
 
-onBeforeUnmount(() => {
-  stopSectionResize();
-});
 </script>
 
 <template>
