@@ -73,7 +73,7 @@ export function usePointerDrag<TState>(options: PointerDragOptions<TState>) {
       completed.target.releasePointerCapture(completed.pointerId);
     }
     options.onEnd?.({
-      event,
+      ...(event ? { event } : {}),
       state: completed.state,
       cancelled
     });
