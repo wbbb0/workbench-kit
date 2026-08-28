@@ -47,6 +47,31 @@ export type UiNode =
   | { kind: "record"; schema: SchemaMeta; key: UiNode; value: UiNode }
   | { kind: "union"; schema: SchemaMeta; options: UiNode[] };
 
+/** 动态分组选项中的一个可选值。key 只用于选择器身份，value 是最终写回草稿的完整值。 */
+export interface EditorOption {
+  key: string;
+  label: string;
+  value: unknown;
+  description?: string;
+  disabled?: boolean;
+}
+
+/** 动态选项分组。group key 与 option key 都应在各自层级内稳定且唯一。 */
+export interface EditorOptionGroup {
+  key: string;
+  label: string;
+  options: EditorOption[];
+}
+
+export type EditorOptionsResult =
+  | { options: string[] }
+  | { groups: EditorOptionGroup[] };
+
+/** record 节点显式结构变更通知，供调用方处理跨资源联动。 */
+export type EditorRecordMutationEvent =
+  | { kind: "rename"; path: Array<string | number>; key: string; nextKey: string }
+  | { kind: "remove"; path: Array<string | number>; key: string };
+
 /** layered 资源中的一层。 */
 export interface LayerInfo {
   key: string;
@@ -131,5 +156,5 @@ export interface ResourceEditorClient {
   /** 保存草稿值。失败时抛出带用户可读 message 的 Error。 */
   save(key: string, value: unknown): Promise<ResourceEditorSaveResult>;
   /** 可选动态选项接口，供业务项目扩展字段选择器。 */
-  options?(key: string): Promise<{ options: string[] }>;
+  options?(key: string): Promise<EditorOptionsResult>;
 }

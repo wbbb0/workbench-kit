@@ -42,6 +42,10 @@ watchEffect(() => {
       return;
     }
     editorClient.options(key).then((res) => {
+      if (!("options" in res)) {
+        dynamicOptionsError.value = true;
+        return;
+      }
       dynamicOptions.value = res.options;
     }).catch(() => {
       dynamicOptionsError.value = true;

@@ -2,8 +2,9 @@
 import { ref, computed, watch } from "vue";
 import { Plus, Trash2, ArrowUp, ArrowDown, Pencil, Check, Undo2, Copy } from "lucide-vue-next";
 import SchemaField from "./SchemaField.vue";
+import GroupedOptionPicker from "./GroupedOptionPicker.vue";
 import { TreeNodeShell } from "@workbench-kit/vue-workbench";
-import type { EditorFeatures, UiNode } from "../types";
+import type { EditorFeatures, EditorRecordMutationEvent, UiNode } from "../types";
 import { canUnsetNodeValue, deepEqual, removeValueAtPathAndPrune, type PathSegment } from "../editorState";
 
 type HeaderActionIcon = "trash" | "up" | "down" | "pencil" | "check" | "restore" | "copy";
@@ -52,6 +53,8 @@ const props = defineProps<{
   headerEditPlaceholder?: string;
   forceHeader?: boolean;
   onHeaderEditSubmit?: (value: string) => void;
+  /** record 显式 rename/remove 前的可选异步 guard；返回 false 时取消本地变更。 */
+  beforeRecordMutation?: (event: EditorRecordMutationEvent) => boolean | Promise<boolean>;
 }>();
 
 const emit = defineEmits<{ "update:modelValue": [value: unknown] }>();
@@ -59,7 +62,8 @@ const emit = defineEmits<{ "update:modelValue": [value: unknown] }>();
 const depth = computed(() => props.depth ?? 0);
 const path = computed(() => props.path ?? []);
 const open = ref(depth.value <= 0); // 若要默认展开n层，改为 depth.value <= n
-const interactionsDisabled = computed(() => props.disabled || props.readOnly);
+const recordMutationPending = ref(false);
+const interactionsDisabled = computed(() => props.disabled || props.readOnly || recordMutationPending.value);
 
 function asObj(value: unknown): Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value)
@@ -355,10 +359,12 @@ function addRecordEntry() {
   emit("update:modelValue", next);
 }
 
-function removeRecordEntry(key: string) {
-  const next = cloneRecord(displayedRecord.value);
-  delete next[key];
-  emitObjectWithoutUndefined(next);
+async function removeRecordEntry(key: string) {
+  await commitRecordMutation({ kind: "remove", path: [...path.value], key }, () => {
+    const next = cloneRecord(displayedRecord.value);
+    delete next[key];
+    emitObjectWithoutUndefined(next);
+  });
 }
 
 function duplicateRecordEntry(key: string) {
@@ -377,15 +383,36 @@ function duplicateRecordEntry(key: string) {
   emit("update:modelValue", Object.fromEntries(entries));
 }
 
-function renameRecordKey(oldKey: string, rawKey: string) {
+async function renameRecordKey(oldKey: string, rawKey: string) {
   const trimmedKey = rawKey.trim();
   if (!trimmedKey || trimmedKey === oldKey) return;
 
   const entries = recordEntries.value.map(([key, value]) => [key, value] as const);
   if (entries.some(([key]) => key === trimmedKey)) return;
 
-  const renamed = entries.map(([key, value]) => (key === oldKey ? [trimmedKey, value] : [key, value]));
-  emit("update:modelValue", Object.fromEntries(renamed));
+  await commitRecordMutation({
+    kind: "rename",
+    path: [...path.value],
+    key: oldKey,
+    nextKey: trimmedKey
+  }, () => {
+    const renamed = entries.map(([key, value]) => (key === oldKey ? [trimmedKey, value] : [key, value]));
+    emit("update:modelValue", Object.fromEntries(renamed));
+    editingRecordKey.value = null;
+  });
+}
+
+async function commitRecordMutation(event: EditorRecordMutationEvent, commit: () => void): Promise<void> {
+  if (recordMutationPending.value) return;
+  recordMutationPending.value = true;
+  try {
+    if (props.beforeRecordMutation && !await props.beforeRecordMutation(event)) return;
+    commit();
+  } catch {
+    // Guard 拒绝或失败时保持原值；业务层负责展示具体错误。
+  } finally {
+    recordMutationPending.value = false;
+  }
 }
 
 function moveRecordEntry(key: string, offset: -1 | 1) {
@@ -616,6 +643,61 @@ function onUnionSelect(event: Event) {
     />
   </div>
 
+  <div
+    v-else-if="node.kind === 'group' && node.schema.dynamicRef"
+    :class="['editor-field-row flex min-w-0 flex-col items-stretch gap-1 py-1 pr-0', nodeClasses]"
+  >
+    <div v-if="showFieldHeader" class="flex min-w-0 items-center justify-between gap-2 py-px">
+      <div class="min-w-0 flex flex-1 items-center gap-1">
+        <template v-if="headerEditing">
+          <input
+            class="input-base h-7 min-w-0 flex-1 rounded-md px-2 font-mono text-small"
+            v-model="headerEditDraft"
+            :placeholder="headerEditPlaceholder ?? '输入名称'"
+            :disabled="interactionsDisabled"
+            autofocus
+            @blur="onHeaderEditBlur"
+            @keydown.enter.prevent="onHeaderEditEnter"
+          />
+        </template>
+        <span v-else-if="label" class="min-w-0 flex items-center gap-1 truncate text-small leading-[1.3]" :title="description || label">
+          <span :class="[
+            currentPathDirty ? 'text-text-accent' : 'text-text-secondary',
+            showLocalValue ? 'font-bold' : 'font-medium'
+          ]">
+            {{ label }}
+            <span v-if="node.schema.optional" class="ml-px text-text-subtle">?</span>
+          </span>
+          <span v-if="currentPathDirty" class="editor-dirty-dot" aria-hidden="true"></span>
+        </span>
+      </div>
+      <div class="flex shrink-0 items-center gap-1">
+        <span v-if="headerMeta !== undefined" class="tree-meta font-mono">{{ headerMeta }}</span>
+        <button
+          v-for="action in mergedHeaderActions"
+          :key="action.key"
+          class="flex items-center rounded-sm bg-transparent p-1 text-text-subtle hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+          :class="action.danger ? 'hover:text-danger' : ''"
+          :title="action.title"
+          :disabled="interactionsDisabled || action.disabled"
+          @click.stop="onHeaderActionClick(action)"
+        >
+          <component :is="actionIcon(action.icon)" :size="12" :stroke-width="2" />
+        </button>
+      </div>
+    </div>
+    <GroupedOptionPicker
+      :dynamic-ref="node.schema.dynamicRef"
+      :model-value="modelValue"
+      :effective-value="effectiveValue"
+      :inherited="inherited"
+      :default-value="defaultValue"
+      :disabled="disabled"
+      :read-only="readOnly"
+      @update:model-value="emit('update:modelValue', $event)"
+    />
+  </div>
+
   <div v-else-if="node.kind === 'group'" :class="nodeClasses">
     <TreeNodeShell v-if="showGroupHeader" collapsible :expanded="open" :meta="headerMeta" :child-inset="false" @toggle="open = !open">
       <template #label>
@@ -668,6 +750,7 @@ function onUnionSelect(event: Event) {
           :depth="depth + 1"
           :disabled="disabled"
           :read-only="readOnly"
+          :before-record-mutation="beforeRecordMutation"
           @update:model-value="onGroupChildUpdate(key, $event)"
         />
       </div>
@@ -691,6 +774,7 @@ function onUnionSelect(event: Event) {
         :depth="depth + 1"
         :disabled="disabled"
         :read-only="readOnly"
+        :before-record-mutation="beforeRecordMutation"
         @update:model-value="onGroupChildUpdate(key, $event)"
       />
     </div>
@@ -753,6 +837,7 @@ function onUnionSelect(event: Event) {
             :depth="depth + 1"
             :disabled="disabled"
             :read-only="readOnly"
+            :before-record-mutation="beforeRecordMutation"
             :force-header="!isComplexNode(node.item)"
             class="min-w-0 flex-1"
             @update:model-value="onArrayItemUpdate(idx, $event)"
@@ -823,8 +908,9 @@ function onUnionSelect(event: Event) {
             :depth="depth + 1"
             :disabled="disabled"
             :read-only="readOnly"
+            :before-record-mutation="beforeRecordMutation"
             :force-header="true"
-            :on-header-edit-submit="(rawKey: string) => { renameRecordKey(key, rawKey); editingRecordKey = null; }"
+            :on-header-edit-submit="(rawKey: string) => renameRecordKey(key, rawKey)"
             class="min-w-0 flex-1"
             @update:model-value="onRecordValueUpdate(key, $event)"
           />
@@ -862,6 +948,7 @@ function onUnionSelect(event: Event) {
       :depth="depth + 1"
       :disabled="disabled"
       :read-only="readOnly"
+      :before-record-mutation="beforeRecordMutation"
       @update:model-value="emit('update:modelValue', $event)"
     />
   </div>

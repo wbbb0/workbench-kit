@@ -155,6 +155,36 @@ configureResourceEditorClient(editorApi);
 - `effectiveValue` 是最终生效值。
 - `editorFeatures` 控制参考背景、unset 行为和 draft effective 计算方式。
 
+`options(key)` 是可选的动态选项接口。字符串节点继续使用扁平清单：
+
+```ts
+{ options: ["alpha", "beta"] }
+```
+
+当 `UiNode.kind === "group"` 且对象 schema 带有 `dynamicRef` 时，`SchemaNode` 会把该节点渲染为通用的两级联动选择器。此时接口返回分组清单：
+
+```ts
+{
+  groups: [
+    {
+      key: "group-a",
+      label: "分组 A",
+      options: [
+        {
+          key: "item-a",
+          label: "选项 A",
+          value: { source: "group-a", item: "item-a" },
+          description: "可选说明",
+          disabled: false
+        }
+      ]
+    }
+  ]
+}
+```
+
+`key` 只承担选择器身份，`value` 是选择后写回草稿的完整值。切换分组时，新分组若有同 key 的可用选项，会自动保留该选项并写回新分组的完整 `value`；否则清空当前值。
+
 ## createResourceEditorState
 
 `createResourceEditorState` 封装资源列表、选中项、加载、草稿、校验、保存和 reload。
@@ -213,6 +243,11 @@ import { useConfigEditor } from "./useConfigEditor";
 
 const editor = useConfigEditor();
 
+async function beforeRecordMutation(event) {
+  // 可在这里确认危险操作，或先完成其它资源的联动准备。
+  return window.confirm(event.kind === "remove" ? "确认删除？" : "确认重命名？");
+}
+
 onMounted(() => {
   void editor.refreshResources();
 });
@@ -240,11 +275,14 @@ onMounted(() => {
         :stored-value="editor.storedDraftValue"
         :effective-value="editor.effectiveValue"
         :editor-features="editor.model.editorFeatures"
+        :before-record-mutation="beforeRecordMutation"
       />
     </div>
   </section>
 </template>
 ```
+
+`beforeRecordMutation` 会在 record 的显式 rename/remove 写入本地草稿前调用。事件包含 record 节点的 `path`、原 `key`，rename 还包含 `nextKey`；返回或解析为 `false` 会取消变更。回调会递归传递，因此通常只需在根 `SchemaNode` 上设置。
 
 ## 职责边界
 
