@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { Plus, Trash2, ArrowUp, ArrowDown, Pencil, Check, Undo2, Copy } from "lucide-vue-next";
+import { projectSchemaVariant } from "../schemaVariant";
 import SchemaField from "./SchemaField.vue";
 import GroupedOptionPicker from "./GroupedOptionPicker.vue";
 import { TreeNodeShell } from "@workbench-kit/vue-workbench";
@@ -284,8 +285,15 @@ function onArrayItemUpdate(index: number, childValue: unknown) {
   emit("update:modelValue", next);
 }
 
+function initialNodeValue(node: UiNode): unknown {
+  if (node.kind !== "union" || !node.schema.discriminator) return null;
+  if (node.schema.hasDefault) return jsonClone(node.schema.defaultValue);
+  return node.options[0] ? projectSchemaVariant(node.options[0], {}) : null;
+}
+
 function addArrayItem() {
-  emit("update:modelValue", [...displayedItems.value, null]);
+  const value = props.node.kind === "array" ? initialNodeValue(props.node.item) : null;
+  emit("update:modelValue", [...displayedItems.value, value]);
 }
 
 function removeArrayItem(index: number) {
@@ -355,7 +363,7 @@ function addRecordEntry() {
     index += 1;
     key = `key_${index}`;
   }
-  next[key] = null;
+  next[key] = props.node.kind === "record" ? initialNodeValue(props.node.value) : null;
   emit("update:modelValue", next);
 }
 
@@ -483,9 +491,17 @@ const displayedUnionValue = computed(() =>
       ? props.effectiveValue
       : props.defaultValue
 );
-const matchedUnionIdx = computed(() => unionOptions.value.findIndex((option) => nodeMatchesValue(option, displayedUnionValue.value)));
+const matchedUnionIdx = computed(() => unionOptions.value.findIndex((option) => {
+  const discriminator = props.node.schema.discriminator;
+  const value = displayedUnionValue.value;
+  if (discriminator && option.kind === "group" && isPlainObject(value)) {
+    const field = option.children[discriminator];
+    return field ? nodeMatchesValue(field.node, value[discriminator]) : false;
+  }
+  return nodeMatchesValue(option, value);
+}));
 const activeUnionIdx = computed(() => {
-  if (props.readOnly) {
+  if (props.readOnly || props.node.schema.discriminator) {
     return matchedUnionIdx.value >= 0 ? matchedUnionIdx.value : 0;
   }
   return selectedUnionIdx.value;
@@ -585,9 +601,34 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value);
 }
 
+const activeUnionNode = computed(() => {
+  const node = unionOptions.value[activeUnionIdx.value];
+  const discriminator = props.node.schema.discriminator;
+  if (!node || node.kind !== "group" || !discriminator) return node;
+  return { ...node, children: Object.fromEntries(Object.entries(node.children).filter(([key]) => key !== discriminator)) };
+});
+
+function onUnionValueUpdate(value: unknown) {
+  const discriminator = props.node.schema.discriminator;
+  const option = unionOptions.value[activeUnionIdx.value];
+  if (discriminator && option?.kind === "group" && isPlainObject(value)) {
+    const field = option.children[discriminator]?.node.schema;
+    if (field?.kind === "literal") {
+      emit("update:modelValue", { ...value, [discriminator]: field.value });
+      return;
+    }
+  }
+  emit("update:modelValue", value);
+}
+
 function onUnionSelect(event: Event) {
-  selectedUnionIdx.value = parseInt((event.target as HTMLSelectElement).value, 10);
-  emit("update:modelValue", null);
+  const index = Number((event.target as HTMLSelectElement).value);
+  const option = unionOptions.value[index];
+  if (interactionsDisabled.value || !option) return;
+  selectedUnionIdx.value = index;
+  emit("update:modelValue", props.node.schema.discriminator
+    ? projectSchemaVariant(option, displayedUnionValue.value ?? {})
+    : null);
 }
 </script>
 
@@ -928,7 +969,31 @@ function onUnionSelect(event: Event) {
 
   <div v-else-if="node.kind === 'union'" :class="nodeClasses">
     <div class="flex flex-col items-stretch gap-1 py-1">
-      <span class="text-small leading-[1.3] text-text-muted">{{ label }}</span>
+      <div class="flex min-w-0 items-center justify-between gap-2">
+        <input
+          v-if="node.schema.discriminator && headerEditing"
+          v-model="headerEditDraft"
+          class="input-base h-7 min-w-0 flex-1 rounded-md px-2 font-mono text-small"
+          :placeholder="headerEditPlaceholder ?? '输入名称'"
+          :disabled="interactionsDisabled"
+          @blur="onHeaderEditBlur"
+          @keydown.enter.prevent="onHeaderEditEnter"
+        />
+        <span v-else class="text-small leading-[1.3] text-text-muted" :title="description">{{ label }}</span>
+        <div v-if="node.schema.discriminator" class="flex shrink-0 items-center gap-1">
+          <button
+            v-for="action in mergedHeaderActions"
+            :key="action.key"
+            class="flex items-center rounded-sm bg-transparent p-1 text-text-subtle hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-40"
+            :class="action.danger ? 'hover:text-danger' : ''"
+            :title="action.title"
+            :disabled="interactionsDisabled || action.disabled"
+            @click.stop="onHeaderActionClick(action)"
+          >
+            <component :is="actionIcon(action.icon)" :size="12" :stroke-width="2" />
+          </button>
+        </div>
+      </div>
       <select class="input-base min-h-6 max-w-60 px-1.5 py-0.5 text-small" :value="activeUnionIdx" :disabled="interactionsDisabled" @change="onUnionSelect">
         <option v-for="(opt, idx) in unionOptions" :key="idx" :value="idx">
           {{ getUnionOptionLabel(opt, idx) }}
@@ -936,8 +1001,9 @@ function onUnionSelect(event: Event) {
       </select>
     </div>
     <SchemaNode
-      v-if="unionOptions[activeUnionIdx]"
-      :node="unionOptions[activeUnionIdx]!"
+      v-if="activeUnionNode"
+      :key="node.schema.discriminator ? activeUnionIdx : undefined"
+      :node="activeUnionNode"
       :model-value="modelValue"
       :inherited="inherited"
       :default-value="defaultValue"
@@ -949,7 +1015,7 @@ function onUnionSelect(event: Event) {
       :disabled="disabled"
       :read-only="readOnly"
       :before-record-mutation="beforeRecordMutation"
-      @update:model-value="emit('update:modelValue', $event)"
+      @update:model-value="onUnionValueUpdate"
     />
   </div>
 </template>

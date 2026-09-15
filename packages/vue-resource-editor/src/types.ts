@@ -31,6 +31,7 @@ export interface SchemaMeta {
   key?: SchemaMeta;
   recordValue?: SchemaMeta;
   options?: SchemaMeta[];
+  discriminator?: string;
   values?: unknown[];
   integer?: boolean;
   min?: number;

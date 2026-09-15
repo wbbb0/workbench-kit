@@ -328,3 +328,17 @@ Optional behavior such as auto-confirm countdown should be added through optiona
 The consuming app owns its final theme values, but it does not need to define every token from scratch. Import a template when the default look is good enough, and override only the variables that differ.
 
 `@workbench-kit/vue/style.css` expects the resolved CSS variables to include surface, border, text, accent, state, scrollbar, font, and workbench sizing tokens. Templates provide those variables. A custom app theme can either replace the template entirely or inherit from it with overrides.
+
+## 按类型切换对象表单
+
+对对象 union 的 `SchemaMeta` 添加可选的 `discriminator`（例如 `"type"`），
+并在每个对象分支中为该字段声明不同的 literal 值。`SchemaNode` 会按当前值选中分支，
+只渲染该分支适用字段；判别字段由上层下拉框管理，不重复渲染。
+
+切换时通过 `projectSchemaVariant(node, value)` 投影到目标分支：保留适用字段及嵌套清单，
+写入目标 literal，移除不适用字段，使用目标 schema 默认值。passthrough 对象保留自定义键。
+投影创建新值，不修改原值，也支持 Vue 响应式对象。该函数从 `@workbench-kit/vue` 和
+`@workbench-kit/vue-resource-editor` 导出，可用于业务层的预览或测试。
+
+此能力不含供应商、模型、网络或业务目录规则。未提供 `discriminator` 的 union 继续使用原有行为；
+旧 SchemaMeta 不需要修改。只读和禁用状态不触发切换，外部值刷新后重新按判别字段选择分支。

@@ -6,3 +6,4 @@ export * from "./editorState.js";
 export * from "./resourceEditorClient.js";
 export * from "./resourceEditorState.js";
 export * from "./useEditorDraftState.js";
+export { projectSchemaVariant } from "./schemaVariant.js";
