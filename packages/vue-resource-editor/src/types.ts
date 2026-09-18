@@ -71,7 +71,8 @@ export type EditorOptionsResult =
 /** record 节点显式结构变更通知，供调用方处理跨资源联动。 */
 export type EditorRecordMutationEvent =
   | { kind: "rename"; path: Array<string | number>; key: string; nextKey: string }
-  | { kind: "remove"; path: Array<string | number>; key: string };
+  | { kind: "remove"; path: Array<string | number>; key: string }
+  | { kind: "add"; path: Array<string | number> };
 
 /** layered 资源中的一层。 */
 export interface LayerInfo {

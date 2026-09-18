@@ -54,7 +54,7 @@ const props = defineProps<{
   headerEditPlaceholder?: string;
   forceHeader?: boolean;
   onHeaderEditSubmit?: (value: string) => void;
-  /** record 显式 rename/remove 前的可选异步 guard；返回 false 时取消本地变更。 */
+  /** record 显式 rename/remove/add 前的可选异步 guard；返回 false 时取消本地变更。 */
   beforeRecordMutation?: (event: EditorRecordMutationEvent) => boolean | Promise<boolean>;
 }>();
 
@@ -356,15 +356,17 @@ function onRecordValueUpdate(key: string, childValue: unknown) {
 }
 
 function addRecordEntry() {
-  const next = cloneRecord(displayedRecord.value);
-  let index = Object.keys(next).length + 1;
-  let key = `key_${index}`;
-  while (key in next) {
-    index += 1;
-    key = `key_${index}`;
-  }
-  next[key] = props.node.kind === "record" ? initialNodeValue(props.node.value) : null;
-  emit("update:modelValue", next);
+  return commitRecordMutation({ kind: "add", path: [...path.value] }, () => {
+    const next = cloneRecord(displayedRecord.value);
+    let index = Object.keys(next).length + 1;
+    let key = `key_${index}`;
+    while (key in next) {
+      index += 1;
+      key = `key_${index}`;
+    }
+    next[key] = props.node.kind === "record" ? initialNodeValue(props.node.value) : null;
+    emit("update:modelValue", next);
+  });
 }
 
 async function removeRecordEntry(key: string) {
