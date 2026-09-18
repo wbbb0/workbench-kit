@@ -1,4 +1,4 @@
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { expect, it } from "vitest";
 import SchemaNode from "./SchemaNode.vue";
 import { projectSchemaVariant } from "../schemaVariant";
@@ -78,4 +78,31 @@ it("新增判别 union 条目带上类型，普通条目仍以 null 初始化", 
     expect(result.key_1).toEqual(discriminated ? { type: "first", entries: {} } : null);
     wrapper.unmount();
   }
+});
+
+it("record 新增也经过 beforeRecordMutation：guard 返回 false 时不插入", async () => {
+  const { vi } = await import("vitest");
+  const guard = vi.fn(async () => false);
+  const record: UiNode = { kind: "record", schema: { kind: "record", optional: false, hasDefault: false }, key: text, value: text };
+  const wrapper = mount(SchemaNode, { props: { node: record, modelValue: { a: "x" }, beforeRecordMutation: guard } });
+  const add = wrapper.findAll("button").find(b => b.text().includes("添加"))!;
+  await add.trigger("click");
+  await flushPromises();
+  expect(guard).toHaveBeenCalledWith({ kind: "add", path: [] });
+  expect(wrapper.emitted("update:modelValue")).toBeUndefined();
+  wrapper.unmount();
+});
+
+it("record 新增 guard 返回 true 时仍按默认插入空条目", async () => {
+  const { vi } = await import("vitest");
+  const guard = vi.fn(async () => true);
+  const record: UiNode = { kind: "record", schema: { kind: "record", optional: false, hasDefault: false }, key: text, value: text };
+  const wrapper = mount(SchemaNode, { props: { node: record, modelValue: { a: "x" }, beforeRecordMutation: guard } });
+  const add = wrapper.findAll("button").find(b => b.text().includes("添加"))!;
+  await add.trigger("click");
+  await flushPromises();
+  expect(guard).toHaveBeenCalledWith({ kind: "add", path: [] });
+  const result = wrapper.emitted("update:modelValue")?.[0]?.[0] as any;
+  expect(result.key_2).toEqual(null);
+  wrapper.unmount();
 });
