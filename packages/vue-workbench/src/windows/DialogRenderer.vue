@@ -27,6 +27,7 @@ const busyActionId = ref<string | null>(null);
 const isBusy = computed(() => busyActionId.value !== null);
 
 const blocks = computed(() => props.definition.blocks ?? []);
+const blocksGrow = computed(() => blocks.value.some(block => block.kind === "component" && block.grow === true));
 const fields = computed(() => props.definition.schema?.fields ?? []);
 const actions = computed(() => props.definition.actions ?? []);
 const footerMode = computed(() => props.definition.footer ?? "auto");
@@ -204,7 +205,12 @@ function handleClose() {
 <template>
   <div class="flex min-h-0 flex-1 flex-col text-small leading-5 text-text-secondary">
     <div class="scrollbar-thin flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-      <div v-if="blocks.length" class="flex min-h-0 flex-col gap-3">
+      <div
+        v-if="blocks.length"
+        class="flex min-h-0 flex-col gap-3"
+        :class="blocksGrow ? 'flex-1' : ''"
+        data-dialog-blocks
+      >
         <template v-for="(block, index) in blocks" :key="index">
           <p v-if="block.kind === 'text'" class="whitespace-pre-wrap text-text-secondary">
             {{ block.content }}

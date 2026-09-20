@@ -139,6 +139,8 @@ export type WorkbenchDialogBlock<TValues extends Record<string, unknown> = Recor
       kind: "component";
       component: Component;
       props?: Record<string, unknown>;
+      /** 让 block 容器占满窗口内容区的剩余高度，适用于工作区式自定义内容。 */
+      grow?: boolean;
     };
 
 export type WorkbenchDialogAction<

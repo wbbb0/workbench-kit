@@ -307,6 +307,18 @@ const result = await openDialog<{ scopes: string[] }>({
 });
 ```
 
+When a component block contains a workspace-like layout that should follow a resizable window's height, opt it into the remaining content space explicitly:
+
+```ts
+await openDialog({
+  title: "Inspect resource",
+  size: "xl",
+  blocks: [{ kind: "component", component: ResourceInspector, grow: true }]
+});
+```
+
+Blocks remain content-sized by default, so compact confirmation dialogs are unaffected.
+
 `WindowSurface` is the only implementation of window movement, window sizing, maximize, and viewport bounds. Shared pointer-session mechanics live in `usePointerDrag`; do not duplicate window geometry behavior in app wrappers or primitives.
 
 `WorkbenchConfirmDialog` is intentionally backward-compatible with the basic confirm shape:
