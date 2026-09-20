@@ -319,6 +319,17 @@ await openDialog({
 
 Blocks remain content-sized by default, so compact confirmation dialogs are unaffected.
 
+Component blocks can write state into their injected `values` object and let the native window footer derive its action label and disabled state:
+
+```ts
+actions: [{
+  id: "save",
+  label: ({ values }) => values.exists ? "Update" : "Add",
+  disabled: ({ values }) => values.valid !== true,
+  run: ({ values }) => values.entry
+}]
+```
+
 `WindowSurface` is the only implementation of window movement, window sizing, maximize, and viewport bounds. Shared pointer-session mechanics live in `usePointerDrag`; do not duplicate window geometry behavior in app wrappers or primitives.
 
 `WorkbenchConfirmDialog` is intentionally backward-compatible with the basic confirm shape:

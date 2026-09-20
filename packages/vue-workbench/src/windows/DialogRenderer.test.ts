@@ -41,4 +41,42 @@ describe("DialogRenderer", () => {
 
     expect(wrapper.get("[data-dialog-blocks]").classes()).not.toContain("flex-1");
   });
+
+  it("derives footer action state from values written by a component block", async () => {
+    const StateBlock = defineComponent({
+      props: { values: { type: Object, required: true } },
+      setup(props) {
+        return () => h("button", {
+          "data-test": "make-valid",
+          onClick: () => {
+            props.values.valid = true;
+            props.values.updating = true;
+          }
+        }, "make valid");
+      }
+    });
+    const wrapper = mount(DialogRenderer, {
+      props: {
+        windowId: "dynamic-action",
+        definition: {
+          kind: "dialog",
+          title: "Dynamic action",
+          size: "lg",
+          blocks: [{ kind: "component", component: StateBlock }],
+          actions: [{
+            id: "save",
+            label: ({ values }) => values.updating ? "Update" : "Add",
+            disabled: ({ values }) => values.valid !== true
+          }]
+        }
+      }
+    });
+
+    const action = wrapper.get('[data-action-id="save"]');
+    expect(action.text()).toBe("Add");
+    expect((action.element as HTMLButtonElement).disabled).toBe(true);
+    await wrapper.get('[data-test="make-valid"]').trigger("click");
+    expect(action.text()).toBe("Update");
+    expect((action.element as HTMLButtonElement).disabled).toBe(false);
+  });
 });

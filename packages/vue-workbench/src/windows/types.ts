@@ -149,8 +149,11 @@ export type WorkbenchDialogAction<
 > = {
   /** 稳定动作 ID，会出现在窗口关闭结果中。 */
   id: string;
-  label: string;
+  /** 可根据 component block 写入的实时 values 动态调整按钮文案。 */
+  label: string | ((context: { values: Readonly<TValues>; windowId: string }) => string);
   variant?: "primary" | "secondary" | "danger";
+  /** 可根据实时 values 禁用动作；执行期间仍由窗口统一禁用全部 footer 动作。 */
+  disabled?: boolean | ((context: { values: Readonly<TValues>; windowId: string }) => boolean);
   /** 点击动作时执行。返回值会作为 action result 回传给 open/openDialog。 */
   run?: (context: { values: TValues; windowId: string }) => Promise<TResult> | TResult;
 };

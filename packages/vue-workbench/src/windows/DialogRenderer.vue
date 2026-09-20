@@ -162,8 +162,20 @@ function resolveComponentReference(component: unknown) {
   return toRaw(component as object);
 }
 
+function actionLabel(action: WorkbenchDialogAction<DialogValues, unknown>) {
+  return typeof action.label === "function"
+    ? action.label({ values, windowId: props.windowId })
+    : action.label;
+}
+
+function actionDisabled(action: WorkbenchDialogAction<DialogValues, unknown>) {
+  return typeof action.disabled === "function"
+    ? action.disabled({ values, windowId: props.windowId })
+    : action.disabled === true;
+}
+
 async function handleAction(action: WorkbenchDialogAction<DialogValues, unknown>) {
-  if (busyActionId.value !== null) {
+  if (busyActionId.value !== null || actionDisabled(action)) {
     return;
   }
 
@@ -258,11 +270,11 @@ function handleClose() {
               : 'btn btn-primary'
         ]"
         :data-action-id="action.id"
-        :disabled="isBusy"
+        :disabled="isBusy || actionDisabled(action)"
         type="button"
         @click="handleAction(action)"
       >
-        {{ busyActionId === action.id ? "处理中…" : action.label }}
+        {{ busyActionId === action.id ? "处理中…" : actionLabel(action) }}
       </button>
     </div>
   </div>
