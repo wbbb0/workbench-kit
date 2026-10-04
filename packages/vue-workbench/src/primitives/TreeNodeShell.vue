@@ -59,7 +59,7 @@ const collapsibleIcon = computed(() => {
         :style="!$slots.leading && props.indentPx > 0 ? { paddingLeft: `${props.indentPx}px` } : undefined"
         @click="emit('toggle')"
       >
-        <div class="tree-head min-w-0">
+        <div class="tree-head flex min-w-0 flex-1 items-center gap-1.5">
           <component :is="collapsibleIcon" :size="13" :stroke-width="2" class="tree-chevron shrink-0 text-text-muted" />
           <div class="min-w-0 flex-1">
             <slot name="label" />
@@ -72,7 +72,7 @@ const collapsibleIcon = computed(() => {
         :style="!$slots.leading && props.indentPx > 0 ? { paddingLeft: `${props.indentPx}px` } : undefined"
         @click="select"
       >
-        <div class="tree-head min-w-0">
+        <div class="tree-head flex min-w-0 flex-1 items-center gap-1.5">
           <slot name="icon" />
           <div class="min-w-0 flex-1">
             <slot name="label" />
