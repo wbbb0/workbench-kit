@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { WorkbenchButton, TreeNodeShell } from "@workbench-kit/vue-workbench";
 import type { FileLocation, FileLocationRoot, FileDirectoryEntry, FileLocationClient } from "./operations.js";
-const props = withDefaults(defineProps<{ roots: FileLocationRoot[]; client: FileLocationClient; modelValue?: FileLocation | null; disabled?: boolean; selectLabel?: string; targetDisabledReason?: (location: FileLocation) => string | undefined }>(), { selectLabel: "选择此位置" });
+const props = withDefaults(defineProps<{ roots: FileLocationRoot[]; client: FileLocationClient; modelValue?: FileLocation | null; disabled?: boolean; selectLabel?: string; showSelectButton?: boolean; targetDisabledReason?: (location: FileLocation) => string | undefined }>(), { selectLabel: "选择此位置", showSelectButton: true });
 const emit = defineEmits<{ "update:modelValue": [location: FileLocation | null]; select: [location: FileLocation] }>();
 const current = ref<FileLocation | null>(props.modelValue ? { ...props.modelValue } : null);
 const history = ref<FileLocation[]>([]);
@@ -62,6 +62,6 @@ onBeforeUnmount(() => abort?.abort());
       <p v-if="error" role="alert" class="py-3 text-danger">{{ error }}</p>
     </div>
     <p v-if="disabledReason && current" class="text-xs text-text-muted">{{ disabledReason }}</p>
-    <WorkbenchButton v-if="current" :disabled="disabled || !!disabledReason || loading" @click="emit('select', {...current})">{{ selectLabel }}</WorkbenchButton>
+    <WorkbenchButton v-if="current && showSelectButton" :disabled="disabled || !!disabledReason || loading" @click="emit('select', {...current})">{{ selectLabel }}</WorkbenchButton>
   </div>
 </template>

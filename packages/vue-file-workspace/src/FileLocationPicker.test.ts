@@ -4,6 +4,11 @@ import FileLocationPicker from "./FileLocationPicker.vue";
 import FileTree from "./FileTree.vue";
 const roots=[{id:"a",label:"Root A"},{id:"b",label:"Root B",disabled:true,disabledReason:"只读"}];
 describe("FileLocationPicker",()=>{
+  it("can delegate confirmation to an external action while keeping browsing controlled",async()=>{
+    const wrapper=mount(FileLocationPicker,{props:{roots,client:{listDirectories:vi.fn(async()=>({entries:[]}))},showSelectButton:false}});
+    await wrapper.findAll("button").find(button=>button.text()==="Root A")!.trigger("click");await flushPromises();
+    expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual([{rootId:"a",path:""}]);expect(wrapper.emitted("select")).toBeUndefined();expect(wrapper.text()).not.toContain("选择此位置");wrapper.unmount();
+  });
   it("resets on controlled null and emits null on returning to roots",async()=>{
     const wrapper=mount(FileLocationPicker,{props:{roots,client:{listDirectories:vi.fn(async()=>({entries:[]}))},modelValue:{rootId:"a",path:""}}});await flushPromises();
     await wrapper.findAll("button").find(button=>button.text()==="返回")!.trigger("click");expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual([null]);

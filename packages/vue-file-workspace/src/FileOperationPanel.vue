@@ -12,7 +12,7 @@ const reason = computed(() => {
   const rootReason = props.request.kind !== "delete" && props.request.target && (props.locationClient || props.roots.length) ? (!root ? "根目录不可用" : root.disabled ? root.disabledReason || "此位置不可用" : "") : "";
   return props.disabledReason || rootReason || (props.request.kind !== "delete" && !props.request.target ? "请先选择目标目录" : "") || (props.request.target && props.targetDisabledReason?.(props.request.target)) || (!items.value.length ? "没有待处理条目" : "");
 });
-function target(location: FileLocation) { emit("update:request", { ...props.request, target: location }); }
+function target(location: FileLocation | null) { emit("update:request", { ...props.request, target: location ?? undefined }); }
 </script>
 <template>
   <div class="flex min-h-0 flex-col gap-3">
@@ -21,7 +21,7 @@ function target(location: FileLocation) { emit("update:request", { ...props.requ
       <div v-for="(item,index) in items" :key="index" class="truncate text-sm">{{ 'relativePath' in item ? item.relativePath : item.name }}</div>
     </div>
     <slot name="target" :request="request" :set-target="target">
-      <FileLocationPicker v-if="request.kind !== 'delete' && locationClient" :roots="roots" :client="locationClient" :model-value="request.target" :disabled="pending" :target-disabled-reason="targetDisabledReason" @select="target" />
+      <FileLocationPicker v-if="request.kind !== 'delete' && locationClient" :roots="roots" :client="locationClient" :model-value="request.target ?? null" :disabled="pending" :target-disabled-reason="targetDisabledReason" :show-select-button="false" @update:model-value="target" />
       <p v-else-if="request.target" class="break-all">目标：{{ request.target.path || '/' }}</p>
     </slot>
     <slot :request="request" />

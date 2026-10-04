@@ -217,3 +217,5 @@ onMounted(() => {
 `useFilePicker().pick({directory:true})` 在支持 File System Access 的安全上下文浏览器中保留空目录；其它浏览器退回 `webkitdirectory`，该浏览器接口只返回文件，无法保留空目录。`readFileDrop` 使用目录 entry 递归读取并保留空目录。所有上传路径统一为相对路径，拒绝绝对路径和 `..`。
 
 `useFileClipboard` 每次调用独立，工作区需要共享剪贴板时在上层提供同一个实例。复制/剪切保存来源与条目快照；剪切成功后由业务调用 `clear()`，失败保留。内部拖放用 `writeFileDrag`，外部拖放和内部拖放通过 `useFileDrop` 区分；默认 copy，消费者可用 `dropEffect` 回调基于目标位置决定 move/copy/none。
+
+列表列宽默认不写入浏览器存储；可选 `storageKey` 持久化列宽，读取时校验数值类型并限制在列的有效范围。`FileLocationPicker` 默认显示选择按钮；在 runtime window 已提供外部确认动作时，传 `showSelectButton=false` 并监听 `update:modelValue`，将浏览位置写入窗口的临时 values，最终确认由宿主完成。`FileOperationPanel` 使用该模式实时更新 `request.target`，最终操作只需一次确认。

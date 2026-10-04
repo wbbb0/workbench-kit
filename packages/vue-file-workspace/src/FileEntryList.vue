@@ -12,6 +12,8 @@ const props = withDefaults(defineProps<{
   compactBreakpoint?: number; draggable?: boolean; dropEnabled?: boolean;
   dropEffect?: (target: FileWorkspaceEntry | null, event: DragEvent) => "copy" | "move" | "none";
   dropHint?: string;
+  /** 可选的列宽存储键；不配置时不访问localStorage。 */
+  storageKey?: string;
 }>(), { selectedPaths: () => [], focusedPath: null, viewMode: "list", gridSize: 120, visibleColumns: () => ["size", "modifiedAt", "type"], compactBreakpoint: 640 });
 const emit = defineEmits<{
   setSelection: [paths: string[], focusedPath: string | null]; focusEntry: [entry: FileWorkspaceEntry];
@@ -34,13 +36,37 @@ const count = computed(() => Math.ceil(props.entries.length / columns.value));
 const start = computed(() => Math.max(0, Math.floor(scrollTop.value / cellHeight.value) - 6));
 const end = computed(() => Math.min(count.value, start.value + Math.ceil(height.value / cellHeight.value) + 12));
 const visible = computed(() => props.entries.slice(start.value * columns.value, end.value * columns.value).map((entry, i) => ({ entry, index: start.value * columns.value + i })));
-const sizes = reactive<Record<string, number>>({ name: 360, size: 112, modifiedAt: 160, type: 112 });
+const defaultSizes: Record<string,number> = { name:360,size:112,modifiedAt:160,type:112 };
+const sizes = reactive<Record<string, number>>({ ...defaultSizes });
 const config = [{key:"name",label:"名称",min:160},{key:"size",label:"大小",min:76},{key:"modifiedAt",label:"修改时间",min:112},{key:"type",label:"类型",min:88}];
+function clampWidth(key: string, width: number) {
+  const min = config.find(column => column.key === key)?.min ?? 80;
+  const max = key === "name" ? 720 : key === "modifiedAt" ? 260 : 220;
+  return Math.max(min,Math.min(max,Math.round(width)));
+}
+function restoreWidths() {
+  Object.assign(sizes,defaultSizes);
+  if (!props.storageKey || typeof window === "undefined") return;
+  try {
+    const raw = window.localStorage.getItem(props.storageKey);
+    const saved: unknown = raw ? JSON.parse(raw) : null;
+    if (!saved || typeof saved !== "object" || Array.isArray(saved)) return;
+    for (const {key} of config) {
+      const value = (saved as Record<string,unknown>)[key];
+      if (typeof value === "number" && Number.isFinite(value)) sizes[key] = clampWidth(key,value);
+    }
+  } catch { /* Storage may be unavailable; column resizing remains usable. */ }
+}
+function persistWidths() {
+  if (!props.storageKey || typeof window === "undefined") return;
+  try { window.localStorage.setItem(props.storageKey,JSON.stringify(sizes)); } catch { /* Optional persistence. */ }
+}
+watch(() => props.storageKey,restoreWidths);
 const activeColumns = computed(() => config.filter(column => column.key === "name" || props.visibleColumns.includes(column.key)));
 const listWidth = computed(() => compact.value || grid.value ? width.value : Math.max(width.value, activeColumns.value.reduce((total,column) => total + sizes[column.key]!, 0) + 80));
 const template = computed(() => activeColumns.value.map(column => `${sizes[column.key]}px`).join(" "));
 const selection = useCollectionSelection({ keys: () => props.entries.filter(entry => !entry.disabledReason).map(entry => entry.path), selectedKeys: () => props.selectedPaths, focusedKey: () => props.focusedPath, onChange: (paths, focused) => emit("setSelection", paths, focused) });
-const columnDrag = usePointerDrag<{key:string;width:number}>({ cursor:"col-resize", onMove({state,deltaX}) { sizes[state.key] = Math.max(config.find(column => column.key === state.key)?.min ?? 80,state.width + deltaX); } });
+const columnDrag = usePointerDrag<{key:string;width:number}>({ cursor:"col-resize", onMove({state,deltaX}) { sizes[state.key] = clampWidth(state.key,state.width + deltaX); }, onEnd: persistWidths });
 const marquee = useMarqueeSelection({
   point(event) { const rect = scrollEl.value!.getBoundingClientRect(); return { x: event.clientX - rect.left + scrollEl.value!.scrollLeft, y: event.clientY - rect.top + scrollEl.value!.scrollTop - (!compact.value && !grid.value ? 36 : 0) }; },
   selectedKeys: () => props.selectedPaths,
@@ -119,7 +145,7 @@ function keydown(event: KeyboardEvent) {
 function bytes(value?: number) { if (value == null) return "—"; if(value < 1024) return `${value} B`; const unit = Math.min(4,Math.floor(Math.log(value)/Math.log(1024))); return `${(value / 1024 ** unit).toFixed(1)} ${['B','KB','MB','GB','TB'][unit]}`; }
 function meta(entry: FileWorkspaceEntry,key:string) { if(key === "size") return entry.kind === "directory" ? "—" : bytes(entry.sizeBytes); if(key === "modifiedAt") return entry.updatedAtMs == null ? "—" : new Date(entry.updatedAtMs).toLocaleString(); return entry.typeLabel ?? (entry.kind === "directory" ? "目录" : "文件"); }
 let observer: ResizeObserver | undefined;
-onMounted(() => { if (!scrollEl.value) return; observer = new ResizeObserver(([box]) => { if(box) {width.value = box.contentRect.width; height.value = box.contentRect.height;} }); width.value = scrollEl.value.clientWidth; height.value = scrollEl.value.clientHeight || 400; observer.observe(scrollEl.value); });
+onMounted(() => { restoreWidths(); if (!scrollEl.value) return; observer = new ResizeObserver(([box]) => { if(box) {width.value = box.contentRect.width; height.value = box.contentRect.height;} }); width.value = scrollEl.value.clientWidth; height.value = scrollEl.value.clientHeight || 400; observer.observe(scrollEl.value); });
 onBeforeUnmount(() => observer?.disconnect());
 watch([columns,cellHeight], async ([cols,cell],[oldCols,oldCell]) => { const index = Math.floor(scrollTop.value / oldCell) * oldCols; await nextTick(); if(scrollEl.value) scrollEl.value.scrollTop = Math.floor(index / cols) * cell; });
 watch(() => props.entries, async () => { await nextTick(); if(scrollEl.value) scrollTop.value = scrollEl.value.scrollTop; });

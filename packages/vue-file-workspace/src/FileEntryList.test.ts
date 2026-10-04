@@ -3,8 +3,21 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import FileEntryList from "./FileEntryList.vue";
 const entries = Array.from({length:1000},(_,index)=>({name:`File ${index}`,path:`file-${index}`,kind:"file" as const,sizeBytes:100,updatedAtMs:0}));
 function viewport(width:number,height=400) { vi.stubGlobal("ResizeObserver",class { callback:ResizeObserverCallback; constructor(callback:ResizeObserverCallback){this.callback=callback;}observe(){this.callback([{contentRect:{width,height}}] as ResizeObserverEntry[],this as unknown as ResizeObserver);}disconnect(){} }); }
-afterEach(()=>vi.unstubAllGlobals());
+afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();window.localStorage.clear();});
 describe("FileEntryList",()=>{
+  it("restores bounded column widths from an optional key and persists resized widths",async()=>{
+    viewport(1000);window.localStorage.setItem("saved-columns",JSON.stringify({name:-1,size:1e10,modifiedAt:"bad",type:null}));
+    const wrapper=mount(FileEntryList,{props:{entries:entries.slice(0,1),storageKey:"saved-columns"}});await flushPromises();
+    expect(wrapper.find('.file-list-header .grid').attributes('style')).toContain('160px 220px 160px 112px');
+    wrapper.findAll('[data-column-resize]')[0]!.element.dispatchEvent(new PointerEvent("pointerdown",{pointerId:4,button:0,isPrimary:true,clientX:0}));
+    window.dispatchEvent(new PointerEvent("pointermove",{pointerId:4,clientX:4000}));window.dispatchEvent(new PointerEvent("pointerup",{pointerId:4}));
+    expect(JSON.parse(window.localStorage.getItem("saved-columns")!).name).toBe(720);wrapper.unmount();
+  });
+  it("tolerates malformed or unavailable column storage",async()=>{
+    viewport(1000);window.localStorage.setItem("saved-columns","null");const wrapper=mount(FileEntryList,{props:{entries:entries.slice(0,1),storageKey:"saved-columns"}});await flushPromises();
+    expect(wrapper.find('.file-list-header .grid').attributes('style')).toContain('360px 112px 160px 112px');
+    vi.spyOn(window.localStorage,'getItem').mockImplementation(()=>{throw new Error('Storage blocked');});await wrapper.setProps({storageKey:"another-key"});expect(wrapper.find('.file-list-header .grid').attributes('style')).toContain('360px');wrapper.unmount();
+  });
   it("finds accessible entries for Home and End when the endpoints are disabled",async()=>{
     viewport(1000);const items=entries.slice(0,4).map((entry,index)=>({...entry,disabledReason:index===0 || index===3 ? "不可访问" : undefined}));
     const wrapper=mount(FileEntryList,{props:{entries:items,focusedPath:"file-2"}});await flushPromises();
