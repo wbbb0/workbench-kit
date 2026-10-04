@@ -17,7 +17,8 @@
 - 优先维护 `@workbench-kit/vue` 聚合入口，简单业务项目不应被迫分别依赖多个底层包。
 - 底层包仍应保持可独立引用，但不要让业务项目必须直接使用底层包才能完成常规接入。
 - 不要引入 llm-onebot 或其他业务项目的 API、路由、store、资源名称、会话语义或后端协议。
-- 能通过 props、事件、composable、client adapter 注入的能力可以进入共享包；必须知道具体业务字段或接口路径的逻辑留在业务项目。
+- 所有可复用的通用组件和功能应集中实现于本库，并按包职责归属；本库仅包含通用能力，不包含业务逻辑。通过 props、事件、composable 或 client adapter 注入业务数据、行为和权限；必须知道具体业务字段、接口路径或后端协议的逻辑留在消费项目。
+- 扩展和抽取通用能力必须保持向后兼容：保留现有导出、props、事件、类型契约及默认行为，新增能力使用可选配置或独立组件，并验证原有消费方式。
 - 主题模板放在 `packages/vue-workbench/src/themes/`，并通过 `packages/vue` 聚合入口暴露；业务项目应能选择模板、局部 override，或完全自定义 token。
 - CSS/Tailwind 接入应尽量保持单入口；常规项目优先导入 `@workbench-kit/vue/style.css`，避免要求业务项目手写多个 `@source`。
 - `WorkbenchRuntimeRoot` 是 controller、menu、toast、window host 的共享 runtime 根。需要 `useWorkbenchWindows()`、toast 或菜单服务的页面必须挂在它或其包装 root 下。

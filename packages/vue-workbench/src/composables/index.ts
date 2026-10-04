@@ -7,3 +7,5 @@ export type {
   PointerDragMove,
   PointerDragOptions
 } from "./usePointerDrag.js";
+export * from "./useCollectionSelection.js";
+export * from "./useMarqueeSelection.js";

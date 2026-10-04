@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { FileText, Image as ImageIcon, File } from "lucide-vue-next";
+import { FileText, Image as ImageIcon, File, Folder, FolderOpen, ChevronDown, ChevronRight } from "lucide-vue-next";
 import { TreeNodeShell } from "@workbench-kit/vue-workbench";
 import type { LocalFileItem } from "./types";
 
 defineOptions({ name: "WorkspaceFileTree" });
+defineSlots<{ actions?: (props: { item: LocalFileItem }) => unknown; directoryEnd?: (props: { item: LocalFileItem }) => unknown; meta?: (props: { item: LocalFileItem }) => unknown }>();
 
 const props = withDefaults(defineProps<{
   /** 当前层要渲染的文件/目录列表。 */
@@ -23,6 +24,13 @@ const props = withDefaults(defineProps<{
   indeterminatePaths?: string[];
   /** 当前递归深度。根层默认为 0。 */
   depth?: number;
+  /** 默认关闭；拖放内容由调用方设置/读取。 */
+  draggable?: boolean;
+  dropEnabled?: boolean;
+  touchDensity?: boolean;
+  showActions?: boolean;
+  /** 保留默认点击目录展开；开启后目录label导航、独立按钮展开。 */
+  directoryNavigation?: boolean;
 }>(), {
   depth: 0,
   selectionMode: "single",
@@ -34,6 +42,9 @@ const emit = defineEmits<{
   toggleDirectory: [path: string];
   selectItem: [item: LocalFileItem];
   toggleSelection: [item: LocalFileItem, selected: boolean];
+  dragItem: [item: LocalFileItem, event: DragEvent];
+  dropItem: [item: LocalFileItem, event: DragEvent];
+  itemAction: [item: LocalFileItem, event: MouseEvent];
 }>();
 
 const expandedSet = computed(() => new Set(props.expandedPaths));
@@ -59,7 +70,12 @@ function forwardToggleSelection(item: LocalFileItem, selected: boolean) {
   <div class="flex w-max min-w-full flex-col gap-0.5">
     <template v-for="item in items" :key="item.path">
       <TreeNodeShell
-        :collapsible="item.kind === 'directory'"
+        :draggable="draggable"
+        :class="{ 'file-tree-touch': touchDensity }"
+        @dragstart.stop="emit('dragItem', item, $event)"
+        @dragover="dropEnabled && item.kind === 'directory' && $event.preventDefault()"
+        @drop="dropEnabled && item.kind === 'directory' && ($event.preventDefault(), $event.stopPropagation(), emit('dropItem',item,$event))"
+        :collapsible="item.kind === 'directory' && !directoryNavigation"
         :expanded="expandedSet.has(item.path)"
         :selected="selectionMode === 'single' && selectedPath === item.path"
         :child-inset="false"
@@ -68,8 +84,9 @@ function forwardToggleSelection(item: LocalFileItem, selected: boolean) {
         @toggle="emit('toggleDirectory', item.path)"
         @select="emit('selectItem', item)"
       >
-        <template v-if="selectionMode === 'multiple'" #leading>
-          <input
+        <template v-if="selectionMode === 'multiple' || (directoryNavigation && item.kind === 'directory')" #leading>
+          <button v-if="directoryNavigation && item.kind === 'directory'" type="button" class="flex size-9 items-center justify-center" :aria-label="`${expandedSet.has(item.path) ? '折叠' : '展开'} ${item.name}`" :aria-expanded="expandedSet.has(item.path)" @click.stop="emit('toggleDirectory',item.path)"><component :is="expandedSet.has(item.path) ? ChevronDown : ChevronRight" :size="14" /></button>
+          <input v-if="selectionMode === 'multiple'"
             type="checkbox"
             class="size-4 shrink-0"
             :aria-label="`Select ${item.name}`"
@@ -82,8 +99,8 @@ function forwardToggleSelection(item: LocalFileItem, selected: boolean) {
         </template>
         <template #icon>
           <component
-            v-if="item.kind !== 'directory'"
-            :is="itemIcon(item)"
+            v-if="item.kind !== 'directory' || directoryNavigation"
+            :is="item.kind === 'directory' ? (expandedSet.has(item.path) ? FolderOpen : Folder) : itemIcon(item)"
             :size="13"
             :stroke-width="1.8"
             class="shrink-0 text-text-muted"
@@ -92,8 +109,11 @@ function forwardToggleSelection(item: LocalFileItem, selected: boolean) {
         <template #label>
           <span class="tree-label">{{ item.name }}</span>
         </template>
+        <template v-if="showActions || $slots.actions" #actions>
+          <slot name="actions" :item="item"><button type="button" class="flex size-9 items-center justify-center rounded hover:bg-surface-hover" :aria-label="`${item.name} 的更多操作`" @click.stop="emit('itemAction',item,$event)">⋯</button></slot>
+        </template>
         <template #meta>
-          <span class="tree-meta">{{ item.kind === "directory" ? "目录" : "文件" }}</span>
+          <slot name="meta" :item="item"><span class="tree-meta">{{ item.kind === "directory" ? "目录" : "文件" }}</span></slot>
         </template>
 
         <template v-if="item.kind === 'directory' && expandedSet.has(item.path)">
@@ -107,13 +127,26 @@ function forwardToggleSelection(item: LocalFileItem, selected: boolean) {
               :selected-paths="selectedPaths"
               :indeterminate-paths="indeterminatePaths"
               :depth="props.depth + 1"
+              :draggable="draggable" :drop-enabled="dropEnabled" :touch-density="touchDensity" :show-actions="showActions" :directory-navigation="directoryNavigation"
+              @drag-item="(item,event) => emit('dragItem',item,event)"
+              @drop-item="(item,event) => emit('dropItem',item,event)"
+              @item-action="(item,event) => emit('itemAction',item,event)"
               @toggle-directory="emit('toggleDirectory', $event)"
               @select-item="emit('selectItem', $event)"
               @toggle-selection="forwardToggleSelection"
-            />
+            >
+              <template v-if="$slots.actions" #actions="{ item }: { item: LocalFileItem }"><slot name="actions" :item="item" /></template>
+              <template v-if="$slots.meta" #meta="{ item }: { item: LocalFileItem }"><slot name="meta" :item="item" /></template>
+              <template v-if="$slots.directoryEnd" #directoryEnd="{ item }: { item: LocalFileItem }"><slot name="directoryEnd" :item="item" /></template>
+            </WorkspaceFileTree>
+            <slot name="directoryEnd" :item="item" />
           </div>
         </template>
       </TreeNodeShell>
     </template>
   </div>
 </template>
+
+<style scoped>
+.file-tree-touch :deep(.tree-shell-header > button) { min-height:44px; }
+</style>

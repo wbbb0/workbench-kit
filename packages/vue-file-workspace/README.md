@@ -205,3 +205,15 @@ onMounted(() => {
 - 文件预览器。
 - 图片、二进制、媒体文件展示。
 - 上传、删除、重命名等写操作。
+
+## 响应式列表与文件操作
+
+`FileEntryList` 接收结构化 `FileWorkspaceEntry`，使用 `setSelection`、`focusEntry`、`openEntry`、`entryAction` 事件交给业务维护状态。支持容器宽度驱动的双行紧凑布局、桌面虚拟列表/网格、范围选择、快速输入定位、框选与列宽调整。`thumbnail`、`actions`、`entry-meta`、`selection-actions` 插槽用于注入缩略图和业务动作。触摸单击打开，鼠标单击选择、双击打开；紧凑模式的“选择”入口启用显式多选。拖放默认关闭，调用方通过可选 `draggable`、`dropEnabled` 和事件接入。
+
+`FileLocationPicker` 的 `FileLocationClient` 只负责目录列表；root、可选位置、禁用原因均由业务提供。支持 AbortSignal、分页、加载失败重试及返回历史。`FileOperationPanel` 和 `FileConflictPanel` 是可嵌入 runtime window 的内容组件，不创建自己的弹窗，也不执行后端操作。
+
+`FileOperationsAdapter` 独立于现有 `FileWorkspaceClient`，可选用于上传、复制、移动、删除。共享包只定义请求/任务/冲突契约；API 路径、认证、root 配置、执行与权限不属于本包。
+
+`useFilePicker().pick({directory:true})` 在支持 File System Access 的安全上下文浏览器中保留空目录；其它浏览器退回 `webkitdirectory`，该浏览器接口只返回文件，无法保留空目录。`readFileDrop` 使用目录 entry 递归读取并保留空目录。所有上传路径统一为相对路径，拒绝绝对路径和 `..`。
+
+`useFileClipboard` 每次调用独立，工作区需要共享剪贴板时在上层提供同一个实例。复制/剪切保存来源与条目快照；剪切成功后由业务调用 `clear()`，失败保留。内部拖放用 `writeFileDrag`，外部拖放和内部拖放通过 `useFileDrop` 区分；默认 copy，消费者可用 `dropEffect` 回调基于目标位置决定 move/copy/none。

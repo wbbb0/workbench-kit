@@ -1,3 +1,11 @@
 export { default } from "./FileTree.vue";
 export { default as FileTree } from "./FileTree.vue";
 export * from "./types.js";
+export { default as FileEntryList } from "./FileEntryList.vue";
+export { default as FileLocationPicker } from "./FileLocationPicker.vue";
+export { default as FileOperationPanel } from "./FileOperationPanel.vue";
+export { default as FileConflictPanel } from "./FileConflictPanel.vue";
+export * from "./operations.js";
+export * from "./composables/useFilePicker.js";
+export * from "./composables/useFileDrop.js";
+export * from "./composables/useFileClipboard.js";
