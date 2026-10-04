@@ -68,6 +68,7 @@ const normalizedPanes = computed(() => {
 const sizingSignature = computed(() => createSplitPaneSizingSignature(normalizedPanes.value));
 const availablePanes = computed(() => normalizedPanes.value.filter((pane) => !pane.tabDisabled));
 const compact = computed(() => containerWidth.value > 0 && containerWidth.value < props.breakpoint);
+const compactTabs = computed(() => compact.value && props.compactMode === "tabs");
 const stacked = computed(() => compact.value && props.compactMode === "stacked");
 const layoutAxis = computed<ResponsiveSplitPaneOrientation>(() => (
   stacked.value ? "vertical" : props.orientation
@@ -92,6 +93,9 @@ const layoutExtent = computed(() => (
   normalizedPanes.value.reduce((total, pane) => total + (activeSizes.value[pane.id] ?? paneMinSize(pane)), 0)
 ));
 const layoutStyle = computed(() => {
+  if (compactTabs.value) {
+    return { width: "100%", height: "100%", gridTemplateColumns: "minmax(0, 1fr)", gridTemplateRows: "minmax(0, 1fr)" };
+  }
   const tracks = normalizedPanes.value.map(
     (pane) => `${Math.max(0, activeSizes.value[pane.id] ?? paneMinSize(pane))}px`
   ).join(" ");
@@ -471,6 +475,8 @@ onBeforeUnmount(() => {
   observer?.disconnect();
 });
 
+watch([compactTabs, layoutAxis], () => dividerDrag.stop());
+
 watch(() => props.compactMode, () => {
   void nextTick(syncSize);
 });
@@ -484,52 +490,34 @@ watch(() => props.orientation, () => {
 </script>
 
 <template>
-  <div ref="rootRef" class="h-full min-h-0 min-w-0">
-    <div v-if="compact && compactMode === 'tabs'" class="flex h-full min-h-0 flex-col overflow-hidden">
-      <WorkbenchTabStrip
-        :items="tabItems"
-        :model-value="activePaneId"
-        bordered
-        @update:model-value="requestActivePane"
-      />
-      <div class="min-h-0 flex-1 overflow-hidden">
-        <div
-          v-for="pane in normalizedPanes"
-          v-show="pane.id === activePaneId"
-          :key="pane.id"
-          :id="panelId(normalizedPanes.indexOf(pane))"
-          class="h-full min-h-0 min-w-0 overflow-hidden"
-          role="tabpanel"
-          :aria-labelledby="tabId(normalizedPanes.indexOf(pane))"
-        >
-          <slot
-            v-if="hasNamedPaneSlot(pane.id)"
-            :name="pane.id"
-            v-bind="paneScope(pane)"
-          />
-          <slot v-else name="pane" v-bind="paneScope(pane)" />
-        </div>
-      </div>
-    </div>
-
+  <div ref="rootRef" class="flex h-full min-h-0 min-w-0 flex-col">
+    <WorkbenchTabStrip
+      v-show="compactTabs"
+      :items="tabItems"
+      :model-value="activePaneId"
+      bordered
+      @update:model-value="requestActivePane"
+    />
     <div
-      v-else
-      class="h-full min-h-0 min-w-0"
-      :class="layoutAxis === 'horizontal' ? 'overflow-x-auto overflow-y-hidden' : 'overflow-x-hidden overflow-y-auto'"
+      class="min-h-0 min-w-0 flex-1"
+      :class="compactTabs ? 'overflow-hidden' : layoutAxis === 'horizontal' ? 'overflow-x-auto overflow-y-hidden' : 'overflow-x-hidden overflow-y-auto'"
     >
       <div class="relative isolate grid min-h-0 min-w-0 overflow-hidden" :style="layoutStyle">
-        <template v-for="pane in normalizedPanes" :key="pane.id">
-          <div class="min-h-0 min-w-0 overflow-hidden">
-            <slot
-              v-if="hasNamedPaneSlot(pane.id)"
-              :name="pane.id"
-              v-bind="paneScope(pane)"
-            />
-            <slot v-else name="pane" v-bind="paneScope(pane)" />
-          </div>
-        </template>
+        <div
+          v-for="(pane, index) in normalizedPanes"
+          v-show="!compactTabs || pane.id === activePaneId"
+          :key="pane.id"
+          :id="panelId(index)"
+          class="min-h-0 min-w-0 overflow-hidden"
+          :role="compactTabs ? 'tabpanel' : undefined"
+          :aria-labelledby="compactTabs ? tabId(index) : undefined"
+        >
+          <slot v-if="hasNamedPaneSlot(pane.id)" :name="pane.id" v-bind="paneScope(pane)" />
+          <slot v-else name="pane" v-bind="paneScope(pane)" />
+        </div>
         <WorkbenchSash
           v-for="dividerIndex in Math.max(0, normalizedPanes.length - 1)"
+          v-show="!compactTabs"
           :key="`sash-${dividerIndex - 1}`"
           :orientation="layoutAxis === 'horizontal' ? 'vertical' : 'horizontal'"
           :active="activeDividerIndex === dividerIndex - 1"

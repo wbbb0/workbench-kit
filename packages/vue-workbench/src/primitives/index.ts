@@ -37,3 +37,8 @@ export { default as PagedListPane } from "./PagedListPane.vue";
 export { default as ResizableDisclosureStack } from "./ResizableDisclosureStack.vue";
 export type { ResizableDisclosureLayout, ResizableDisclosureSection } from "./disclosureStackTypes.js";
 export type { WorkbenchDataTableColumn } from "./dataTableTypes.js";
+
+export { default as WorkbenchActionToolbar } from "./WorkbenchActionToolbar.vue";
+export type { WorkbenchToolbarAction } from "./actionToolbarTypes.js";
+export { default as WorkbenchTaskList } from "./WorkbenchTaskList.vue";
+export type { WorkbenchTaskItem, WorkbenchTaskStatus } from "./taskListTypes.js";

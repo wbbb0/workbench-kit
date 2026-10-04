@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, useTemplateRef } from "vue";
+import { computed, onBeforeUnmount, onMounted, useTemplateRef, ref, watch } from "vue";
 import { X } from "lucide-vue-next";
 import { canStartPointerDrag, usePointerDrag } from "../composables/usePointerDrag";
 import { resolveWindowSizing } from "./windowSizing";
@@ -27,6 +27,9 @@ const emit = defineEmits<{
 
 const surfaceRef = useTemplateRef<HTMLElement>("surface");
 
+const mobileFullscreen = computed(() => props.isMobile && props.window.definition.mobileFullscreen === true);
+const visualViewport = ref({ width: 0, height: 0, left: 0, top: 0 });
+
 const sizing = computed(() => resolveWindowSizing(props.window.definition.size, props.isMobile));
 const minWindowSize: WorkbenchWindowSizePx = {
   width: 320,
@@ -49,7 +52,22 @@ const showCloseButton = computed(() => (
   props.window.definition.showCloseButton ?? ((props.window.definition.actions?.length ?? 0) === 0)
 ));
 
-const surfaceStyle = computed(() => ({
+const surfaceStyle = computed(() => mobileFullscreen.value ? {
+  width: visualViewport.value.width ? `${visualViewport.value.width}px` : "100vw",
+  height: visualViewport.value.height ? `${visualViewport.value.height}px` : "100dvh",
+  left: `${visualViewport.value.left}px`,
+  top: `${visualViewport.value.top}px`,
+  maxWidth: "none",
+  maxHeight: "none",
+  borderRadius: "0",
+  paddingTop: "env(safe-area-inset-top, 0px)",
+  paddingBottom: "env(safe-area-inset-bottom, 0px)",
+  paddingLeft: "env(safe-area-inset-left, 0px)",
+  paddingRight: "env(safe-area-inset-right, 0px)",
+  boxSizing: "border-box" as const,
+  zIndex: String(props.window.order * 2),
+  transform: "none"
+} : ({
   ...sizing.value.style,
   ...(props.window.sizePx ? {
     width: `${props.window.sizePx.width}px`,
@@ -387,12 +405,29 @@ function clampWindowToViewport() {
   emit("bounds", nextBounds);
 }
 
+function updateVisualViewport() {
+  const viewport = window.visualViewport;
+  visualViewport.value = { width: viewport?.width ?? window.innerWidth, height: viewport?.height ?? window.innerHeight, left: viewport?.offsetLeft ?? 0, top: viewport?.offsetTop ?? 0 };
+}
+
+watch(() => props.isMobile, () => {
+  windowDrag.stop();
+  windowResize.stop();
+});
+
 onMounted(() => {
+  updateVisualViewport();
   window.addEventListener("resize", clampWindowToViewport);
+  window.addEventListener("resize", updateVisualViewport);
+  window.visualViewport?.addEventListener("resize", updateVisualViewport);
+  window.visualViewport?.addEventListener("scroll", updateVisualViewport);
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", clampWindowToViewport);
+  window.removeEventListener("resize", updateVisualViewport);
+  window.visualViewport?.removeEventListener("resize", updateVisualViewport);
+  window.visualViewport?.removeEventListener("scroll", updateVisualViewport);
 });
 
 function handleFocusIn() {

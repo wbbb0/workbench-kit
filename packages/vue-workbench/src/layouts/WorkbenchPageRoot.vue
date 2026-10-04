@@ -49,7 +49,7 @@ const mainClass = computed(() => props.contentLayout === "full"
   ? "min-h-0 flex-1 overflow-hidden"
   : "scrollbar-thin min-h-0 flex-1 overflow-auto");
 
-const headerShellClass = "mx-auto flex h-10 w-full max-w-5xl flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between";
+const headerShellClass = "workbench-page-header mx-auto flex min-h-10 w-full max-w-5xl flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6";
 
 const contentShellClass = computed(() => {
   if (props.contentLayout === "full") {
@@ -65,9 +65,9 @@ const contentShellClass = computed(() => {
 <template>
   <WorkbenchRuntimeRoot :view="resolvedView">
     <div class="flex h-dvh min-h-0 flex-col overflow-hidden bg-surface-app text-text-primary">
-      <header v-if="showHeader" class="shrink-0 border-b border-border-default bg-surface-sidebar">
+      <header v-if="showHeader" class="shrink-0 border-b border-border-default bg-surface-sidebar" style="padding-top: env(safe-area-inset-top, 0px)">
         <div :class="headerShellClass">
-          <div class="flex min-w-0 items-baseline gap-3">
+          <div class="flex min-w-0 flex-1 items-baseline gap-3">
             <div class="flex min-w-0 items-baseline gap-1">
               <WorkbenchBreadcrumbs :items="breadcrumbs" />
               <a
@@ -86,7 +86,7 @@ const contentShellClass = computed(() => {
             </span>
           </div>
 
-          <nav v-if="$slots.actions" class="flex flex-wrap gap-3 text-small text-text-muted">
+          <nav v-if="$slots.actions" class="flex min-w-0 max-w-full flex-wrap items-center gap-2 text-small text-text-muted sm:justify-end">
             <slot name="actions" />
           </nav>
         </div>
@@ -100,3 +100,16 @@ const contentShellClass = computed(() => {
     </div>
   </WorkbenchRuntimeRoot>
 </template>
+
+<style scoped>
+.workbench-page-header {
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+}
+@media (min-width: 640px) {
+  .workbench-page-header {
+    padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+  }
+}
+</style>

@@ -175,6 +175,8 @@ export type WorkbenchWindowDefinition<
   modal?: boolean;
   movable?: boolean;
   resizable?: boolean;
+  /** 可选移动端铺满；保留桌面尺寸和位置，返回桌面时恢复。 */
+  mobileFullscreen?: boolean;
   showCloseButton?: boolean;
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
