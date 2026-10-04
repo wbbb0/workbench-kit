@@ -150,7 +150,7 @@ defineExpose<WorkbenchWindowDialogController<DialogValues>>({
 function resolveBlockProps(block: WorkbenchDialogBlock<DialogValues>) {
   return block.kind === "component"
     ? {
-        ...(block.props ?? {}),
+        ...(typeof block.props === "function" ? block.props() : block.props ?? {}),
         values,
         windowId: props.windowId,
         busy: isBusy.value

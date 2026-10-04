@@ -23,22 +23,22 @@ function buildSubmenuEntry(item: Extract<MenuNode, { kind: "submenu" }>, anchor:
 function onSelect(item: MenuNode, event: MouseEvent) {
   if (item.kind === "action") {
     clearPendingSubmenu();
-    item.onSelect();
     closeAllMenus();
+    item.onSelect();
     return;
   }
 
   if (item.kind === "toggle") {
     clearPendingSubmenu();
-    item.onToggle(!item.checked);
     closeAllMenus();
+    item.onToggle(!item.checked);
     return;
   }
 
   if (item.kind === "radio") {
     clearPendingSubmenu();
-    item.onSelect();
     closeAllMenus();
+    item.onSelect();
     return;
   }
 
@@ -70,11 +70,14 @@ function menuIcon(item: MenuNode) {
 </script>
 
 <template>
-  <div class="flex min-w-44 flex-col gap-0.5 p-0.5">
+  <div class="flex min-w-44 flex-col gap-0.5 p-0.5" role="menu">
     <template v-for="item in items" :key="item.id">
       <button
+        type="button"
         v-if="item.kind === 'action' || item.kind === 'submenu'"
         class="flex min-h-8 w-full items-center justify-between rounded-sm px-2.5 py-1 text-left text-[13px] text-text-primary transition-colors duration-120 outline-none hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:text-text-primary"
+        role="menuitem"
+        :aria-haspopup="item.kind === 'submenu' ? 'menu' : undefined"
         data-menu-item="true"
         :data-menu-kind="item.kind"
         :disabled="item.kind === 'action' && item.disabled"
@@ -91,6 +94,9 @@ function menuIcon(item: MenuNode) {
       <div v-else-if="item.kind === 'separator'" class="border-t border-border-default/80" />
       <button
         v-else-if="item.kind === 'toggle'"
+        type="button"
+        role="menuitemcheckbox"
+        :aria-checked="item.checked"
         class="flex min-h-8 w-full items-center justify-between rounded-sm px-2.5 py-1 text-left text-[13px] text-text-primary transition-colors duration-120 outline-none hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:text-text-primary"
         data-menu-item="true"
         :data-menu-kind="item.kind"
@@ -101,6 +107,9 @@ function menuIcon(item: MenuNode) {
       </button>
       <button
         v-else-if="item.kind === 'radio'"
+        type="button"
+        role="menuitemradio"
+        :aria-checked="item.checked"
         class="flex min-h-8 w-full items-center justify-between rounded-sm px-2.5 py-1 text-left text-[13px] text-text-primary transition-colors duration-120 outline-none hover:bg-surface-hover focus-visible:bg-surface-hover focus-visible:text-text-primary"
         data-menu-item="true"
         :data-menu-kind="item.kind"

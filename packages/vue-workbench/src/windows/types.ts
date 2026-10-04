@@ -138,7 +138,8 @@ export type WorkbenchDialogBlock<TValues extends Record<string, unknown> = Recor
   | {
       kind: "component";
       component: Component;
-      props?: Record<string, unknown>;
+      /** 静态 props 保持快照语义；factory 可注入实时响应式状态及共享 controller。 */
+      props?: Record<string, unknown> | (() => Record<string, unknown>);
       /** 让 block 容器占满窗口内容区的剩余高度，适用于工作区式自定义内容。 */
       grow?: boolean;
     };

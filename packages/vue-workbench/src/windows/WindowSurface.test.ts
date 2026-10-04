@@ -16,6 +16,8 @@ describe("mobile fullscreen windows", () => {
   it("ignores desktop bounds in mobile fullscreen and restores them afterwards", async () => {
     const window = makeWindow(true);
     const wrapper = mount(WindowSurface, { props: { window, isMobile: true } });
+    expect(wrapper.get('[role="dialog"]').attributes("aria-label")).toBe("Tool");
+    expect(wrapper.get('[role="dialog"]').attributes("aria-modal")).toBe("false");
     expect((wrapper.element as HTMLElement).style.transform).toBe("none");
     expect((wrapper.element as HTMLElement).style.left).toBe("0px");
     expect(wrapper.find('[data-window-resize-handle]').exists()).toBe(false);

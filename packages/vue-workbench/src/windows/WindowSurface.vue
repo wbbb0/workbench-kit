@@ -444,6 +444,9 @@ function handleFocusIn() {
     class="rounded-xl"
     :class="surfaceClasses"
     :style="surfaceStyle"
+    role="dialog"
+    :aria-label="window.definition.title"
+    :aria-modal="window.definition.modal === true"
     :aria-disabled="inactive ? 'true' : 'false'"
     @focusin="handleFocusIn"
     @pointerdown="handleSurfacePointerDown"
@@ -462,7 +465,7 @@ function handleFocusIn() {
           {{ window.definition.description }}
         </div>
       </div>
-      <button v-if="showCloseButton" class="btn-ghost -mr-1 -mt-0.5" title="关闭" type="button" :disabled="inactive" @click="emit('close')">
+      <button v-if="showCloseButton" class="btn-ghost -mr-1 -mt-0.5" title="关闭" aria-label="关闭" type="button" :disabled="inactive" @click="emit('close')">
         <X :size="14" :stroke-width="2" />
       </button>
     </header>
