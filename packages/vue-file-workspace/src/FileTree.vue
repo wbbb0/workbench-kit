@@ -31,6 +31,8 @@ const props = withDefaults(defineProps<{
   showActions?: boolean;
   /** 保留默认点击目录展开；开启后目录label导航、独立按钮展开。 */
   directoryNavigation?: boolean;
+  /** 显式开启右键菜单入口，默认不拦截浏览器contextmenu。 */
+  contextActions?: boolean;
 }>(), {
   depth: 0,
   selectionMode: "single",
@@ -61,6 +63,11 @@ function itemIcon(item: LocalFileItem) {
   return File;
 }
 
+function context(item: LocalFileItem, event: MouseEvent) {
+  if (!props.contextActions) return;
+  event.preventDefault(); event.stopPropagation(); emit("itemAction",item,event);
+}
+
 function forwardToggleSelection(item: LocalFileItem, selected: boolean) {
   emit("toggleSelection", item, selected);
 }
@@ -72,6 +79,7 @@ function forwardToggleSelection(item: LocalFileItem, selected: boolean) {
       <TreeNodeShell
         :draggable="draggable"
         :class="{ 'file-tree-touch': touchDensity }"
+        @contextmenu="context(item,$event)"
         @dragstart.stop="emit('dragItem', item, $event)"
         @dragover="dropEnabled && item.kind === 'directory' && $event.preventDefault()"
         @drop="dropEnabled && item.kind === 'directory' && ($event.preventDefault(), $event.stopPropagation(), emit('dropItem',item,$event))"
@@ -127,7 +135,7 @@ function forwardToggleSelection(item: LocalFileItem, selected: boolean) {
               :selected-paths="selectedPaths"
               :indeterminate-paths="indeterminatePaths"
               :depth="props.depth + 1"
-              :draggable="draggable" :drop-enabled="dropEnabled" :touch-density="touchDensity" :show-actions="showActions" :directory-navigation="directoryNavigation"
+              :draggable="draggable" :drop-enabled="dropEnabled" :touch-density="touchDensity" :show-actions="showActions" :directory-navigation="directoryNavigation" :context-actions="contextActions"
               @drag-item="(item,event) => emit('dragItem',item,event)"
               @drop-item="(item,event) => emit('dropItem',item,event)"
               @item-action="(item,event) => emit('itemAction',item,event)"

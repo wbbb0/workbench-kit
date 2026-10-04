@@ -39,10 +39,11 @@ describe("FileTree compatibility",()=>{
   });
   it("preserves old toggle/selection events and forwards directory footer and actions recursively",async()=>{
     const dir={name:"dir",path:"dir",kind:"directory" as const,sizeBytes:0,updatedAtMs:0};const child={...dir,name:"child",path:"dir/child",kind:"file" as const};
-    const wrapper=mount(FileTree,{props:{items:[dir],expandedPaths:["dir"],itemsByPath:{dir:[child]},selectedPath:null,showActions:true},slots:{directoryEnd:'<span class="directory-footer">More directories</span>'}});
+    const wrapper=mount(FileTree,{props:{items:[dir],expandedPaths:["dir"],itemsByPath:{dir:[child]},selectedPath:null,showActions:true,contextActions:true},slots:{directoryEnd:'<span class="directory-footer">More directories</span>'}});
     expect(wrapper.findAll(".directory-footer")).toHaveLength(1);
     const folder=wrapper.findAll("button").find(button=>button.text()==="dir")!;await folder.trigger("click");expect(wrapper.emitted("toggleDirectory")).toEqual([["dir"]]);
     const file=wrapper.findAll("button").find(button=>button.text()==="child")!;await file.trigger("click");expect(wrapper.emitted("selectItem")).toEqual([[child]]);
+    await file.trigger("contextmenu");expect(wrapper.emitted("itemAction")?.[0]?.[0]).toEqual(child);
     const childShell=wrapper.findAll('.tree-shell-header')[1]!.element.parentElement!;
     childShell.dispatchEvent(new Event('dragstart',{bubbles:true}));expect(wrapper.emitted('dragItem')).toHaveLength(1);expect(wrapper.emitted('dragItem')?.[0]?.[0]).toEqual(child);
     const action=wrapper.find('button[aria-label="child 的更多操作"]');await action.trigger("click");expect(wrapper.emitted("itemAction")?.[0]?.[0]).toEqual(child);wrapper.unmount();

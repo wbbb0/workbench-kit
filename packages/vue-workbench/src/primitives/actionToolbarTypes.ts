@@ -5,6 +5,8 @@ export type WorkbenchToolbarAction = {
   id: string;
   label: string;
   icon?: Component;
+  /** 仅工具栏显示图标；菜单、aria-label 和默认title保留label。 */
+  iconOnly?: boolean;
   disabled?: boolean;
   title?: string;
   /** 较大的值优先保留在工具栏，菜单和工具栏均保持原始顺序。 */

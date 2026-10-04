@@ -74,10 +74,10 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="root" class="workbench-action-toolbar relative flex min-w-0 w-full overflow-hidden items-center gap-1" role="group" :aria-label="label">
-    <WorkbenchButton v-for="action in visible" :key="action.id" class="shrink-0" :label="action.label" :icon="action.icon" :title="action.title" :disabled="action.disabled" :variant="action.variant || 'secondary'" @click="invoke(action.id)" />
+    <WorkbenchButton v-for="action in visible" :key="action.id" class="shrink-0" :label="action.iconOnly ? undefined : action.label" :icon="action.icon" :title="action.title || (action.iconOnly ? action.label : undefined)" :aria-label="action.iconOnly ? action.label : undefined" :disabled="action.disabled" :variant="action.variant || 'secondary'" @click="invoke(action.id)" />
     <WorkbenchButton v-if="overflow.length" class="shrink-0" :icon="Ellipsis" :title="moreLabel" :aria-label="moreLabel" data-menu-trigger="true" aria-haspopup="menu" @click="openMore" />
     <div ref="measuring" class="pointer-events-none invisible absolute left-0 top-0 flex w-max gap-1" aria-hidden="true" inert>
-      <WorkbenchButton v-for="action in actions" :key="action.id" :label="action.label" :icon="action.icon" :variant="action.variant || 'secondary'" tabindex="-1" />
+      <WorkbenchButton v-for="action in actions" :key="action.id" :label="action.iconOnly ? undefined : action.label" :icon="action.icon" :variant="action.variant || 'secondary'" tabindex="-1" />
       <WorkbenchButton :icon="Ellipsis" :title="moreLabel" tabindex="-1" />
     </div>
   </div>

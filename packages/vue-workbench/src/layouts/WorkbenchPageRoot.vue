@@ -49,7 +49,7 @@ const mainClass = computed(() => props.contentLayout === "full"
   ? "min-h-0 flex-1 overflow-hidden"
   : "scrollbar-thin min-h-0 flex-1 overflow-auto");
 
-const headerShellClass = "workbench-page-header mx-auto flex min-h-10 w-full max-w-5xl flex-col gap-2 px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-6";
+const headerShellClass = "workbench-page-header mx-auto flex min-h-10 w-full max-w-5xl flex-row flex-wrap items-center gap-2 px-3 py-2 sm:justify-between sm:gap-3 sm:px-6";
 
 const contentShellClass = computed(() => {
   if (props.contentLayout === "full") {
@@ -67,7 +67,7 @@ const contentShellClass = computed(() => {
     <div class="flex h-dvh min-h-0 flex-col overflow-hidden bg-surface-app text-text-primary">
       <header v-if="showHeader" class="shrink-0 border-b border-border-default bg-surface-sidebar" style="padding-top: env(safe-area-inset-top, 0px)">
         <div :class="headerShellClass">
-          <div class="flex min-w-0 flex-1 items-baseline gap-3">
+          <div class="flex min-w-0 flex-1 basis-[10rem] items-baseline gap-3">
             <div class="flex min-w-0 items-baseline gap-1">
               <WorkbenchBreadcrumbs :items="breadcrumbs" />
               <a
