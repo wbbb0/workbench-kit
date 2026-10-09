@@ -28,6 +28,8 @@ const props = withDefaults(defineProps<{
   draggable?: boolean;
   dropEnabled?: boolean;
   touchDensity?: boolean;
+  /** 可选紧凑行高；触摸密度开启时仍保留较大点击区域。 */
+  compact?: boolean;
   showActions?: boolean;
   /** 保留默认点击目录展开；开启后目录label导航、独立按钮展开。 */
   directoryNavigation?: boolean;
@@ -93,7 +95,7 @@ function forwardToggleSelection(item: LocalFileItem, selected: boolean) {
         @select="emit('selectItem', item)"
       >
         <template v-if="selectionMode === 'multiple' || (directoryNavigation && item.kind === 'directory')" #leading>
-          <button v-if="directoryNavigation && item.kind === 'directory'" type="button" class="flex size-9 items-center justify-center" :aria-label="`${expandedSet.has(item.path) ? '折叠' : '展开'} ${item.name}`" :aria-expanded="expandedSet.has(item.path)" @click.stop="emit('toggleDirectory',item.path)"><component :is="expandedSet.has(item.path) ? ChevronDown : ChevronRight" :size="14" /></button>
+          <button v-if="directoryNavigation && item.kind === 'directory'" type="button" class="flex shrink-0 items-center justify-center" :class="compact && !touchDensity ? 'size-6' : 'size-9'" :aria-label="`${expandedSet.has(item.path) ? '折叠' : '展开'} ${item.name}`" :aria-expanded="expandedSet.has(item.path)" @click.stop="emit('toggleDirectory',item.path)"><component :is="expandedSet.has(item.path) ? ChevronDown : ChevronRight" :size="14" /></button>
           <input v-if="selectionMode === 'multiple'"
             type="checkbox"
             class="size-4 shrink-0"
@@ -118,7 +120,7 @@ function forwardToggleSelection(item: LocalFileItem, selected: boolean) {
           <span class="tree-label">{{ item.name }}</span>
         </template>
         <template v-if="showActions || $slots.actions" #actions>
-          <slot name="actions" :item="item"><button type="button" class="flex size-9 items-center justify-center rounded hover:bg-surface-hover" :aria-label="`${item.name} 的更多操作`" @click.stop="emit('itemAction',item,$event)">⋯</button></slot>
+          <slot name="actions" :item="item"><button type="button" class="flex shrink-0 items-center justify-center rounded hover:bg-surface-hover" :class="compact && !touchDensity ? 'size-6' : 'size-9'" :aria-label="`${item.name} 的更多操作`" @click.stop="emit('itemAction',item,$event)">⋯</button></slot>
         </template>
         <template #meta>
           <slot name="meta" :item="item"><span class="tree-meta">{{ item.kind === "directory" ? "目录" : "文件" }}</span></slot>
@@ -135,7 +137,7 @@ function forwardToggleSelection(item: LocalFileItem, selected: boolean) {
               :selected-paths="selectedPaths"
               :indeterminate-paths="indeterminatePaths"
               :depth="props.depth + 1"
-              :draggable="draggable" :drop-enabled="dropEnabled" :touch-density="touchDensity" :show-actions="showActions" :directory-navigation="directoryNavigation" :context-actions="contextActions"
+              :draggable="draggable" :drop-enabled="dropEnabled" :touch-density="touchDensity" :compact="compact" :show-actions="showActions" :directory-navigation="directoryNavigation" :context-actions="contextActions"
               @drag-item="(item,event) => emit('dragItem',item,event)"
               @drop-item="(item,event) => emit('dropItem',item,event)"
               @item-action="(item,event) => emit('itemAction',item,event)"
