@@ -10,6 +10,17 @@ const CustomBlock = defineComponent({
 });
 
 describe("DialogRenderer", () => {
+  it("preserves the default close label and result while accepting an optional caption", async () => {
+    const definition = { kind: "dialog" as const, title: "Info", size: "auto" as const, footer: "close" as const };
+    const wrapper = mount(DialogRenderer, { props: { windowId: "close-label", definition } });
+    expect(wrapper.get('[data-action-kind="close"]').text()).toBe("取消");
+    await wrapper.setProps({ definition: { ...definition, closeLabel: "知道了" } });
+    expect(wrapper.get('[data-action-kind="close"]').text()).toBe("知道了");
+    await wrapper.get('[data-action-kind="close"]').trigger("click");
+    expect(wrapper.emitted("resolve")?.[0]?.[0]).toMatchObject({ reason: "close", values: {} });
+    wrapper.unmount();
+  });
+
   it("lets an opted-in component block fill the available content height", () => {
     const wrapper = mount(DialogRenderer, {
       props: {

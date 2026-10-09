@@ -13,3 +13,6 @@ export * from "./menu/menuRuntime.js";
 export * from "./menu/types.js";
 export * from "./menu/useMenuRuntime.js";
 export * from "./menu/useMenuTrigger.js";
+export { default as WorkbenchErrorPanel } from "./errors/WorkbenchErrorPanel.vue";
+export * from "./errors/types.js";
+export * from "./errors/useWorkbenchErrors.js";

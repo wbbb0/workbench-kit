@@ -255,7 +255,7 @@ function handleClose() {
         type="button"
         @click="handleClose"
       >
-        取消
+        {{ definition.closeLabel ?? "取消" }}
       </button>
 
       <button

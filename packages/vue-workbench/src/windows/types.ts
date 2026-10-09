@@ -182,6 +182,8 @@ export type WorkbenchWindowDefinition<
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
   footer?: WorkbenchDialogFooterMode;
+  /** Optional label for the footer close button. Defaults to 取消. */
+  closeLabel?: string;
   context?: WorkbenchWindowContext;
 };
 
