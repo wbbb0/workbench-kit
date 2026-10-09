@@ -5,6 +5,26 @@ const entries = Array.from({length:1000},(_,index)=>({name:`File ${index}`,path:
 function viewport(width:number,height=400) { vi.stubGlobal("ResizeObserver",class { callback:ResizeObserverCallback; constructor(callback:ResizeObserverCallback){this.callback=callback;}observe(){this.callback([{contentRect:{width,height}}] as ResizeObserverEntry[],this as unknown as ResizeObserver);}disconnect(){} }); }
 afterEach(()=>{vi.unstubAllGlobals();vi.restoreAllMocks();window.localStorage.clear();});
 describe("FileEntryList",()=>{
+  it("keeps non-openable entries selectable by mouse, marquee, keyboard and all while blocking open and mixed drag",async()=>{
+    viewport(1000);const special={...entries[0]!,openDisabledReason:"只能查看属性",draggable:false};const items=[special,entries[1]!];
+    const wrapper=mount(FileEntryList,{props:{entries:items,draggable:true}});await flushPromises();
+    const rows=wrapper.findAll('[role="option"]');expect(rows[0]!.attributes('draggable')).toBe('false');expect(rows[0]!.attributes('aria-disabled')).toBe('false');expect(rows[1]!.attributes('draggable')).toBe('true');
+    await rows[0]!.trigger('click');expect(wrapper.emitted('setSelection')?.at(-1)).toEqual([[special.path],special.path]);
+    await wrapper.setProps({focusedPath:special.path,selectedPaths:[special.path]});await rows[0]!.trigger('dblclick');await wrapper.get('[role="listbox"]').trigger('keydown',{key:'Enter'});expect(wrapper.emitted('openEntry')).toBeUndefined();
+    await wrapper.get('[role="listbox"]').trigger('keydown',{key:'a',ctrlKey:true});expect(wrapper.emitted('setSelection')?.at(-1)).toEqual([[special.path,items[1]!.path],special.path]);
+    const scroll=wrapper.get('[role="listbox"]').element;
+    scroll.dispatchEvent(new PointerEvent('pointerdown',{pointerId:7,pointerType:'mouse',button:0,isPrimary:true,clientX:0,clientY:40}));
+    window.dispatchEvent(new PointerEvent('pointermove',{pointerId:7,clientX:300,clientY:120}));window.dispatchEvent(new PointerEvent('pointerup',{pointerId:7}));
+    expect(wrapper.emitted('setSelection')?.at(-1)?.[0]).toEqual([special.path,items[1]!.path]);
+    await rows[0]!.trigger('pointerdown',{pointerType:'mouse'});await rows[0]!.trigger('click');expect(wrapper.emitted('setSelection')?.at(-1)).toEqual([[special.path],special.path]);
+    await wrapper.setProps({selectedPaths:items.map(item=>item.path)});const blocked=new Event('dragstart',{bubbles:true,cancelable:true});rows[1]!.element.dispatchEvent(blocked);expect(blocked.defaultPrevented).toBe(true);expect(wrapper.emitted('dragEntries')).toBeUndefined();
+    await wrapper.setProps({selectedPaths:[items[1]!.path]});await rows[1]!.trigger('dragstart');expect(wrapper.emitted('dragEntries')?.at(-1)?.[0]).toEqual([items[1]]);wrapper.unmount();
+  });
+  it("selects and focuses a non-openable entry on touch without opening it",async()=>{
+    viewport(390);const special={...entries[0]!,openDisabledReason:"只能查看属性",draggable:false};const wrapper=mount(FileEntryList,{props:{entries:[special],draggable:true}});await flushPromises();
+    const row=wrapper.get('[role="option"]');await row.trigger('pointerdown',{pointerType:'touch'});await row.trigger('click');expect(wrapper.emitted('setSelection')).toEqual([[[special.path],special.path]]);expect(wrapper.emitted('focusEntry')).toEqual([[special]]);expect(wrapper.emitted('openEntry')).toBeUndefined();
+    expect(row.attributes('title')).toBe('只能查看属性');wrapper.unmount();
+  });
   it("restores bounded column widths from an optional key and persists resized widths",async()=>{
     viewport(1000);window.localStorage.setItem("saved-columns",JSON.stringify({name:-1,size:1e10,modifiedAt:"bad",type:null}));
     const wrapper=mount(FileEntryList,{props:{entries:entries.slice(0,1),storageKey:"saved-columns"}});await flushPromises();

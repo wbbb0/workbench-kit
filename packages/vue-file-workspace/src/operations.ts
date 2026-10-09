@@ -5,8 +5,12 @@ export interface FileWorkspaceEntry extends Pick<LocalFileItem, "path" | "name" 
   sizeBytes?: number;
   updatedAtMs?: number;
   typeLabel?: string;
-  /** 业务可用于不可访问或不可打开条目；共享包不推导权限。 */
+  /** 禁用整个条目（包括选择和打开）；共享包不推导权限。 */
   disabledReason?: string;
+  /** 仅限制打开，仍支持选择、聚焦和查看元信息。 */
+  openDisabledReason?: string;
+  /** 可选的条目拖动能力；省略时遵循列表级draggable配置。 */
+  draggable?: boolean;
 }
 export interface FileLocation { rootId: string; path: string }
 export interface FileLocationRoot { id: string; label: string; disabled?: boolean; disabledReason?: string }

@@ -16,6 +16,22 @@ This repository is public for convenience, but it is maintained for personal pro
 - [Usage](docs/usage.md)
 - [Workflow](docs/workflow.md)
 
+## Responsive breadcrumbs
+
+`WorkbenchBreadcrumbs` preserves its complete-path display by default. Opt into
+`autoCollapse` to show every segment when space allows, and move intermediate
+ancestors into a navigation menu as the available width shrinks:
+
+```vue
+<WorkbenchBreadcrumbs class="min-w-0 flex-1" :items="pathItems" auto-collapse />
+```
+
+Items accept `label` with optional `href` or `onSelect`. The first and last
+segments remain visible; exceptionally long labels truncate with a title.
+Container resizing and label changes update the visible path. An explicit
+`maxItems` remains an upper limit, including when `autoCollapse` is enabled.
+Without `autoCollapse`, existing `maxItems` behavior remains unchanged.
+
 ## Error feedback
 
 Applications normalize their transport or domain errors into `WorkbenchErrorInfo`.

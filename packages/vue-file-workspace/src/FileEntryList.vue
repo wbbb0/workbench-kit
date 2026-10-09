@@ -82,6 +82,7 @@ const marquee = useMarqueeSelection({
 });
 function pointerDown(event: PointerEvent) {
   lastPointerType.value = event.pointerType;
+  if ((event.target as HTMLElement).closest('[data-file-entry]')) marquee.moved.value = false;
   if (compact.value || event.pointerType === "touch" || (event.target as HTMLElement).closest('[data-file-entry],button,input,[data-column-resize]')) return;
   marquee.start(event);
 }
@@ -89,14 +90,16 @@ function click(entry: FileWorkspaceEntry,event: MouseEvent) {
   if (entry.disabledReason) return;
   if (marquee.moved.value) { marquee.moved.value = false; return; }
   if (selectionMode.value) selection.select(entry.path,{additive:true});
-  else if (lastPointerType.value === "touch" || (event as PointerEvent).pointerType === "touch") { emit("focusEntry",entry); emit("openEntry",entry); return; }
+  else if (lastPointerType.value === "touch" || (event as PointerEvent).pointerType === "touch") { if (entry.openDisabledReason) selection.select(entry.path); emit("focusEntry",entry); if (!entry.openDisabledReason) emit("openEntry",entry); return; }
   else selection.select(entry.path,{additive:event.ctrlKey || event.metaKey,range:event.shiftKey});
   emit("focusEntry",entry);
 }
-function open(entry: FileWorkspaceEntry) { if (!selectionMode.value && !entry.disabledReason) emit("openEntry",entry); }
+function open(entry: FileWorkspaceEntry) { if (!selectionMode.value && !entry.disabledReason && !entry.openDisabledReason) emit("openEntry",entry); }
 function action(entry: FileWorkspaceEntry,event: MouseEvent) { event.preventDefault(); event.stopPropagation(); emit("entryAction",entry,event); }
 function drag(entry: FileWorkspaceEntry,event: DragEvent) {
-  emit("dragEntries",selection.selected.value.has(entry.path) ? props.entries.filter(item => selection.selected.value.has(item.path)) : [entry],event);
+  const entries = selection.selected.value.has(entry.path) ? props.entries.filter(item => selection.selected.value.has(item.path)) : [entry];
+  if (!props.draggable || compact.value || entries.some(item => item.disabledReason || item.draggable === false)) { event.preventDefault(); event.stopPropagation(); return; }
+  emit("dragEntries",entries,event);
 }
 function acceptsDrag(event: DragEvent) { return !!event.dataTransfer && Array.from(event.dataTransfer.types).some(type => type === "Files" || type === FILE_WORKSPACE_DRAG_TYPE); }
 function targetFor(entry?: FileWorkspaceEntry | null) { return entry?.kind === "directory" ? entry : null; }
@@ -163,11 +166,11 @@ watch(() => props.entries, async () => { await nextTick(); if(scrollEl.value) sc
       </div>
       <div class="relative" :style="{height:`${count * cellHeight}px`,width:`${listWidth}px`}">
         <div class="absolute left-0 top-0 w-full" :style="{transform:`translateY(${start * cellHeight}px)`,display:grid?'grid':'block',gridTemplateColumns:grid?`repeat(${columns},minmax(0,1fr))`:undefined,columnGap:grid?'12px':undefined,paddingInline:grid?'12px':undefined}">
-          <div v-for="{entry} in visible" :key="entry.path" data-file-entry role="option" :aria-selected="selection.selected.value.has(entry.path)" :aria-disabled="!!entry.disabledReason" :title="entry.disabledReason" :draggable="draggable && !compact && !entry.disabledReason" class="file-entry group relative flex min-w-0 items-center gap-2 border-b border-border-default px-3" :class="{'file-entry-selected':selection.selected.value.has(entry.path),'file-entry-focused':focusedPath === entry.path,'file-entry-grid':grid,'file-entry-drop-target':dropTarget?.path === entry.path}" :style="{height:`${cellHeight}px`}" @pointerdown="lastPointerType = $event.pointerType" @click="click(entry,$event)" @dblclick="lastPointerType !== 'touch' && open(entry)" @contextmenu="action(entry,$event)" @dragstart="drag(entry,$event)" @dragover.stop="dragover($event,entry)" @drop="drop(entry,$event)">
+          <div v-for="{entry} in visible" :key="entry.path" data-file-entry role="option" :aria-selected="selection.selected.value.has(entry.path)" :aria-disabled="!!entry.disabledReason" :title="entry.disabledReason || entry.openDisabledReason" :draggable="draggable && !compact && !entry.disabledReason && entry.draggable !== false" class="file-entry group relative flex min-w-0 items-center gap-2 border-b border-border-default px-3" :class="{'file-entry-selected':selection.selected.value.has(entry.path),'file-entry-focused':focusedPath === entry.path,'file-entry-grid':grid,'file-entry-drop-target':dropTarget?.path === entry.path}" :style="{height:`${cellHeight}px`}" @pointerdown="lastPointerType = $event.pointerType" @click="click(entry,$event)" @dblclick="lastPointerType !== 'touch' && open(entry)" @contextmenu="action(entry,$event)" @dragstart="drag(entry,$event)" @dragover.stop="dragover($event,entry)" @drop="drop(entry,$event)">
             <input v-if="selectionMode" type="checkbox" :checked="selection.selected.value.has(entry.path)" :aria-label="`选择 ${entry.name}`" class="size-4 shrink-0" @click.stop="selection.select(entry.path,{additive:true})" @pointerdown.stop>
             <div v-if="compact || grid" class="shrink-0"><slot name="thumbnail" :entry="entry" :size="grid ? Math.max(96,gridSize) : 36"><component :is="entry.kind === 'directory' ? Folder : File" :size="grid?Math.max(48,gridSize/2):28" class="text-text-muted" /></slot></div>
             <div v-if="compact || grid" class="min-w-0 flex-1"><div class="file-entry-name" :class="grid ? 'file-entry-grid-name' : 'truncate'" :title="entry.name">{{ entry.name }}</div><div v-if="compact" class="truncate text-xs text-text-muted"><slot name="entry-meta" :entry="entry">{{ meta(entry,'size') }} · {{ meta(entry,'modifiedAt') }}</slot></div></div>
-            <div v-else class="grid min-w-0" :style="{gridTemplateColumns:template}"><div v-for="column in activeColumns" :key="column.key" class="flex min-w-0 items-center gap-2 pr-3"><template v-if="column.key === 'name'"><slot name="thumbnail" :entry="entry" :size="24"><component :is="entry.kind === 'directory' ? Folder : File" :size="20" class="shrink-0 text-text-muted" /></slot><span class="truncate" :title="entry.name">{{ entry.name }}</span></template><span v-else class="truncate text-xs text-text-muted">{{ meta(entry,column.key) }}</span></div></div>
+            <div v-else class="grid min-w-0" :style="{gridTemplateColumns:template}"><div v-for="column in activeColumns" :key="column.key" class="flex min-w-0 items-center gap-2 pr-3"><template v-if="column.key === 'name'"><slot name="thumbnail" :entry="entry" :size="24"><component :is="entry.kind === 'directory' ? Folder : File" :size="20" class="shrink-0 text-text-muted" /></slot><span class="truncate" :title="entry.name">{{ entry.name }}</span></template><span v-else class="truncate text-xs text-text-muted" :title="column.key === 'type' && entry.openDisabledReason ? `${meta(entry,column.key)}：${entry.openDisabledReason}` : meta(entry,column.key)">{{ meta(entry,column.key) }}</span></div></div>
             <div class="file-entry-actions" @click.stop @dblclick.stop @pointerdown.stop><slot name="actions" :entry="entry" :action="(event:MouseEvent)=>action(entry,event)"><button type="button" class="flex size-11 items-center justify-center rounded hover:bg-surface-hover" :aria-label="`${entry.name} 的更多操作`" @click="action(entry,$event)"><MoreHorizontal :size="18" /></button></slot></div>
           </div>
         </div>
