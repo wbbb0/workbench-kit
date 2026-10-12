@@ -9,3 +9,5 @@ export * from "./operations.js";
 export * from "./composables/useFilePicker.js";
 export * from "./composables/useFileDrop.js";
 export * from "./composables/useFileClipboard.js";
+export * from "./chunkUpload.js";
+export * from "./rangeDownload.js";
