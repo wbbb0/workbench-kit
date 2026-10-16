@@ -22,9 +22,20 @@ This repository is public for convenience, but it is maintained for personal pro
 square tabs with separators and an accent line on the active tab. Existing
 consumers keep the default rounded appearance. Selection, closing, dragging,
 and the compact tab menu use the same props and events in either appearance.
-Optional `size="xs"` provides 28px desktop tabs and 36px compact controls;
-existing `sm` and `md` sizes are unchanged. Set `tab-height="2rem"` to explicitly
-unify desktop and compact heights. The add button stays vertically centered.
+The size scale is shared by expanded tabs and compact controls, including touch:
+
+| Size | Height | Horizontal padding | Label / icon |
+| --- | --- | --- | --- |
+| `xs` | 1.5rem (24px) | 0.375rem | 11px / 12px |
+| `sm` | 1.75rem (28px) | 0.5rem | 12px / 14px |
+| `md` (default) | 2rem (32px) | 0.625rem | 12px / 14px |
+| `lg` | 2.5rem (40px) | 0.75rem | 14px / 16px |
+
+Pixel equivalents assume a 16px root font size. Add/compact action buttons are
+square and vertically centered; close targets scale within the tab height.
+This replaces the earlier size mappings and the temporary `tabHeight` override.
+Choose `lg` when larger touch targets are preferred; responsive collapse changes
+the presentation without changing the selected size.
 
 ## Responsive breadcrumbs
 
