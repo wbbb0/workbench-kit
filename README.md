@@ -22,6 +22,8 @@ This repository is public for convenience, but it is maintained for personal pro
 square tabs with separators and an accent line on the active tab. Existing
 consumers keep the default rounded appearance. Selection, closing, dragging,
 and the compact tab menu use the same props and events in either appearance.
+Optional `size="xs"` provides 28px desktop tabs and 36px compact controls;
+existing `sm` and `md` sizes are unchanged.
 
 ## Responsive breadcrumbs
 

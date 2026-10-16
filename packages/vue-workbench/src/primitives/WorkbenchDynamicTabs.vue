@@ -9,7 +9,7 @@ import type { WorkbenchDynamicTabItem } from "./dynamicTabsTypes";
 const props = withDefaults(defineProps<{
   items: readonly WorkbenchDynamicTabItem[];
   modelValue: string;
-  size?: "sm" | "md";
+  size?: "xs" | "sm" | "md";
   /** editor 使用相邻的平直标签；默认保留原有圆角标签外观。 */
   appearance?: "default" | "editor";
   addable?: boolean;
@@ -111,7 +111,7 @@ function handleWheel(event: WheelEvent): void {
       :key="item.id"
       class="workbench-dynamic-tab group grid min-w-30 max-w-56 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 px-2 text-left text-small text-text-muted transition-colors hover:bg-surface-hover hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
       :class="[
-        size === 'sm' ? 'h-8' : 'h-9',
+        size === 'xs' ? 'h-7' : size === 'sm' ? 'h-8' : 'h-9',
         { 'is-active': modelValue === item.id },
         appearance === 'editor'
           ? 'workbench-editor-tab'
@@ -144,7 +144,7 @@ function handleWheel(event: WheelEvent): void {
     <button
       v-if="addable"
       class="workbench-dynamic-tabs-add sticky right-0 z-10 flex shrink-0 items-center justify-center bg-surface-muted text-text-muted hover:bg-surface-hover hover:text-text-secondary"
-      :class="[size === 'sm' ? 'size-8' : 'size-9', appearance === 'editor' ? 'rounded-none' : 'mb-px rounded-md border border-border-subtle']"
+      :class="[size === 'xs' ? 'size-7' : size === 'sm' ? 'size-8' : 'size-9', appearance === 'editor' ? 'rounded-none' : 'mb-px rounded-md border border-border-subtle']"
       type="button"
       :title="addLabel"
       @click="emit('add')"
@@ -153,12 +153,12 @@ function handleWheel(event: WheelEvent): void {
     </button>
   </div>
   <div v-if="compact" class="workbench-dynamic-tabs-compact min-w-0 items-center" :class="appearance === 'editor' ? 'gap-0' : 'gap-1'">
-    <button type="button" class="workbench-dynamic-tabs-current flex min-w-0 flex-1 h-10 items-center gap-2 px-2 text-small text-text-secondary" :class="appearance === 'editor' ? 'workbench-editor-tab is-active' : 'rounded border border-border-subtle bg-surface-muted'" :aria-label="tabsLabel" aria-haspopup="menu" data-menu-trigger="true" @click="openTabs">
+    <button type="button" class="workbench-dynamic-tabs-current flex min-w-0 flex-1 items-center gap-2 px-2 text-small text-text-secondary" :class="[size === 'xs' ? 'h-9' : 'h-10', appearance === 'editor' ? 'workbench-editor-tab is-active' : 'rounded border border-border-subtle bg-surface-muted']" :aria-label="tabsLabel" aria-haspopup="menu" data-menu-trigger="true" @click="openTabs">
       <span class="min-w-0 flex-1 truncate">{{ activeItem?.label || tabsLabel }}</span>
       <span class="text-text-subtle">{{ items.length }}</span><ChevronDown class="size-4 shrink-0" aria-hidden="true" />
     </button>
-    <button v-if="activeItem?.closable" type="button" class="flex size-10 shrink-0 items-center justify-center hover:bg-surface-hover" :class="appearance === 'editor' ? 'rounded-none' : 'rounded'" :title="`Close ${activeItem.label}`" :aria-label="`Close ${activeItem.label}`" :disabled="activeItem.disabled" @click="closeTab(activeItem.id)"><X class="size-4" aria-hidden="true" /></button>
-    <button v-if="addable" type="button" class="flex size-10 shrink-0 items-center justify-center hover:bg-surface-hover" :class="appearance === 'editor' ? 'rounded-none' : 'rounded'" :title="addLabel" :aria-label="addLabel" @click="emit('add')"><Plus class="size-4" aria-hidden="true" /></button>
+    <button v-if="activeItem?.closable" type="button" class="flex shrink-0 items-center justify-center hover:bg-surface-hover" :class="[size === 'xs' ? 'size-9' : 'size-10', appearance === 'editor' ? 'rounded-none' : 'rounded']" :title="`Close ${activeItem.label}`" :aria-label="`Close ${activeItem.label}`" :disabled="activeItem.disabled" @click="closeTab(activeItem.id)"><X class="size-4" aria-hidden="true" /></button>
+    <button v-if="addable" type="button" class="flex shrink-0 items-center justify-center hover:bg-surface-hover" :class="[size === 'xs' ? 'size-9' : 'size-10', appearance === 'editor' ? 'rounded-none' : 'rounded']" :title="addLabel" :aria-label="addLabel" @click="emit('add')"><Plus class="size-4" aria-hidden="true" /></button>
   </div>
   </div>
 </template>
