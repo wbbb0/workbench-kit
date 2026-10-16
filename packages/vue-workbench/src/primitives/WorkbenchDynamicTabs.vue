@@ -10,6 +10,8 @@ const props = withDefaults(defineProps<{
   items: readonly WorkbenchDynamicTabItem[];
   modelValue: string;
   size?: "xs" | "sm" | "md";
+  /** 可选 CSS 长度，统一桌面标签和紧凑控件的高度。 */
+  tabHeight?: string;
   /** editor 使用相邻的平直标签；默认保留原有圆角标签外观。 */
   appearance?: "default" | "editor";
   addable?: boolean;
@@ -97,7 +99,7 @@ function handleWheel(event: WheelEvent): void {
 </script>
 
 <template>
-  <div class="workbench-dynamic-tabs min-w-0 max-w-full flex-1" :class="{ 'is-compact-enabled': compact, 'is-editor': appearance === 'editor' }">
+  <div class="workbench-dynamic-tabs min-w-0 max-w-full flex-1" :class="{ 'is-compact-enabled': compact, 'is-editor': appearance === 'editor', 'has-custom-height': !!tabHeight }" :style="tabHeight ? { '--workbench-tab-height': tabHeight } : undefined">
   <div
     :class="[
       'workbench-dynamic-tabs-expanded max-w-full items-end overflow-hidden scrollbar-none flex min-w-0 flex-1 overflow-x-auto',
@@ -143,7 +145,7 @@ function handleWheel(event: WheelEvent): void {
     </div>
     <button
       v-if="addable"
-      class="workbench-dynamic-tabs-add sticky right-0 z-10 flex shrink-0 items-center justify-center bg-surface-muted text-text-muted hover:bg-surface-hover hover:text-text-secondary"
+      class="workbench-dynamic-tabs-add sticky right-0 z-10 self-center flex shrink-0 items-center justify-center bg-surface-muted text-text-muted hover:bg-surface-hover hover:text-text-secondary"
       :class="[size === 'xs' ? 'size-7' : size === 'sm' ? 'size-8' : 'size-9', appearance === 'editor' ? 'rounded-none' : 'mb-px rounded-md border border-border-subtle']"
       type="button"
       :title="addLabel"
@@ -187,5 +189,11 @@ function handleWheel(event: WheelEvent): void {
 @media (any-pointer: coarse) {
   .workbench-dynamic-tabs-expanded > .group { min-height: 40px; }
   .workbench-dynamic-tabs-expanded > .group > button:last-child { min-width: 32px; min-height: 32px; }
+}
+.has-custom-height .workbench-dynamic-tab,
+.has-custom-height .workbench-dynamic-tabs-add,
+.has-custom-height .workbench-dynamic-tabs-compact > button {
+  height: var(--workbench-tab-height);
+  min-height: var(--workbench-tab-height);
 }
 </style>
