@@ -10,6 +10,8 @@ const props = withDefaults(defineProps<{
   items: readonly WorkbenchDynamicTabItem[];
   modelValue: string;
   size?: "sm" | "md";
+  /** editor 使用相邻的平直标签；默认保留原有圆角标签外观。 */
+  appearance?: "default" | "editor";
   addable?: boolean;
   addLabel?: string;
   bordered?: boolean;
@@ -19,6 +21,7 @@ const props = withDefaults(defineProps<{
   tabsLabel?: string;
 }>(), {
   size: "md",
+  appearance: "default",
   addable: false,
   addLabel: "Add",
   bordered: true,
@@ -94,10 +97,11 @@ function handleWheel(event: WheelEvent): void {
 </script>
 
 <template>
-  <div class="workbench-dynamic-tabs min-w-0 max-w-full flex-1" :class="{ 'is-compact-enabled': compact }">
+  <div class="workbench-dynamic-tabs min-w-0 max-w-full flex-1" :class="{ 'is-compact-enabled': compact, 'is-editor': appearance === 'editor' }">
   <div
     :class="[
-      'workbench-dynamic-tabs-expanded max-w-full items-end overflow-hidden scrollbar-none flex min-w-0 flex-1 gap-1 overflow-x-auto',
+      'workbench-dynamic-tabs-expanded max-w-full items-end overflow-hidden scrollbar-none flex min-w-0 flex-1 overflow-x-auto',
+      appearance === 'editor' ? 'gap-0' : 'gap-1',
       bordered ? 'border-b border-border-default' : ''
     ]"
     @wheel="handleWheel"
@@ -105,10 +109,13 @@ function handleWheel(event: WheelEvent): void {
     <div
       v-for="item in items"
       :key="item.id"
-      class="group grid min-w-30 max-w-56 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 rounded-md border border-border-subtle bg-surface-muted px-2 text-left text-small text-text-muted transition-colors hover:bg-surface-hover hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
+      class="workbench-dynamic-tab group grid min-w-30 max-w-56 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 px-2 text-left text-small text-text-muted transition-colors hover:bg-surface-hover hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
       :class="[
         size === 'sm' ? 'h-8' : 'h-9',
-        modelValue === item.id ? 'rounded-t-md rounded-b-none border-border-default border-b-0 bg-surface-default text-text-secondary pb-px' : ''
+        { 'is-active': modelValue === item.id },
+        appearance === 'editor'
+          ? 'workbench-editor-tab'
+          : ['rounded-md border border-border-subtle bg-surface-muted', modelValue === item.id ? 'rounded-t-md rounded-b-none border-border-default border-b-0 bg-surface-default text-text-secondary pb-px' : '']
       ]"
       :title="item.title || item.label"
       :draggable="draggable && !item.disabled"
@@ -136,8 +143,8 @@ function handleWheel(event: WheelEvent): void {
     </div>
     <button
       v-if="addable"
-      class="sticky right-0 z-10 mb-px flex shrink-0 items-center justify-center rounded-md border border-border-subtle bg-surface-muted text-text-muted hover:bg-surface-hover hover:text-text-secondary"
-      :class="size === 'sm' ? 'size-8' : 'size-9'"
+      class="workbench-dynamic-tabs-add sticky right-0 z-10 flex shrink-0 items-center justify-center bg-surface-muted text-text-muted hover:bg-surface-hover hover:text-text-secondary"
+      :class="[size === 'sm' ? 'size-8' : 'size-9', appearance === 'editor' ? 'rounded-none' : 'mb-px rounded-md border border-border-subtle']"
       type="button"
       :title="addLabel"
       @click="emit('add')"
@@ -145,13 +152,13 @@ function handleWheel(event: WheelEvent): void {
       <Plus class="size-4" aria-hidden="true" />
     </button>
   </div>
-  <div v-if="compact" class="workbench-dynamic-tabs-compact min-w-0 items-center gap-1">
-    <button type="button" class="flex min-w-0 flex-1 h-10 items-center gap-2 rounded border border-border-subtle bg-surface-muted px-2 text-small text-text-secondary" :aria-label="tabsLabel" aria-haspopup="menu" data-menu-trigger="true" @click="openTabs">
+  <div v-if="compact" class="workbench-dynamic-tabs-compact min-w-0 items-center" :class="appearance === 'editor' ? 'gap-0' : 'gap-1'">
+    <button type="button" class="workbench-dynamic-tabs-current flex min-w-0 flex-1 h-10 items-center gap-2 px-2 text-small text-text-secondary" :class="appearance === 'editor' ? 'workbench-editor-tab is-active' : 'rounded border border-border-subtle bg-surface-muted'" :aria-label="tabsLabel" aria-haspopup="menu" data-menu-trigger="true" @click="openTabs">
       <span class="min-w-0 flex-1 truncate">{{ activeItem?.label || tabsLabel }}</span>
       <span class="text-text-subtle">{{ items.length }}</span><ChevronDown class="size-4 shrink-0" aria-hidden="true" />
     </button>
-    <button v-if="activeItem?.closable" type="button" class="flex size-10 shrink-0 items-center justify-center rounded hover:bg-surface-hover" :title="`Close ${activeItem.label}`" :aria-label="`Close ${activeItem.label}`" :disabled="activeItem.disabled" @click="closeTab(activeItem.id)"><X class="size-4" aria-hidden="true" /></button>
-    <button v-if="addable" type="button" class="flex size-10 shrink-0 items-center justify-center rounded hover:bg-surface-hover" :title="addLabel" :aria-label="addLabel" @click="emit('add')"><Plus class="size-4" aria-hidden="true" /></button>
+    <button v-if="activeItem?.closable" type="button" class="flex size-10 shrink-0 items-center justify-center hover:bg-surface-hover" :class="appearance === 'editor' ? 'rounded-none' : 'rounded'" :title="`Close ${activeItem.label}`" :aria-label="`Close ${activeItem.label}`" :disabled="activeItem.disabled" @click="closeTab(activeItem.id)"><X class="size-4" aria-hidden="true" /></button>
+    <button v-if="addable" type="button" class="flex size-10 shrink-0 items-center justify-center hover:bg-surface-hover" :class="appearance === 'editor' ? 'rounded-none' : 'rounded'" :title="addLabel" :aria-label="addLabel" @click="emit('add')"><Plus class="size-4" aria-hidden="true" /></button>
   </div>
   </div>
 </template>
@@ -159,6 +166,20 @@ function handleWheel(event: WheelEvent): void {
 <style scoped>
 .workbench-dynamic-tabs { container-type: inline-size; }
 .workbench-dynamic-tabs-compact { display: none; }
+.workbench-editor-tab {
+  border-radius: 0;
+  border-top: 2px solid transparent;
+  border-right: 1px solid var(--border-default);
+  background: var(--surface-muted);
+}
+.workbench-editor-tab.is-active {
+  border-top-color: var(--accent);
+  background: var(--surface-panel);
+  color: var(--text-secondary);
+}
+.workbench-editor-tab:not(.is-active):hover {
+  background: var(--surface-hover);
+}
 @container (max-width: 480px) {
   .is-compact-enabled .workbench-dynamic-tabs-expanded { display: none; }
   .is-compact-enabled .workbench-dynamic-tabs-compact { display: flex; }

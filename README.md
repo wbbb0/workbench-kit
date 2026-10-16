@@ -16,6 +16,13 @@ This repository is public for convenience, but it is maintained for personal pro
 - [Usage](docs/usage.md)
 - [Workflow](docs/workflow.md)
 
+## Editor-style tabs
+
+`WorkbenchDynamicTabs` supports optional `appearance="editor"` for adjacent,
+square tabs with separators and an accent line on the active tab. Existing
+consumers keep the default rounded appearance. Selection, closing, dragging,
+and the compact tab menu use the same props and events in either appearance.
+
 ## Responsive breadcrumbs
 
 `WorkbenchBreadcrumbs` preserves its complete-path display by default. Opt into
