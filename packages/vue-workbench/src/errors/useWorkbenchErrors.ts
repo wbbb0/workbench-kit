@@ -22,7 +22,12 @@ function readIdentity(value: string): ErrorIdentity | undefined {
 export function createWorkbenchErrors(windows: WorkbenchWindowManager) {
   function show(info: WorkbenchErrorInfo, options: WorkbenchErrorOptions = {}): string {
     const snapshot = { ...info };
-    const identity: ErrorIdentity = { id: options.id, code: snapshot.code, message: snapshot.message, requestId: snapshot.requestId };
+    const identity: ErrorIdentity = {
+      message: snapshot.message,
+      ...(options.id !== undefined ? { id: options.id } : {}),
+      ...(snapshot.code !== undefined ? { code: snapshot.code } : {}),
+      ...(snapshot.requestId !== undefined ? { requestId: snapshot.requestId } : {})
+    };
     const existing = windows.snapshot().find(window => {
       const context = window.definition.context;
       if (context?.kind !== errorContextKind) return false;
