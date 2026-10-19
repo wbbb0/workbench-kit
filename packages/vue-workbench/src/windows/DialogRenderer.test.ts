@@ -124,3 +124,37 @@ describe("DialogRenderer live props factories", () => {
     wrapper.unmount();
   });
 });
+
+describe("DialogRenderer value ownership", () => {
+  it("preserves component values across window snapshots and only removes retired schema fields", async () => {
+    const StateBlock = defineComponent({
+      props: { values: { type: Object, required: true } },
+      setup(props) {
+        onMounted(() => {
+          props.values.canSubmit = true;
+          props.values.entry = { settings: { limit: 32768 } };
+        });
+        return () => h("div");
+      }
+    });
+    const manager = createWindowManager();
+    manager.openSync({
+      id: "state", kind: "dialog", title: "Custom form", size: "lg",
+      schema: { fields: [{ kind: "string", key: "oldField", label: "Old", defaultValue: "old" }] },
+      blocks: [{ kind: "component", component: StateBlock }],
+      actions: [{ id: "save", label: "Save", disabled: ({ values }) => values.canSubmit !== true }]
+    });
+    const wrapper = mount(DialogRenderer, { props: { windowId: "state", definition: manager.get("state")!.definition } });
+    await nextTick();
+    manager.move("state", { x: 10, y: 20 });
+    await wrapper.setProps({ definition: manager.get("state")!.definition });
+    expect((wrapper.get('[data-action-id="save"]').element as HTMLButtonElement).disabled).toBe(false);
+    await wrapper.setProps({ definition: { ...manager.get("state")!.definition, schema: { fields: [] } } });
+    await wrapper.get('[data-action-id="save"]').trigger("click");
+    expect(wrapper.emitted("resolve")?.[0]?.[0]).toMatchObject({
+      values: { canSubmit: true, entry: { settings: { limit: 32768 } } }
+    });
+    expect((wrapper.emitted("resolve")?.[0]?.[0] as any).values).not.toHaveProperty("oldField");
+    wrapper.unmount();
+  });
+});

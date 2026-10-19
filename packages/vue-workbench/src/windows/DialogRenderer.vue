@@ -125,16 +125,20 @@ function reconcileFields(fieldsToReconcile: readonly WorkbenchDialogField<Dialog
   }, {});
 }
 
+let schemaKeys = new Set<string>();
+
 function syncValues() {
   const nextValues = reconcileFields(fields.value, toRaw(values) as DialogValues);
 
-  for (const key of Object.keys(values)) {
+  // Only schema-owned fields may be removed; component blocks own their other values.
+  for (const key of schemaKeys) {
     if (!(key in nextValues)) {
       delete values[key];
     }
   }
 
   Object.assign(values, nextValues);
+  schemaKeys = new Set(Object.keys(nextValues));
 }
 
 watch(fields, syncValues, { immediate: true });
