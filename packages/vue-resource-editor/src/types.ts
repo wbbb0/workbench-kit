@@ -85,7 +85,7 @@ export interface LayerInfo {
 export type EditorDraftEffectiveMode =
   | "draft_only"
   | "merge_reference"
-  | "routing_preset_catalog";
+  | "record_inheritance";
 
 /** unset 操作展示和行为模式。 */
 export type EditorUnsetMode =
@@ -99,6 +99,7 @@ export interface EditorFeatures {
   unsetMode: EditorUnsetMode;
   unsetActionLabel: string | null;
   draftEffectiveMode: EditorDraftEffectiveMode;
+  recordInheritance?: { sourceKey: string; defaults: Record<string, unknown> };
 }
 
 interface BaseEditorModel {

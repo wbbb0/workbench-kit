@@ -133,3 +133,5 @@ and save failures retain valid partial cache for an explicit retry.
 对象型 `dynamicRef` 使用两级分组选择。切换分组而尚未选定选项时，只更新组件内的选择草稿，不向资源表单写入 `undefined`、`null` 或部分对象；选齐后一次提交完整 `option.value`。失效旧值会保留并提示，可直接选择新分组及新选项修复。
 
 动态目录由 `useResourceEditorOptions` 统一加载，同一目录的并发请求复用结果，过期响应不会覆盖新结果。通用资源编辑器在成功保存、加载或重新加载后刷新目录；业务侧在目录由其他入口变更时可调用聚合入口导出的 `invalidateResourceEditorOptions()`，使已挂载的分组和字符串选择器同步刷新。刷新不会静默改写表单中的失效引用。
+
+记录目录若从某个条目继承默认值，可指定 `draftEffectiveMode: "record_inheritance"` 和 `recordInheritance: { sourceKey, defaults }`。共享包只按通用对象深合并、数组替换语义计算继承；具体条目名称、业务字段和默认值由宿主提供。

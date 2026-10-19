@@ -154,107 +154,25 @@ function asObject(value: unknown): Record<string, unknown> {
   return isPlainObject(value) ? value : {};
 }
 
-function completeRoutingPresetField(
-  draftPreset: Record<string, unknown>,
-  referencePreset: Record<string, unknown>,
-  field: string
-): unknown {
-  if (Object.prototype.hasOwnProperty.call(draftPreset, field)) {
-    return computeEffectiveValue(referencePreset[field], draftPreset[field]);
+function computeRecordInheritance(model: EditorModel, draftValue: unknown) {
+  const inheritance = model.editorFeatures.recordInheritance;
+  if (!inheritance) throw new Error("record_inheritance requires sourceKey and defaults");
+  const draft = asObject(draftValue);
+  const source = computeEffectiveValue(inheritance.defaults, asObject(draft[inheritance.sourceKey]));
+  const reference: Record<string, unknown> = {};
+  const effective: Record<string, unknown> = {};
+  for (const key of new Set([inheritance.sourceKey, ...Object.keys(draft)])) {
+    const isSource = key === inheritance.sourceKey;
+    reference[key] = isSource ? {} : source;
+    effective[key] = computeEffectiveValue(isSource ? inheritance.defaults : source, asObject(draft[key]));
   }
-  return referencePreset[field] ?? [];
-}
-
-const ROUTING_PRESET_FIELDS: Array<{ key: string; defaultValue: unknown }> = [
-  { key: "mainSmall", defaultValue: [] },
-  { key: "mainLarge", defaultValue: [] },
-  { key: "summarizer", defaultValue: [] },
-  { key: "textInspector", defaultValue: [] },
-  { key: "sessionCaptioner", defaultValue: [] },
-  { key: "imageCaptioner", defaultValue: [] },
-  { key: "imageInspector", defaultValue: [] },
-  { key: "audioTranscription", defaultValue: [] },
-  { key: "turnPlanner", defaultValue: [] },
-  { key: "embedding", defaultValue: [] },
-  {
-    key: "historyWindow",
-    defaultValue: {
-      maxRecentMessages: 50,
-      maxImageReferences: 5
-    }
-  },
-  {
-    key: "tokenLimits",
-    defaultValue: {
-      triggerTokens: 150000,
-      retainTokens: 4000
-    }
-  }
-];
-
-function createCompletedRoutingPreset(
-  draftPreset: Record<string, unknown>,
-  referencePreset: Record<string, unknown> = {}
-): Record<string, unknown> {
-  const completedPreset: Record<string, unknown> = {};
-  for (const field of ROUTING_PRESET_FIELDS) {
-    completedPreset[field.key] = completeRoutingPresetField(
-      draftPreset,
-      {
-        [field.key]: field.defaultValue,
-        ...referencePreset
-      },
-      field.key
-    );
-  }
-  return completedPreset;
-}
-
-function computeRoutingPresetCatalogReferenceValue(draftValue: unknown): unknown {
-  const draftCatalog = asObject(draftValue);
-  const defaultPreset = asObject(draftCatalog.default);
-  const completedDefaultPreset = createCompletedRoutingPreset(defaultPreset);
-  const referenceCatalog: Record<string, unknown> = {
-    default: {}
-  };
-
-  for (const presetName of Object.keys(draftCatalog)) {
-    if (presetName === "default") {
-      continue;
-    }
-    referenceCatalog[presetName] = completedDefaultPreset;
-  }
-
-  return referenceCatalog;
-}
-
-function computeRoutingPresetCatalogEffectiveValue(referenceValue: unknown, draftValue: unknown): unknown {
-  const draftCatalog = asObject(draftValue);
-  const referenceCatalog = asObject(referenceValue);
-  const draftDefaultPreset = asObject(draftCatalog.default);
-  const defaultReferencePreset = createCompletedRoutingPreset(draftDefaultPreset);
-  const effectiveCatalog: Record<string, unknown> = {};
-
-  for (const presetName of Object.keys(draftCatalog)) {
-    const draftPreset = asObject(draftCatalog[presetName]);
-    const referencePreset = presetName === "default"
-      ? {}
-      : asObject(referenceCatalog[presetName] ?? defaultReferencePreset);
-
-    effectiveCatalog[presetName] = createCompletedRoutingPreset(draftPreset, referencePreset);
-  }
-
-  if (!Object.prototype.hasOwnProperty.call(effectiveCatalog, "default")) {
-    effectiveCatalog.default = createCompletedRoutingPreset({});
-  }
-
-  return effectiveCatalog;
+  return { reference, effective };
 }
 
 export function computeDraftReferenceValue(model: EditorModel, draftValue: unknown): unknown {
   switch (model.editorFeatures.draftEffectiveMode) {
-    case "routing_preset_catalog":
-      return computeRoutingPresetCatalogReferenceValue(draftValue);
+    case "record_inheritance":
+      return computeRecordInheritance(model, draftValue).reference;
     case "merge_reference":
     case "draft_only":
     default:
@@ -270,8 +188,8 @@ export function computeDraftEffectiveValue(model: EditorModel, draftValue: unkno
         computeEffectiveValue(model.schemaDefaultValue, referenceValue),
         draftValue
       );
-    case "routing_preset_catalog":
-      return computeRoutingPresetCatalogEffectiveValue(referenceValue, draftValue);
+    case "record_inheritance":
+      return computeRecordInheritance(model, draftValue).effective;
     case "draft_only":
     default:
       return draftValue;
