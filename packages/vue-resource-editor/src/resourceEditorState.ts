@@ -1,3 +1,4 @@
+import { invalidateResourceEditorOptions } from "./resourceEditorClient.js";
 import { computed, ref, watch, type ComputedRef, type Ref } from "vue";
 import { useEditorDraftState } from "./useEditorDraftState.js";
 import type { EditorModel, EditorResourceSummary, ResourceEditorClient } from "./types.js";
@@ -103,6 +104,7 @@ export function createResourceEditorState(options: ResourceEditorStateOptions): 
         return;
       }
       model.value = res.editor;
+      invalidateResourceEditorOptions();
     } finally {
       if (!isStale(requestVersion) && selectedKey.value === requestKey) {
         loading.value = false;
@@ -155,6 +157,7 @@ export function createResourceEditorState(options: ResourceEditorStateOptions): 
     saving.value = true;
     try {
       const res = await options.client.save(selectedKey.value, editorState.draftValue.value);
+      invalidateResourceEditorOptions();
       if (isStale(requestVersion)) {
         return;
       }
@@ -191,6 +194,7 @@ export function createResourceEditorState(options: ResourceEditorStateOptions): 
         return;
       }
       model.value = res.editor;
+      invalidateResourceEditorOptions();
     } finally {
       if (!isStale(requestVersion)) {
         loading.value = false;

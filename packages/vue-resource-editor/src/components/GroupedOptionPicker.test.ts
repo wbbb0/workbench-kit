@@ -1,9 +1,12 @@
+import { reactive } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { flushPromises, mount } from "@vue/test-utils";
+import { enableAutoUnmount, flushPromises, mount } from "@vue/test-utils";
 import SchemaNode from "./SchemaNode.vue";
 import SchemaField from "./SchemaField.vue";
-import { configureResourceEditorClient } from "../resourceEditorClient.js";
+import { configureResourceEditorClient, invalidateResourceEditorOptions } from "../resourceEditorClient.js";
 import type { EditorOptionGroup, ResourceEditorClient, UiNode } from "../types.js";
+
+enableAutoUnmount(afterEach);
 
 const groupedNode: UiNode = {
   kind: "group",
@@ -96,7 +99,7 @@ describe("grouped dynamic option picker", () => {
     ]);
   });
 
-  it("切换到没有同 key 选项的分组时清空，并在选择后写回 unknown 类型的完整 value", async () => {
+  it("切换到没有同 key 的分组只保留本地选择，选齐才写回完整 value", async () => {
     configureOptions(vi.fn(async () => ({ groups })));
     const wrapper = mount(SchemaNode, {
       props: {
@@ -108,7 +111,7 @@ describe("grouped dynamic option picker", () => {
     const [groupSelect, optionSelect] = wrapper.findAll("select");
 
     await groupSelect!.setValue("empty");
-    expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual([undefined]);
+    expect(wrapper.emitted("update:modelValue")).toBeUndefined();
     expect(optionSelect!.attributes("disabled")).toBeDefined();
 
     await groupSelect!.setValue("second");
@@ -153,6 +156,7 @@ describe("grouped dynamic option picker", () => {
     });
 
     expect(wrapper.text()).toContain("加载中");
+    await Promise.resolve();
     resolveOptions({ options: ["legacy"] });
     await flushPromises();
     expect(wrapper.text()).toContain("选项加载失败");
@@ -247,4 +251,95 @@ describe("record mutation guard", () => {
     });
     expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual([{ next: "value" }]);
   });
+});
+
+
+describe("atomic grouped selection", () => {
+  const replacement = { key: "replacement", label: "替换组", options: [{ key: "new", label: "新模型", value: { group: "replacement", item: "new" } }] };
+  const arrayNode: UiNode = { kind: "array", schema: { kind: "array", optional: false, hasDefault: false }, item: groupedNode };
+
+  it.each(["shared", "deleted"])("数组旧模型 %s 在一次分组和模型选择后原子替换，期间不写 undefined/null", async (item) => {
+    configureOptions(vi.fn(async () => ({ groups: [...groups, replacement] })));
+    const original = [{ group: "first", item }];
+    const wrapper = mount(SchemaNode, { props: {
+      node: arrayNode, modelValue: original, effectiveValue: original,
+      "onUpdate:modelValue": (value: unknown) => {
+        const serialized = JSON.parse(JSON.stringify(value));
+        void wrapper.setProps({ modelValue: serialized, effectiveValue: serialized });
+      }
+    } });
+    await flushPromises();
+    const [groupSelect, optionSelect] = wrapper.findAll("select");
+    await groupSelect!.setValue("replacement");
+    await flushPromises();
+    expect(wrapper.emitted("update:modelValue")).toBeUndefined();
+    expect((groupSelect!.element as HTMLSelectElement).value).toBe("replacement");
+    expect(wrapper.props("modelValue")).toEqual(original);
+    await optionSelect!.setValue("new");
+    await flushPromises();
+    expect(wrapper.emitted("update:modelValue")).toEqual([[[{ group: "replacement", item: "new" }]]]);
+    expect((groupSelect!.element as HTMLSelectElement).value).toBe("replacement");
+    expect((optionSelect!.element as HTMLSelectElement).value).toBe("new");
+  });
+
+  it("刷新目录后展示已删除的旧值，并保留用户正在选择的分组", async () => {
+    let catalog = [...groups, replacement];
+    configureOptions(vi.fn(async () => ({ groups: catalog })));
+    const wrapper = mount(SchemaNode, { props: { node: groupedNode, modelValue: { group: "first", item: "shared" } } });
+    await flushPromises();
+    await wrapper.findAll("select")[0]!.setValue("replacement");
+    catalog = [replacement];
+    invalidateResourceEditorOptions();
+    await flushPromises();
+    expect(wrapper.text()).toContain("当前值不在选项清单中");
+    const [groupSelect, optionSelect] = wrapper.findAll("select");
+    expect((groupSelect!.element as HTMLSelectElement).value).toBe("replacement");
+    await optionSelect!.setValue("new");
+    expect(wrapper.emitted("update:modelValue")?.at(-1)).toEqual([{ group: "replacement", item: "new" }]);
+  });
+
+  it("外部重置值会取消尚未提交的分组选择", async () => {
+    configureOptions(vi.fn(async () => ({ groups: [...groups, replacement] })));
+    const wrapper = mount(SchemaNode, { props: { node: groupedNode, modelValue: { group: "first", item: "shared" } } });
+    await flushPromises();
+    await wrapper.findAll("select")[0]!.setValue("replacement");
+    await wrapper.setProps({ modelValue: { group: "second", item: "other" } });
+    expect((wrapper.findAll("select")[0]!.element as HTMLSelectElement).value).toBe("second");
+    expect((wrapper.findAll("select")[1]!.element as HTMLSelectElement).value).toBe("other");
+  });
+});
+
+it("目录刷新会丢弃过期响应，并对同一目录合并请求", async () => {
+  let finishOld!: (value: { groups: EditorOptionGroup[] }) => void;
+  const options = vi.fn()
+    .mockImplementationOnce(() => new Promise(resolve => { finishOld = resolve; }))
+    .mockResolvedValue({ groups: [groups[1]!] });
+  configureOptions(options);
+  const first = mount(SchemaNode, { props: { node: groupedNode, modelValue: undefined } });
+  const second = mount(SchemaNode, { props: { node: groupedNode, modelValue: undefined } });
+  await Promise.resolve();
+  expect(options).toHaveBeenCalledTimes(1);
+  invalidateResourceEditorOptions();
+  await flushPromises();
+  finishOld({ groups: [groups[0]!] });
+  await flushPromises();
+  for (const wrapper of [first, second]) {
+    expect(wrapper.find('option[value="second"]').exists()).toBe(true);
+    expect(wrapper.find('option[value="first"]').exists()).toBe(false);
+    wrapper.unmount();
+  }
+  expect(options).toHaveBeenCalledTimes(2);
+});
+
+
+it("父组件原地修改目标对象时同步分组和选项", async () => {
+  configureOptions(vi.fn(async () => ({ groups })));
+  const target = reactive({ group: "first", item: "shared" });
+  const wrapper = mount(SchemaNode, { props: { node: groupedNode, modelValue: target } });
+  await flushPromises();
+  target.group = "second";
+  target.item = "other";
+  await flushPromises();
+  expect((wrapper.findAll("select")[0]!.element as HTMLSelectElement).value).toBe("second");
+  expect((wrapper.findAll("select")[1]!.element as HTMLSelectElement).value).toBe("other");
 });

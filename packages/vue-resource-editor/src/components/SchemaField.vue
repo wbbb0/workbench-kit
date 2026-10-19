@@ -3,9 +3,9 @@
  * Renders a single leaf field based on schema kind.
  * Emits "update" with the new value whenever the user changes the input.
  */
-import { computed, ref, watchEffect } from "vue";
+import { computed } from "vue";
 import type { SchemaMeta } from "../types";
-import { useResourceEditorClient } from "../resourceEditorClient";
+import { useResourceEditorOptions } from "../resourceEditorClient";
 
 const props = defineProps<{
   schema: SchemaMeta;
@@ -18,10 +18,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{ "update:modelValue": [value: unknown] }>();
 
-// dynamic ref options
-const dynamicOptions = ref<string[] | null>(null);
-const dynamicOptionsError = ref(false);
-const editorClient = useResourceEditorClient();
+const options = useResourceEditorOptions(() => props.schema.kind === "string" ? props.schema.dynamicRef : undefined);
+const dynamicOptions = computed(() => options.data.value && "options" in options.data.value ? options.data.value.options : null);
+const dynamicOptionsError = computed(() => options.error.value || (options.data.value !== null && !("options" in options.data.value)));
 const displayedValue = computed(() => {
   if (props.modelValue !== undefined) {
     return props.modelValue;
@@ -32,26 +31,6 @@ const displayedValue = computed(() => {
   return props.defaultValue;
 });
 
-watchEffect(() => {
-  if (props.schema.kind === "string" && props.schema.dynamicRef) {
-    const key = props.schema.dynamicRef;
-    dynamicOptions.value = null;
-    dynamicOptionsError.value = false;
-    if (!editorClient?.options) {
-      dynamicOptionsError.value = true;
-      return;
-    }
-    editorClient.options(key).then((res) => {
-      if (!("options" in res)) {
-        dynamicOptionsError.value = true;
-        return;
-      }
-      dynamicOptions.value = res.options;
-    }).catch(() => {
-      dynamicOptionsError.value = true;
-    });
-  }
-});
 
 function onInput(e: Event) {
   const v = (e.target as HTMLInputElement).value;

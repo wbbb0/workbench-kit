@@ -2,7 +2,7 @@
 import { computed, ref, watch } from "vue";
 import type { EditorOption, EditorOptionGroup } from "../types.js";
 import { deepEqual } from "../editorState.js";
-import { useResourceEditorClient } from "../resourceEditorClient.js";
+import { useResourceEditorOptions } from "../resourceEditorClient.js";
 
 const props = defineProps<{
   dynamicRef: string;
@@ -16,14 +16,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{ "update:modelValue": [value: unknown] }>();
 
-const editorClient = useResourceEditorClient();
-const groups = ref<EditorOptionGroup[] | null>(null);
-const loadError = ref(false);
+const options = useResourceEditorOptions(() => props.dynamicRef);
+const groups = computed(() => options.data.value && "groups" in options.data.value ? options.data.value.groups : null);
+const loadError = computed(() => options.error.value || (options.data.value !== null && !("groups" in options.data.value)));
 const selectedGroupKey = ref("");
 const selectedOptionKey = ref("");
-let requestId = 0;
-let awaitingModelSync = false;
-let lastEmittedValue: unknown;
+const choosingGroup = ref(false);
 
 const displayedValue = computed(() => {
   if (props.modelValue !== undefined) return props.modelValue;
@@ -48,60 +46,19 @@ const hasInvalidValue = computed(() =>
 );
 const interactionsDisabled = computed(() => props.disabled || props.readOnly);
 
-watch(
-  () => props.dynamicRef,
-  async (dynamicRef) => {
-    const currentRequestId = ++requestId;
-    groups.value = null;
-    loadError.value = false;
-    selectedGroupKey.value = "";
-    selectedOptionKey.value = "";
+watch(groups, () => {
+  if (!groups.value) return;
+  if (choosingGroup.value && groups.value.some(group => group.key === selectedGroupKey.value)) return;
+  choosingGroup.value = false;
+  syncFromValue(displayedValue.value);
+});
 
-    if (!editorClient?.options) {
-      loadError.value = true;
-      return;
-    }
-
-    try {
-      const result = await editorClient.options(dynamicRef);
-      if (currentRequestId !== requestId) return;
-      if (!("groups" in result)) {
-        loadError.value = true;
-        return;
-      }
-      groups.value = result.groups;
-      syncFromValue(displayedValue.value);
-    } catch {
-      if (currentRequestId === requestId) {
-        loadError.value = true;
-      }
-    }
-  },
-  { immediate: true }
-);
-
-watch(
-  () => props.modelValue,
-  (value) => {
-    if (awaitingModelSync && deepEqual(value, lastEmittedValue)) {
-      awaitingModelSync = false;
-      return;
-    }
-    awaitingModelSync = false;
-    syncFromValue(displayedValue.value);
-  },
-  { deep: true }
-);
-
-watch(
-  () => [props.effectiveValue, props.inherited, props.defaultValue] as const,
-  () => {
-    if (props.modelValue === undefined && !awaitingModelSync) {
-      syncFromValue(displayedValue.value);
-    }
-  },
-  { deep: true }
-);
+watch(displayedValue, (value, previous) => {
+  // Deep watchers receive the same reference for in-place parent mutations.
+  if (value !== previous && deepEqual(value, previous)) return;
+  choosingGroup.value = false;
+  syncFromValue(value);
+}, { deep: true });
 
 function findSelection(value: unknown): { group: EditorOptionGroup; option: EditorOption } | null {
   if (!groups.value) return null;
@@ -119,13 +76,8 @@ function syncFromValue(value: unknown) {
   selectedOptionKey.value = selection?.option.key ?? "";
 }
 
-function emitValue(value: unknown) {
-  awaitingModelSync = true;
-  lastEmittedValue = value;
-  emit("update:modelValue", value);
-}
-
 function onGroupChange(event: Event) {
+  if (interactionsDisabled.value) return;
   const nextGroupKey = (event.target as HTMLSelectElement).value;
   const previousOptionKey = selectedOptionKey.value;
   selectedGroupKey.value = nextGroupKey;
@@ -136,19 +88,23 @@ function onGroupChange(event: Event) {
   );
   if (matchingOption) {
     selectedOptionKey.value = matchingOption.key;
-    emitValue(matchingOption.value);
+    choosingGroup.value = false;
+    emit("update:modelValue", matchingOption.value);
     return;
   }
 
   selectedOptionKey.value = "";
-  emitValue(undefined);
+  choosingGroup.value = true;
 }
 
 function onOptionChange(event: Event) {
+  if (interactionsDisabled.value) return;
   const optionKey = (event.target as HTMLSelectElement).value;
-  selectedOptionKey.value = optionKey;
   const option = selectedGroup.value?.options.find((candidate) => candidate.key === optionKey);
-  emitValue(option && !option.disabled ? option.value : undefined);
+  if (!option || option.disabled) return;
+  selectedOptionKey.value = optionKey;
+  choosingGroup.value = false;
+  emit("update:modelValue", option.value);
 }
 
 function formatInvalidValue(value: unknown): string {
@@ -198,6 +154,7 @@ function formatInvalidValue(value: unknown): string {
           </option>
         </select>
       </div>
+      <span v-if="choosingGroup && !selectedOptionKey" class="text-xs text-text-muted">请选择该分组中的选项，选齐后才会替换当前值。</span>
       <span v-if="selectedOption?.description" class="text-xs text-text-muted">
         {{ selectedOption.description }}
       </span>
