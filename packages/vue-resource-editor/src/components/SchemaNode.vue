@@ -286,6 +286,7 @@ function onArrayItemUpdate(index: number, childValue: unknown) {
 }
 
 function initialNodeValue(node: UiNode): unknown {
+  if (props.editorFeatures?.initializeFromDefaults && node.schema.hasDefault) return jsonClone(node.schema.defaultValue);
   if (node.kind !== "union" || !node.schema.discriminator) return null;
   if (node.schema.hasDefault) return jsonClone(node.schema.defaultValue);
   return node.options[0] ? projectSchemaVariant(node.options[0], {}) : null;
@@ -630,7 +631,7 @@ function onUnionSelect(event: Event) {
   selectedUnionIdx.value = index;
   emit("update:modelValue", props.node.schema.discriminator
     ? projectSchemaVariant(option, displayedUnionValue.value ?? {})
-    : null);
+    : props.editorFeatures?.initializeFromDefaults && option.schema.hasDefault ? jsonClone(option.schema.defaultValue) : null);
 }
 </script>
 

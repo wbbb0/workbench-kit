@@ -2,7 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { expect, it } from "vitest";
 import SchemaNode from "./SchemaNode.vue";
 import { projectSchemaVariant } from "../schemaVariant";
-import type { UiNode } from "../types";
+import type { UiNode, EditorFeatures } from "../types";
 const text: UiNode = { kind: "field", schema: { kind: "string", optional: true, hasDefault: false } };
 const group = (children: Record<string, UiNode>): UiNode => ({ kind: "group", schema: { kind: "object", optional: false, hasDefault: false }, children: Object.fromEntries(Object.entries(children).map(([key, node]) => [key, { field: { schema: node.schema }, node }])) });
 const variant = (type: string, extra: string) => group({ type: { kind: "field", schema: { kind: "literal", value: type, optional: false, hasDefault: true, defaultValue: type } }, address: text, secret: text, entries: { kind: "record", schema: { kind: "record", optional: false, hasDefault: true, defaultValue: {} }, key: text, value: group({ name: text }) }, [extra]: text });
@@ -105,4 +105,46 @@ it("record 新增 guard 返回 true 时仍按默认插入空条目", async () =>
   const result = wrapper.emitted("update:modelValue")?.[0]?.[0] as any;
   expect(result.key_2).toEqual(null);
   wrapper.unmount();
+});
+
+it("开启默认值初始化后普通 union 对象和数组条目具有完整结构，嵌套值不共享引用", async () => {
+  const editorFeatures: EditorFeatures = { showReferenceBackdrop: false, unsetMode: "disabled", unsetActionLabel: null, draftEffectiveMode: "draft_only", initializeFromDefaults: true };
+  const defaultValue = { name: null, details: { note: null }, entries: [] };
+  const objectNode: UiNode = { ...group({ name: text }), schema: { kind: "object", optional: false, hasDefault: true, defaultValue } };
+  const nullable: UiNode = { kind: "union", schema: { kind: "union", optional: false, hasDefault: true, defaultValue: null }, options: [objectNode, { kind: "field", schema: { kind: "literal", value: null, optional: false, hasDefault: true, defaultValue: null } }] };
+  const wrapper = mount(SchemaNode, { props: { node: nullable, modelValue: null, editorFeatures } });
+  await wrapper.find("select").setValue("0");
+  const emitted = wrapper.emitted("update:modelValue")?.[0]?.[0] as any;
+  expect(emitted).toEqual(defaultValue);
+  emitted.details.note = "修改";
+  expect(defaultValue.details.note).toBeNull();
+  await wrapper.find("select").setValue("1");
+  expect(wrapper.emitted("update:modelValue")?.[1]?.[0]).toBeNull();
+  wrapper.unmount();
+  const array: UiNode = { kind: "array", schema: { kind: "array", optional: false, hasDefault: false }, item: objectNode };
+  const list = mount(SchemaNode, { props: { node: array, modelValue: [], editorFeatures } });
+  await list.findAll("button").find(button => button.text().includes("添加"))!.trigger("click");
+  expect(list.emitted("update:modelValue")?.[0]?.[0]).toEqual([defaultValue]);
+  list.unmount();
+});
+
+
+it("未开启初始化时即使声明默认值也保留普通 union 和集合新增的原有清空行为", async () => {
+  const objectNode: UiNode = { ...group({ name: text }), schema: { kind: "object", optional: false, hasDefault: true, defaultValue: { name: "默认" } } };
+  const nullable: UiNode = { kind: "union", schema: { kind: "union", optional: false, hasDefault: false }, options: [objectNode, { kind: "field", schema: { kind: "literal", value: null, optional: false, hasDefault: false } }] };
+  const wrapper = mount(SchemaNode, { props: { node: nullable, modelValue: null } });
+  await wrapper.find("select").setValue("0");
+  expect(wrapper.emitted("update:modelValue")?.[0]?.[0]).toBeNull();
+  wrapper.unmount();
+  const array: UiNode = { kind: "array", schema: { kind: "array", optional: false, hasDefault: false }, item: objectNode };
+  const list = mount(SchemaNode, { props: { node: array, modelValue: [] } });
+  await list.findAll("button").find(button => button.text().includes("添加"))!.trigger("click");
+  expect(list.emitted("update:modelValue")?.[0]?.[0]).toEqual([null]);
+  list.unmount();
+  const discriminated: UiNode = { ...node, schema: { ...node.schema, hasDefault: true, defaultValue: { type: "second", entries: {} } } };
+  const record: UiNode = { kind: "record", schema: { kind: "record", optional: false, hasDefault: false }, key: text, value: discriminated };
+  const entries = mount(SchemaNode, { props: { node: record, modelValue: {} } });
+  await entries.findAll("button").find(button => button.text().includes("添加"))!.trigger("click");
+  expect(entries.emitted("update:modelValue")?.[0]?.[0]).toEqual({ key_1: { type: "second", entries: {} } });
+  entries.unmount();
 });

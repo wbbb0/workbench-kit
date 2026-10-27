@@ -99,6 +99,8 @@ export interface EditorFeatures {
   unsetMode: EditorUnsetMode;
   unsetActionLabel: string | null;
   draftEffectiveMode: EditorDraftEffectiveMode;
+  /** 新增集合项及普通 union 切换使用 Schema 默认值；默认关闭，保留原有清空行为。 */
+  initializeFromDefaults?: boolean;
   recordInheritance?: { sourceKey: string; defaults: Record<string, unknown> };
 }
 
