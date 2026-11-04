@@ -148,3 +148,42 @@ it("未开启初始化时即使声明默认值也保留普通 union 和集合新
   expect(entries.emitted("update:modelValue")?.[0]?.[0]).toEqual({ key_1: { type: "second", entries: {} } });
   entries.unmount();
 });
+
+it("局部覆盖缺少判别字段时使用继承分支，编辑子字段不会切到第一个分支", async () => {
+  const wrapper = mount(SchemaNode, { props: {
+    node,
+    modelValue: { address: "local" },
+    effectiveValue: { type: "second", address: "local", secret: "inherited" },
+    inherited: { type: "second", secret: "inherited" }
+  } });
+  expect((wrapper.find("select").element as HTMLSelectElement).value).toBe("1");
+  const groupNode = wrapper.findAllComponents(SchemaNode).find(child => child.props("node").kind === "group")!;
+  groupNode.vm.$emit("update:modelValue", { address: "edited" });
+  expect(wrapper.emitted("update:modelValue")?.at(-1)?.[0]).toEqual({ address: "edited", type: "second" });
+  await wrapper.setProps({ effectiveValue: undefined, modelValue: {}, inherited: { type: "second" } });
+  expect((wrapper.find("select").element as HTMLSelectElement).value).toBe("1");
+  wrapper.unmount();
+});
+
+it("切换供应商后实际表单使用目标分支默认值，而不是第一分支的默认对象", () => {
+  const literal = (value: string): UiNode => ({ kind: "field", schema: { kind: "literal", value, optional: false, hasDefault: true, defaultValue: value } });
+  const settings = group({ baseUrl: text, apiKeyEnv: text, model: text, key: text });
+  const union: UiNode = { kind: "union", schema: { kind: "union", discriminator: "provider", optional: false, hasDefault: false }, options: [
+    group({ provider: literal("first"), config: group({ endpoint: text }) }),
+    group({ provider: literal("second"), config: settings })
+  ] };
+  const defaults = { baseUrl: "https://example.test/v1", apiKeyEnv: "TEST_API_KEY", model: "test-model" };
+  const wrapper = mount(SchemaNode, { props: {
+    node: union, path: ["service"], depth: -2,
+    modelValue: { provider: "second", config: { key: "test-key" } },
+    inherited: { provider: "first", config: {} },
+    defaultValue: { provider: "first", config: { endpoint: "old-endpoint" } },
+    editorFeatures: { draftEffectiveMode: "merge_reference", showReferenceBackdrop: true, unsetMode: "reference", unsetActionLabel: null,
+      variantInheritance: [{ path: ["service"], discriminator: "provider", settingsKey: "config", defaultVariant: "first", defaults: { first: {}, second: defaults } }]
+    }
+  } });
+  const values = wrapper.findAll("textarea").map(input => (input.element as HTMLTextAreaElement).value);
+  expect(values).toEqual(expect.arrayContaining([...Object.values(defaults), "test-key"]));
+  expect(values).not.toContain("old-endpoint");
+  wrapper.unmount();
+});

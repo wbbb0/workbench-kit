@@ -1,3 +1,4 @@
+import { applyVariantInheritance } from "./variantInheritance.js";
 import { deepMerge } from "./deepMerge.js";
 import type { EditorModel, EditorUnsetMode } from "./types.js";
 
@@ -174,6 +175,7 @@ export function computeDraftReferenceValue(model: EditorModel, draftValue: unkno
     case "record_inheritance":
       return computeRecordInheritance(model, draftValue).reference;
     case "merge_reference":
+      return model.editorFeatures.variantInheritance?.length ? applyVariantInheritance(model, draftValue).reference : model.referenceValue;
     case "draft_only":
     default:
       return model.referenceValue;
@@ -184,6 +186,7 @@ export function computeDraftEffectiveValue(model: EditorModel, draftValue: unkno
   const referenceValue = computeDraftReferenceValue(model, draftValue);
   switch (model.editorFeatures.draftEffectiveMode) {
     case "merge_reference":
+      if (model.editorFeatures.variantInheritance?.length) return applyVariantInheritance(model, draftValue).effective;
       return computeEffectiveValue(
         computeEffectiveValue(model.schemaDefaultValue, referenceValue),
         draftValue

@@ -488,12 +488,20 @@ const displayedUnionValue = computed(() =>
       ? props.effectiveValue
       : props.defaultValue
 );
+const inheritedDiscriminator = computed(() => {
+  const key = props.node.schema.discriminator;
+  if (!key) return undefined;
+  for (const value of [props.modelValue, props.effectiveValue, props.inherited, props.defaultValue]) {
+    if (isPlainObject(value) && value[key] !== undefined) return value[key];
+  }
+  return undefined;
+});
 const matchedUnionIdx = computed(() => unionOptions.value.findIndex((option) => {
   const discriminator = props.node.schema.discriminator;
   const value = displayedUnionValue.value;
-  if (discriminator && option.kind === "group" && isPlainObject(value)) {
+  if (discriminator && option.kind === "group") {
     const field = option.children[discriminator];
-    return field ? nodeMatchesValue(field.node, value[discriminator]) : false;
+    return field ? nodeMatchesValue(field.node, inheritedDiscriminator.value) : false;
   }
   return nodeMatchesValue(option, value);
 }));
@@ -603,6 +611,18 @@ const activeUnionNode = computed(() => {
   const discriminator = props.node.schema.discriminator;
   if (!node || node.kind !== "group" || !discriminator) return node;
   return { ...node, children: Object.fromEntries(Object.entries(node.children).filter(([key]) => key !== discriminator)) };
+});
+
+const activeUnionDefaultValue = computed(() => {
+  const discriminator = props.node.schema.discriminator;
+  const option = unionOptions.value[activeUnionIdx.value];
+  const rule = props.editorFeatures?.variantInheritance?.find(rule =>
+    rule.discriminator === discriminator && rule.path.length === path.value.length && rule.path.every((part, index) => part === path.value[index])
+  );
+  if (!rule || !discriminator || option?.kind !== "group") return props.defaultValue;
+  const field = option.children[discriminator]?.node.schema;
+  if (field?.kind !== "literal") return props.defaultValue;
+  return { ...asObj(props.defaultValue), [discriminator]: field.value, [rule.settingsKey]: rule.defaults[String(field.value)] };
 });
 
 function onUnionValueUpdate(value: unknown) {
@@ -1013,7 +1033,7 @@ function onUnionSelect(event: Event) {
       :node="activeUnionNode"
       :model-value="modelValue"
       :inherited="inherited"
-      :default-value="defaultValue"
+      :default-value="activeUnionDefaultValue"
       :stored-value="storedValue"
       :effective-value="effectiveValue"
       :path="path"
