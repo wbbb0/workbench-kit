@@ -1,24 +1,15 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { Plus, Trash2, ArrowUp, ArrowDown, Pencil, Check, Undo2, Copy } from "lucide-vue-next";
+import { Plus, Trash2, ArrowUp, ArrowDown, Pencil, Check, Undo2, Copy, Play } from "lucide-vue-next";
 import { projectSchemaVariant } from "../schemaVariant";
 import SchemaField from "./SchemaField.vue";
 import GroupedOptionPicker from "./GroupedOptionPicker.vue";
 import { TreeNodeShell } from "@workbench-kit/vue-workbench";
-import type { EditorFeatures, EditorRecordMutationEvent, UiNode } from "../types";
+import type { EditorFeatures, EditorRecordMutationEvent, EditorNodeAction, EditorNodeActions, UiNode } from "../types";
 import { canUnsetNodeValue, deepEqual, removeValueAtPathAndPrune, type PathSegment } from "../editorState";
 
-type HeaderActionIcon = "trash" | "up" | "down" | "pencil" | "check" | "restore" | "copy";
-
-interface HeaderAction {
-  key: string;
-  icon: HeaderActionIcon;
-  title: string;
-  disabled?: boolean;
-  danger?: boolean;
-  submitEdit?: boolean;
-  onClick: () => void;
-}
+type HeaderAction = EditorNodeAction;
+type HeaderActionIcon = EditorNodeAction["icon"];
 
 const props = defineProps<{
   /** 当前节点的 UI tree。 */
@@ -49,6 +40,7 @@ const props = defineProps<{
   headerDescription?: string;
   headerMeta?: string | number;
   headerActions?: HeaderAction[];
+  nodeActions?: EditorNodeActions;
   headerEditing?: boolean;
   headerEditValue?: string;
   headerEditPlaceholder?: string;
@@ -146,6 +138,8 @@ function actionIcon(icon: HeaderActionIcon) {
       return Undo2;
     case "copy":
       return Copy;
+    case "play":
+      return Play;
   }
 }
 
@@ -228,7 +222,7 @@ const labelClasses = computed(() => [
 ].filter(Boolean).join(" "));
 
 const mergedHeaderActions = computed<HeaderAction[]>(() => {
-  const next = [...headerActions.value];
+  const next = [...headerActions.value, ...(props.nodeActions?.({ node: props.node, path: path.value, value: props.modelValue }) ?? [])];
   if (canUnsetCurrentValue.value && !interactionsDisabled.value) {
     next.unshift({
       key: `unset-${path.value.join(".") || "root"}`,
@@ -673,6 +667,7 @@ function onUnionSelect(event: Event) {
           @click.stop="onHeaderActionClick(action)"
         >
           <component :is="actionIcon(action.icon)" :size="12" :stroke-width="2" />
+          <span v-if="action.label" class="ml-1">{{ action.label }}</span>
         </button>
       </div>
     </div>
@@ -727,6 +722,7 @@ function onUnionSelect(event: Event) {
           @click.stop="onHeaderActionClick(action)"
         >
           <component :is="actionIcon(action.icon)" :size="12" :stroke-width="2" />
+          <span v-if="action.label" class="ml-1">{{ action.label }}</span>
         </button>
       </div>
     </div>
@@ -773,6 +769,7 @@ function onUnionSelect(event: Event) {
           @click.stop="onHeaderActionClick(action)"
         >
           <component :is="actionIcon(action.icon)" :size="12" :stroke-width="2" />
+          <span v-if="action.label" class="ml-1">{{ action.label }}</span>
         </button>
       </template>
 
@@ -795,6 +792,7 @@ function onUnionSelect(event: Event) {
           :disabled="disabled"
           :read-only="readOnly"
           :before-record-mutation="beforeRecordMutation"
+            :node-actions="nodeActions"
           @update:model-value="onGroupChildUpdate(key, $event)"
         />
       </div>
@@ -819,6 +817,7 @@ function onUnionSelect(event: Event) {
         :disabled="disabled"
         :read-only="readOnly"
         :before-record-mutation="beforeRecordMutation"
+            :node-actions="nodeActions"
         @update:model-value="onGroupChildUpdate(key, $event)"
       />
     </div>
@@ -855,6 +854,7 @@ function onUnionSelect(event: Event) {
           @click.stop="onHeaderActionClick(action)"
         >
           <component :is="actionIcon(action.icon)" :size="12" :stroke-width="2" />
+          <span v-if="action.label" class="ml-1">{{ action.label }}</span>
         </button>
       </template>
 
@@ -882,6 +882,7 @@ function onUnionSelect(event: Event) {
             :disabled="disabled"
             :read-only="readOnly"
             :before-record-mutation="beforeRecordMutation"
+            :node-actions="nodeActions"
             :force-header="!isComplexNode(node.item)"
             class="min-w-0 flex-1"
             @update:model-value="onArrayItemUpdate(idx, $event)"
@@ -929,6 +930,7 @@ function onUnionSelect(event: Event) {
           @click.stop="onHeaderActionClick(action)"
         >
           <component :is="actionIcon(action.icon)" :size="12" :stroke-width="2" />
+          <span v-if="action.label" class="ml-1">{{ action.label }}</span>
         </button>
       </template>
 
@@ -953,6 +955,7 @@ function onUnionSelect(event: Event) {
             :disabled="disabled"
             :read-only="readOnly"
             :before-record-mutation="beforeRecordMutation"
+            :node-actions="nodeActions"
             :force-header="true"
             :on-header-edit-submit="(rawKey: string) => renameRecordKey(key, rawKey)"
             class="min-w-0 flex-1"
@@ -994,6 +997,7 @@ function onUnionSelect(event: Event) {
             @click.stop="onHeaderActionClick(action)"
           >
             <component :is="actionIcon(action.icon)" :size="12" :stroke-width="2" />
+          <span v-if="action.label" class="ml-1">{{ action.label }}</span>
           </button>
         </div>
       </div>
@@ -1018,6 +1022,7 @@ function onUnionSelect(event: Event) {
       :disabled="disabled"
       :read-only="readOnly"
       :before-record-mutation="beforeRecordMutation"
+            :node-actions="nodeActions"
       @update:model-value="onUnionValueUpdate"
     />
   </div>

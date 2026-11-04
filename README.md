@@ -135,3 +135,9 @@ and save failures retain valid partial cache for an explicit retry.
 动态目录由 `useResourceEditorOptions` 统一加载，同一目录的并发请求复用结果，过期响应不会覆盖新结果。通用资源编辑器在成功保存、加载或重新加载后刷新目录；业务侧在目录由其他入口变更时可调用聚合入口导出的 `invalidateResourceEditorOptions()`，使已挂载的分组和字符串选择器同步刷新。刷新不会静默改写表单中的失效引用。
 
 记录目录若从某个条目继承默认值，可指定 `draftEffectiveMode: "record_inheritance"` 和 `recordInheritance: { sourceKey, defaults }`。共享包只按通用对象深合并、数组替换语义计算继承；具体条目名称、业务字段和默认值由宿主提供。
+
+### 节点自定义操作
+
+`SchemaNode` 的可选 `nodeActions` 回调会获得 `{ node, path, value }`，并返回 `EditorNodeAction[]`。组件会递归传递回调，将动作与已有的重命名、排序、复制、删除操作一起展示。动作支持图标、可选文字标签和禁用状态，点击不改变草稿；具体行为由调用方决定。只读或禁用节点不会执行这些操作，未传回调时保持原有行为。
+
+相关 `EditorNodeActions`、`EditorNodeAction` 类型通过 `@workbench-kit/vue` 聚合入口导出。请在业务项目按资源与节点路径选择操作，组件库不解释业务目录名称或调用业务 API。

@@ -48,6 +48,25 @@ export type UiNode =
   | { kind: "record"; schema: SchemaMeta; key: UiNode; value: UiNode }
   | { kind: "union"; schema: SchemaMeta; options: UiNode[] };
 
+/** 由消费方注入的节点操作；组件库不解释业务路径与行为。 */
+export interface EditorNodeAction {
+  key: string;
+  icon: "trash" | "up" | "down" | "pencil" | "check" | "restore" | "copy" | "play";
+  title: string;
+  label?: string;
+  disabled?: boolean;
+  danger?: boolean;
+  submitEdit?: boolean;
+  onClick: () => void;
+}
+
+export interface EditorNodeActionContext {
+  node: UiNode;
+  path: Array<string | number>;
+  value: unknown;
+}
+export type EditorNodeActions = (context: EditorNodeActionContext) => EditorNodeAction[];
+
 /** 动态分组选项中的一个可选值。key 只用于选择器身份，value 是最终写回草稿的完整值。 */
 export interface EditorOption {
   key: string;
