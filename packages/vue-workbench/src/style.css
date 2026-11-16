@@ -359,3 +359,18 @@ body {
   color: var(--text-muted);
   font-size: 14px;
 }
+
+/* 消息正文与代码，CSS 通过统一聚合入口提供。 */
+.wb-message-content p { margin: .55em 0; }
+.wb-message-content h1,.wb-message-content h2,.wb-message-content h3 { margin: 1.1em 0 .5em; font-weight: 650; font-size: 1.2em; }
+.wb-message-content ul { list-style: disc; padding-left: 1.5em; }
+.wb-message-content ol { list-style: decimal; padding-left: 1.5em; }
+.wb-message-content pre { max-height: 28rem; overflow: auto; padding: 1rem; border-radius: 0; background: var(--code-background, #0b1220); color: var(--code-text, #d8dee9); font-size: .83em; line-height: 1.65; cursor: copy; }
+.wb-message-content :not(pre)>code { background: var(--surface-hover); padding: .15em .35em; border-radius: 0; font-size: .88em; }
+.wb-message-content table { display: block; overflow: auto; border-collapse: collapse; }
+.wb-message-content td,.wb-message-content th { border: 1px solid var(--border-default); padding: .35em .7em; }
+.wb-message-content a { color: var(--accent); text-decoration: underline; }
+.wb-message-content blockquote { border-left: 3px solid var(--border-default); padding-left: 1em; color: var(--text-muted); }
+.wb-message-content .hljs-keyword,.wb-message-content .hljs-selector-tag { color: var(--code-keyword, #c4a7e7); }
+.wb-message-content .hljs-string { color: var(--code-string, #a3be8c); }
+.wb-message-content .hljs-number,.wb-message-content .hljs-literal { color: var(--code-number, #ebcb8b); }

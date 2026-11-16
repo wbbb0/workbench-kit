@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import WorkbenchAreaScope from "./WorkbenchAreaScope.vue";
-import { createStatusbarMenuNodes, type WorkbenchStatusbarItem, type WorkbenchTopbarMenu } from "./chrome";
+import {
+  createStatusbarMenuNodes,
+  type WorkbenchStatusbarItem,
+  type WorkbenchTopbarMenu,
+} from "./chrome";
 import type { WorkbenchNavItem } from "./navigation";
 import { useMenuTrigger } from "./menu/useMenuTrigger";
 import type { WorkbenchRuntime } from "./runtime/workbenchRuntime";
@@ -21,16 +25,30 @@ const emit = defineEmits<{
 }>();
 
 const mainArea = computed(() => props.view.areas.mainArea);
-const routeLabel = computed(() => props.view.title || props.navItems.find((item) => item.id === props.activeNavItemId)?.title || "");
+const routeLabel = computed(
+  () =>
+    props.view.title ||
+    props.navItems.find((item) => item.id === props.activeNavItemId)?.title ||
+    "",
+);
 const mobileNavItems = computed(() => props.navItems);
 const mobileRootAreaId = computed(() => props.runtime.mobileRootAreaId.value);
 const mobileRootArea = computed(() => props.view.areas[mobileRootAreaId.value]);
-const activeMobileArea = computed(() => props.view.areas[props.runtime.activeMobileAreaId.value] ?? mainArea.value);
-const hasMobileRootArea = computed(() => mobileRootAreaId.value !== "mainArea" && !!mobileRootArea.value);
-const isActiveMobileAreaVisible = computed(() =>
-  mobileRootAreaId.value === "mainArea" || props.runtime.activeMobileAreaId.value !== mobileRootAreaId.value
+const activeMobileArea = computed(
+  () =>
+    props.view.areas[props.runtime.activeMobileAreaId.value] ?? mainArea.value,
 );
-const isMobileOverlayVisible = computed(() => props.runtime.activeMobileAreaId.value !== mobileRootAreaId.value);
+const hasMobileRootArea = computed(
+  () => mobileRootAreaId.value !== "mainArea" && !!mobileRootArea.value,
+);
+const isActiveMobileAreaVisible = computed(
+  () =>
+    mobileRootAreaId.value === "mainArea" ||
+    props.runtime.activeMobileAreaId.value !== mobileRootAreaId.value,
+);
+const isMobileOverlayVisible = computed(
+  () => props.runtime.activeMobileAreaId.value !== mobileRootAreaId.value,
+);
 const canPopMobileArea = computed(() => props.runtime.canPopMobileArea.value);
 const mobileHistoryDepth = ref(0);
 const mobileHistoryStateKey = "__workbenchMobileArea";
@@ -43,15 +61,15 @@ const mobileWorkbenchTrigger = useMenuTrigger({
       kind: "submenu" as const,
       id: `mobile-${menu.id}`,
       label: menu.label,
-      children: menu.resolveItems()
+      children: menu.resolveItems(),
     })),
     {
       kind: "submenu",
       id: "mobile-statusbar",
       label: "状态栏",
-      children: createStatusbarMenuNodes(props.statusbarItems)
-    }
-  ]
+      children: createStatusbarMenuNodes(props.statusbarItems),
+    },
+  ],
 });
 
 watch(
@@ -60,7 +78,7 @@ watch(
     props.runtime.resetMobileAreaStack();
     mobileHistoryDepth.value = 0;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 function pushMobileHistoryEntry() {
@@ -68,16 +86,21 @@ function pushMobileHistoryEntry() {
     return;
   }
 
-  const currentState = typeof window.history.state === "object" && window.history.state !== null
-    ? window.history.state
-    : {};
-  window.history.pushState({
-    ...currentState,
-    [mobileHistoryStateKey]: {
-      viewId: props.view.id,
-      areaId: props.runtime.activeMobileAreaId.value
-    }
-  }, "", window.location.href);
+  const currentState =
+    typeof window.history.state === "object" && window.history.state !== null
+      ? window.history.state
+      : {};
+  window.history.pushState(
+    {
+      ...currentState,
+      [mobileHistoryStateKey]: {
+        viewId: props.view.id,
+        areaId: props.runtime.activeMobileAreaId.value,
+      },
+    },
+    "",
+    window.location.href,
+  );
   mobileHistoryDepth.value += 1;
 }
 
@@ -89,16 +112,19 @@ function handlePopState() {
   props.runtime.popMobileArea();
 }
 
-watch(() => props.runtime.mobileAreaStack.value.length, (stackLength) => {
-  const desiredDepth = Math.max(0, stackLength - 1);
-  if (!isMobileOverlayVisible.value) {
-    mobileHistoryDepth.value = 0;
-    return;
-  }
-  while (mobileHistoryDepth.value < desiredDepth) {
-    pushMobileHistoryEntry();
-  }
-});
+watch(
+  () => props.runtime.mobileAreaStack.value.length,
+  (stackLength) => {
+    const desiredDepth = Math.max(0, stackLength - 1);
+    if (!isMobileOverlayVisible.value) {
+      mobileHistoryDepth.value = 0;
+      return;
+    }
+    while (mobileHistoryDepth.value < desiredDepth) {
+      pushMobileHistoryEntry();
+    }
+  },
+);
 
 function goBack() {
   if (mobileHistoryDepth.value > 0 && typeof window !== "undefined") {
@@ -113,7 +139,8 @@ function goBack() {
 }
 
 function setMainRegionRef(element: unknown) {
-  props.runtime.mainRegionRef.value = element instanceof HTMLElement ? element : null;
+  props.runtime.mainRegionRef.value =
+    element instanceof HTMLElement ? element : null;
 }
 
 onMounted(() => {
@@ -126,14 +153,20 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="fixed inset-0 flex h-full w-full overflow-hidden bg-surface-app text-text-primary">
+  <div
+    class="fixed inset-0 flex h-full w-full overflow-hidden bg-surface-app text-text-primary"
+  >
     <div
       :ref="hasMobileRootArea ? undefined : setMainRegionRef"
       class="absolute inset-0 flex flex-col bg-surface-app transition-transform duration-220 ease-[ease]"
     >
       <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <header class="pt-safe flex h-[calc(44px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border-default bg-surface-sidebar px-3">
-          <span class="flex-1 font-semibold text-text-secondary">{{ routeLabel }}</span>
+        <header
+          class="pt-safe flex h-[calc(44px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border-default bg-surface-sidebar px-3"
+        >
+          <span class="flex-1 font-semibold text-text-secondary">{{
+            routeLabel
+          }}</span>
           <nav class="flex gap-1">
             <button
               v-for="item in mobileNavItems"
@@ -156,7 +189,14 @@ onUnmounted(() => {
               @pointerup="mobileWorkbenchTrigger.onPointerUp"
               @pointercancel="mobileWorkbenchTrigger.onPointerCancel"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+              >
                 <circle cx="5" cy="12" r="1.5" />
                 <circle cx="12" cy="12" r="1.5" />
                 <circle cx="19" cy="12" r="1.5" />
@@ -165,26 +205,61 @@ onUnmounted(() => {
             </button>
           </nav>
         </header>
-        <WorkbenchAreaScope :area-id="mobileRootAreaId" :component="mobileRootArea" />
+        <WorkbenchAreaScope
+          :area-id="mobileRootAreaId"
+          :component="mobileRootArea"
+          :view-id="view.id"
+          :cache="!!view.cache?.areas?.includes(mobileRootAreaId)"
+          :cache-max="view.cache?.max"
+        />
       </div>
     </div>
     <div
       v-if="hasMobileRootArea"
       :ref="setMainRegionRef"
       class="absolute inset-0 z-10 flex flex-col bg-surface-app transition-transform duration-220 ease-[ease]"
-      :class="isActiveMobileAreaVisible ? 'translate-x-0' : 'pointer-events-none translate-x-full'"
+      :class="
+        isActiveMobileAreaVisible
+          ? 'translate-x-0'
+          : 'pointer-events-none translate-x-full'
+      "
     >
-      <header class="pt-safe flex h-[calc(44px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border-default bg-surface-sidebar px-3">
-        <button v-if="canPopMobileArea" class="flex cursor-pointer items-center gap-1 border-0 bg-transparent px-0 py-1 text-ui text-accent" @click="goBack">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <header
+        class="pt-safe flex h-[calc(44px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border-default bg-surface-sidebar px-3"
+      >
+        <button
+          v-if="canPopMobileArea"
+          class="flex cursor-pointer items-center gap-1 border-0 bg-transparent px-0 py-1 text-ui text-accent"
+          @click="goBack"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
             <polyline points="15 18 9 12 15 6" />
           </svg>
           <span>返回</span>
         </button>
-        <span class="min-w-0 flex-1 truncate text-ui font-medium text-text-secondary">{{ routeLabel }}</span>
+        <span
+          class="min-w-0 flex-1 truncate text-ui font-medium text-text-secondary"
+          >{{ routeLabel }}</span
+        >
       </header>
       <div class="min-h-0 flex-1 overflow-hidden">
-        <WorkbenchAreaScope :area-id="runtime.activeMobileAreaId.value" :component="activeMobileArea" />
+        <WorkbenchAreaScope
+          :area-id="runtime.activeMobileAreaId.value"
+          :component="activeMobileArea"
+          :view-id="view.id"
+          :cache="
+            !!view.cache?.areas?.includes(runtime.activeMobileAreaId.value)
+          "
+          :cache-max="view.cache?.max"
+          :visible="isActiveMobileAreaVisible"
+        />
       </div>
     </div>
   </div>

@@ -28,3 +28,40 @@ describe("mobile fullscreen windows", () => {
     wrapper.unmount();
   });
 });
+
+it("可选按钮与双击共用最大化状态，移动端隐藏按钮", async () => {
+  const window = makeWindow(true);
+  window.definition.showMaximizeButton = true;
+  const wrapper = mount(WindowSurface, { props: { window, isMobile: false } });
+  await wrapper.get('[aria-label="最大化"]').trigger("click");
+  const payload = wrapper.emitted("maximize")![0]![0] as { bounds: WorkbenchRuntimeWindow["restoreBounds"]; restoreBounds: WorkbenchRuntimeWindow["restoreBounds"] };
+  expect(payload.restoreBounds).toEqual({ position: { x: 80, y: 20 }, sizePx: { width: 640, height: 420 } });
+  await wrapper.setProps({ window: { ...window, maximized: true, restoreBounds: payload.restoreBounds } });
+  await wrapper.get('[aria-label="还原"]').trigger("click");
+  expect(wrapper.emitted("maximize")![1]![0]).toMatchObject({ maximized: false, bounds: payload.restoreBounds });
+  await wrapper.setProps({ isMobile: true });
+  expect(wrapper.find('[aria-label="还原"]').exists()).toBe(false);
+  wrapper.unmount();
+});
+
+it("活动模态窗口限制焦点且 Enter 不触发动作，失活后释放焦点", async () => {
+  const window = makeWindow();
+  window.definition.modal = true;
+  window.definition.trapFocus = true;
+  const outside = document.createElement("button");
+  document.body.append(outside);
+  const wrapper = mount(WindowSurface, { props: { window, isMobile: false }, attachTo: document.body, slots: { default: '<button id="last">操作</button>' } });
+  expect(document.activeElement).toBe(wrapper.element);
+  await wrapper.trigger("keydown", { key: "Enter" });
+  expect(wrapper.emitted("close")).toBeUndefined();
+  await wrapper.trigger("keydown", { key: "Tab" });
+  expect(document.activeElement).toBe(wrapper.get('[aria-label="关闭"]').element);
+  await wrapper.get('[aria-label="关闭"]').trigger("keydown", { key: "Tab", shiftKey: true });
+  expect(document.activeElement).toBe(wrapper.get("#last").element);
+  outside.focus();
+  expect(document.activeElement).toBe(wrapper.element);
+  await wrapper.setProps({ inactive: true });
+  outside.focus();
+  expect(document.activeElement).toBe(outside);
+  wrapper.unmount(); outside.remove();
+});

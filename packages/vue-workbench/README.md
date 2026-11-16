@@ -307,7 +307,9 @@ const result = await windows.openDialog({
 });
 ```
 
-这些 composable 依赖 active controller。没有挂载 `WorkbenchRoot` 时，窗口和 toast 服务不可用。
+这些 composable 依赖 runtime controller。请挂载 `WorkbenchRuntimeRoot` 或包含它的 `WorkbenchRoot` / `WorkbenchPageRoot`；窗口组件绑定所属 runtime，组件外调用使用当前 active controller。
+
+runtime 窗口支持 `showCloseButton`、`showMaximizeButton`、`movable`、`resizable`、`mobileFullscreen` 与 footer actions。`showMaximizeButton` 默认关闭，开启后桌面端显示最大化／还原按钮，与标题栏双击共用尺寸逻辑。模态窗口可开启 `trapFocus`，将键盘焦点保持在活动窗口中；宿主负责关闭后的焦点恢复和页面离开时释放窗口。
 
 ## 顶部菜单和状态栏
 
@@ -362,3 +364,16 @@ const statusbarItems: WorkbenchStatusbarItem[] = [
 - `WorkbenchListItem`
 
 这些组件只承担稳定视觉结构，不绑定业务数据。
+
+
+## 区域页面缓存与通用消息窗口
+
+`defineWorkbenchView` 可选 `cache: { areas: ["mainArea", "primarySidebar"], max: 8 }`。
+缓存位于实际区域 renderer，key 仅由 `view.id` 与 `areaId` 组成。未配置时保持原有卸载行为；移动端隐藏详情区域会 deactivated。
+这只保留组件实例；重要的编辑缓冲、阅读锚点应由宿主状态持有，以便缓存淘汰、响应式布局重挂后恢复。
+
+聚合入口 `@workbench-kit/vue` 导出 `MessageWindow`、`MessageTimeline`、`MessageContent`、`MessageComposer` 和 `useMessageViewport`。
+它们只接受通用 `MessageItem` / `MessagePart`、受控草稿文本与阅读锚点，并发出 submit / selection / older / newer / anchor / detail / reference 事件；不请求业务 API、不解析业务 ID、不管理消息队列。
+`MessageTimeline` 使用正向可变高度虚拟清单；宿主提供连续有界消息区间、分页游标对应的布尔标记及可选 `unseen` 数量。
+`active` 默认 true；隐藏时不滚动、不观察行高。Markdown 默认禁用原始 HTML，代码可复制，长代码可展开，图片不可用时保留说明。
+样式仍通过原有 `@workbench-kit/vue/style.css` 单入口提供。

@@ -1,7 +1,11 @@
 import type { Component } from "vue";
 
 /** Workbench 内置区域 ID。业务 view 通过这些 ID 声明 pane 内容和移动端跳转目标。 */
-export type WorkbenchAreaId = "primarySidebar" | "mainArea" | "secondarySidebar" | "bottomPanel";
+export type WorkbenchAreaId =
+  | "primarySidebar"
+  | "mainArea"
+  | "secondarySidebar"
+  | "bottomPanel";
 export type WorkbenchDesktopAreaId = Exclude<WorkbenchAreaId, "mainArea">;
 
 /** 桌面 pane 尺寸约束，单位为 px。 */
@@ -41,6 +45,8 @@ export type WorkbenchView = {
   title: string;
   areas: WorkbenchViewAreas;
   layout: WorkbenchViewLayout;
+  /** 区域页面缓存，默认关闭。key 只含 viewId/areaId。 */
+  cache?: { areas?: WorkbenchAreaId[]; max?: number };
 };
 
 /** 业务项目传入的 view 定义。layout 可省略，defineWorkbenchView 会补默认值。 */
@@ -54,26 +60,28 @@ export type WorkbenchViewDefinition = Omit<WorkbenchView, "layout"> & {
 /** Workbench 默认布局：移动端 rootArea 默认为 primarySidebar；若 view 未提供该区域，runtime 会回退到 mainArea。 */
 export const defaultWorkbenchViewLayout: WorkbenchViewLayout = {
   mobile: {
-    rootArea: "primarySidebar"
+    rootArea: "primarySidebar",
   },
   desktop: {
-    primarySidebar: {}
-  }
+    primarySidebar: {},
+  },
 };
 
 /** 标准化业务 view 定义，补齐移动端和桌面端布局默认值。 */
-export function defineWorkbenchView(definition: WorkbenchViewDefinition): WorkbenchView {
+export function defineWorkbenchView(
+  definition: WorkbenchViewDefinition,
+): WorkbenchView {
   return {
     ...definition,
     layout: {
       mobile: {
         ...defaultWorkbenchViewLayout.mobile,
-        ...definition.layout?.mobile
+        ...definition.layout?.mobile,
       },
       desktop: {
         ...defaultWorkbenchViewLayout.desktop,
-        ...definition.layout?.desktop
-      }
-    }
+        ...definition.layout?.desktop,
+      },
+    },
   };
 }

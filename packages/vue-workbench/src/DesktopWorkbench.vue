@@ -9,7 +9,7 @@ import WorkbenchSash from "./primitives/WorkbenchSash.vue";
 import {
   getWorkbenchDesktopAreaSizeRange,
   type DesktopAreaId,
-  type WorkbenchRuntime
+  type WorkbenchRuntime,
 } from "./runtime/workbenchRuntime";
 import type { WorkbenchStatusbarItem, WorkbenchTopbarMenu } from "./chrome";
 import type { WorkbenchNavItem } from "./navigation";
@@ -35,14 +35,30 @@ const bottomPanel = computed(() => props.view.areas.bottomPanel);
 const hasPrimarySidebar = computed(() => !!primarySidebar.value);
 const hasSecondarySidebar = computed(() => !!secondarySidebar.value);
 const hasBottomPanel = computed(() => !!bottomPanel.value);
-const primarySidebarStyle = computed(() => props.runtime.getDesktopAreaStyle("primarySidebar"));
-const primarySidebarSize = computed(() => props.runtime.getDesktopAreaSizePx("primarySidebar"));
-const secondarySidebarStyle = computed(() => props.runtime.getDesktopAreaStyle("secondarySidebar"));
-const secondarySidebarSize = computed(() => props.runtime.getDesktopAreaSizePx("secondarySidebar"));
-const bottomPanelStyle = computed(() => props.runtime.getDesktopAreaStyle("bottomPanel"));
-const bottomPanelSize = computed(() => props.runtime.getDesktopAreaSizePx("bottomPanel"));
-const primarySidebarRange = computed(() => getDesktopAreaSizeRange("primarySidebar"));
-const secondarySidebarRange = computed(() => getDesktopAreaSizeRange("secondarySidebar"));
+const primarySidebarStyle = computed(() =>
+  props.runtime.getDesktopAreaStyle("primarySidebar"),
+);
+const primarySidebarSize = computed(() =>
+  props.runtime.getDesktopAreaSizePx("primarySidebar"),
+);
+const secondarySidebarStyle = computed(() =>
+  props.runtime.getDesktopAreaStyle("secondarySidebar"),
+);
+const secondarySidebarSize = computed(() =>
+  props.runtime.getDesktopAreaSizePx("secondarySidebar"),
+);
+const bottomPanelStyle = computed(() =>
+  props.runtime.getDesktopAreaStyle("bottomPanel"),
+);
+const bottomPanelSize = computed(() =>
+  props.runtime.getDesktopAreaSizePx("bottomPanel"),
+);
+const primarySidebarRange = computed(() =>
+  getDesktopAreaSizeRange("primarySidebar"),
+);
+const secondarySidebarRange = computed(() =>
+  getDesktopAreaSizeRange("secondarySidebar"),
+);
 const bottomPanelRange = computed(() => getDesktopAreaSizeRange("bottomPanel"));
 
 type ResizeAxis = "x" | "y";
@@ -58,34 +74,51 @@ function getDesktopAreaSizeRange(areaId: DesktopAreaId) {
 }
 
 const desktopAreaResize = usePointerDrag<ActiveResize>({
-  cursor: (state) => state.axis === "x" ? "col-resize" : "row-resize",
+  cursor: (state) => (state.axis === "x" ? "col-resize" : "row-resize"),
   onMove({ state, deltaX, deltaY }) {
     const delta = state.axis === "x" ? deltaX : deltaY;
     props.runtime.setDesktopAreaSize(
       state.areaId,
-      state.startSize + delta * state.direction
+      state.startSize + delta * state.direction,
     );
-  }
+  },
 });
-const activeDesktopAreaId = computed(() => desktopAreaResize.activeState.value?.areaId ?? null);
+const activeDesktopAreaId = computed(
+  () => desktopAreaResize.activeState.value?.areaId ?? null,
+);
 
-function startDesktopAreaResize(areaId: DesktopAreaId, axis: ResizeAxis, direction: 1 | -1, event: PointerEvent) {
+function startDesktopAreaResize(
+  areaId: DesktopAreaId,
+  axis: ResizeAxis,
+  direction: 1 | -1,
+  event: PointerEvent,
+) {
   desktopAreaResize.start(event, {
     areaId,
     axis,
     direction,
-    startSize: props.runtime.getDesktopAreaSizePx(areaId)
+    startSize: props.runtime.getDesktopAreaSizePx(areaId),
   });
 }
 
 function resizeDesktopAreaBy(areaId: DesktopAreaId, deltaPx: number) {
-  props.runtime.setDesktopAreaSize(areaId, props.runtime.getDesktopAreaSizePx(areaId) + deltaPx);
+  props.runtime.setDesktopAreaSize(
+    areaId,
+    props.runtime.getDesktopAreaSizePx(areaId) + deltaPx,
+  );
 }
 
-function onVerticalResizeKeydown(areaId: DesktopAreaId, direction: 1 | -1, event: KeyboardEvent) {
+function onVerticalResizeKeydown(
+  areaId: DesktopAreaId,
+  direction: 1 | -1,
+  event: KeyboardEvent,
+) {
   if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
     event.preventDefault();
-    resizeDesktopAreaBy(areaId, (event.key === "ArrowRight" ? 16 : -16) * direction);
+    resizeDesktopAreaBy(
+      areaId,
+      (event.key === "ArrowRight" ? 16 : -16) * direction,
+    );
   }
 }
 
@@ -102,11 +135,12 @@ function onHorizontalResizeKeydown(event: KeyboardEvent) {
 function resetDesktopAreaResize(areaId: DesktopAreaId) {
   props.runtime.resetDesktopAreaSize(areaId);
 }
-
 </script>
 
 <template>
-  <div class="relative flex h-full w-full overflow-hidden bg-surface-app text-text-primary">
+  <div
+    class="relative flex h-full w-full overflow-hidden bg-surface-app text-text-primary"
+  >
     <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
       <TopBar :menus="topbarMenus" />
       <div class="flex min-h-0 flex-1 overflow-hidden">
@@ -120,8 +154,16 @@ function resetDesktopAreaResize(areaId: DesktopAreaId) {
           class="relative shrink-0 bg-surface-sidebar"
           :style="primarySidebarStyle"
         >
-          <aside class="scrollbar-thin h-full overflow-x-hidden overflow-y-auto">
-            <WorkbenchAreaScope area-id="primarySidebar" :component="primarySidebar" />
+          <aside
+            class="scrollbar-thin h-full overflow-x-hidden overflow-y-auto"
+          >
+            <WorkbenchAreaScope
+              area-id="primarySidebar"
+              :component="primarySidebar"
+              :view-id="view.id"
+              :cache="!!view.cache?.areas?.includes('primarySidebar')"
+              :cache-max="view.cache?.max"
+            />
           </aside>
           <WorkbenchSash
             orientation="vertical"
@@ -132,14 +174,25 @@ function resetDesktopAreaResize(areaId: DesktopAreaId) {
             :value-min="primarySidebarRange.min"
             :value-max="primarySidebarRange.max"
             :value-text="`${primarySidebarSize} pixels`"
-            @pointerdown="startDesktopAreaResize('primarySidebar', 'x', 1, $event)"
+            @pointerdown="
+              startDesktopAreaResize('primarySidebar', 'x', 1, $event)
+            "
             @dblclick="resetDesktopAreaResize('primarySidebar')"
             @keydown="onVerticalResizeKeydown('primarySidebar', 1, $event)"
           />
         </div>
         <section class="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-          <main ref="runtime.mainRegionRef" class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pr-safe">
-            <WorkbenchAreaScope area-id="mainArea" :component="mainArea" />
+          <main
+            ref="runtime.mainRegionRef"
+            class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pr-safe"
+          >
+            <WorkbenchAreaScope
+              area-id="mainArea"
+              :component="mainArea"
+              :view-id="view.id"
+              :cache="!!view.cache?.areas?.includes('mainArea')"
+              :cache-max="view.cache?.max"
+            />
           </main>
           <WorkbenchSash
             v-if="hasBottomPanel"
@@ -151,7 +204,9 @@ function resetDesktopAreaResize(areaId: DesktopAreaId) {
             :value-min="bottomPanelRange.min"
             :value-max="bottomPanelRange.max"
             :value-text="`${bottomPanelSize} pixels`"
-            @pointerdown="startDesktopAreaResize('bottomPanel', 'y', -1, $event)"
+            @pointerdown="
+              startDesktopAreaResize('bottomPanel', 'y', -1, $event)
+            "
             @dblclick="resetDesktopAreaResize('bottomPanel')"
             @keydown="onHorizontalResizeKeydown"
           />
@@ -160,7 +215,13 @@ function resetDesktopAreaResize(areaId: DesktopAreaId) {
             class="scrollbar-thin shrink-0 overflow-auto bg-surface-panel"
             :style="bottomPanelStyle"
           >
-            <WorkbenchAreaScope area-id="bottomPanel" :component="bottomPanel" />
+            <WorkbenchAreaScope
+              area-id="bottomPanel"
+              :component="bottomPanel"
+              :view-id="view.id"
+              :cache="!!view.cache?.areas?.includes('bottomPanel')"
+              :cache-max="view.cache?.max"
+            />
           </aside>
         </section>
         <div
@@ -177,12 +238,22 @@ function resetDesktopAreaResize(areaId: DesktopAreaId) {
             :value-min="secondarySidebarRange.min"
             :value-max="secondarySidebarRange.max"
             :value-text="`${secondarySidebarSize} pixels`"
-            @pointerdown="startDesktopAreaResize('secondarySidebar', 'x', -1, $event)"
+            @pointerdown="
+              startDesktopAreaResize('secondarySidebar', 'x', -1, $event)
+            "
             @dblclick="resetDesktopAreaResize('secondarySidebar')"
             @keydown="onVerticalResizeKeydown('secondarySidebar', -1, $event)"
           />
-          <aside class="scrollbar-thin h-full overflow-x-hidden overflow-y-auto">
-            <WorkbenchAreaScope area-id="secondarySidebar" :component="secondarySidebar" />
+          <aside
+            class="scrollbar-thin h-full overflow-x-hidden overflow-y-auto"
+          >
+            <WorkbenchAreaScope
+              area-id="secondarySidebar"
+              :component="secondarySidebar"
+              :view-id="view.id"
+              :cache="!!view.cache?.areas?.includes('secondarySidebar')"
+              :cache-max="view.cache?.max"
+            />
           </aside>
         </div>
       </div>

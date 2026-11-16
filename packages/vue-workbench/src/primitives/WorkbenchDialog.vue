@@ -9,13 +9,17 @@ const props = withDefaults(defineProps<{
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
   ariaLabel?: string;
+  closeText?: string;
+  trapFocus?: boolean;
 }>(), {
   title: "",
   size: "md",
   acceptKeyboardConfirm: false,
   closeOnBackdrop: true,
   closeOnEscape: true,
-  ariaLabel: ""
+  ariaLabel: "",
+  closeText: "Close",
+  trapFocus: false
 });
 
 const emit = defineEmits<{
@@ -26,6 +30,13 @@ const emit = defineEmits<{
 }>();
 
 const dialogRef = ref<HTMLElement | null>(null);
+let locked = false;
+let previousOverflow = "";
+function releaseScroll() {
+  if (!locked || typeof document === "undefined") return;
+  document.body.style.overflow = previousOverflow;
+  locked = false;
+}
 
 const sizeClass = computed(() => ({
   sm: "max-w-sm",
@@ -63,6 +74,21 @@ function onKeydown(event: KeyboardEvent) {
     return;
   }
 
+  if (event.key === "Tab" && props.trapFocus && dialogRef.value) {
+    const panel = dialogRef.value;
+    const controls = Array.from(panel.querySelectorAll<HTMLElement>(
+      'a[href],button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),[tabindex]'
+    )).filter(element => element.tabIndex >= 0 && !element.closest('[hidden],[inert]') && getComputedStyle(element).display !== 'none');
+    const first = controls[0], last = controls.at(-1), active = document.activeElement;
+    if (!first) { event.preventDefault(); panel.focus(); }
+    else if (event.shiftKey && (active === first || active === panel || !panel.contains(active))) {
+      event.preventDefault(); last?.focus();
+    } else if (!event.shiftKey && (active === last || active === panel || !panel.contains(active))) {
+      event.preventDefault(); first.focus();
+    }
+    return;
+  }
+
   if (event.key === "Escape" && props.closeOnEscape) {
     event.preventDefault();
     cancel();
@@ -86,11 +112,15 @@ watch(
       return;
     }
 
-    document.body.style.overflow = open ? "hidden" : "";
+    if (open && !locked) {
+      previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      locked = true;
+    } else if (!open) releaseScroll();
 
     if (open) {
       await nextTick();
-      dialogRef.value?.focus();
+      if (props.modelValue) dialogRef.value?.focus();
     }
   },
   { immediate: true }
@@ -101,9 +131,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  if (typeof document !== "undefined") {
-    document.body.style.overflow = "";
-  }
+  releaseScroll();
   window.removeEventListener("keydown", onKeydown);
 });
 </script>
@@ -130,7 +158,7 @@ onBeforeUnmount(() => {
           </slot>
         </div>
         <button class="btn btn-ghost" type="button" @click="cancel">
-          Close
+          {{ closeText }}
         </button>
       </header>
 

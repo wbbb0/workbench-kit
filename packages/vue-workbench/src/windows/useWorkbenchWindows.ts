@@ -1,5 +1,5 @@
 import { computed } from "vue";
-import { useWorkbenchController } from "../runtime/workbenchController.js";
+import { useWorkbenchController, useWorkbenchControllerContext } from "../runtime/workbenchController.js";
 export type { WorkbenchRuntimeWindow, WorkbenchWindowManager } from "./windowService.js";
 import type { WorkbenchWindowManager } from "./windowService.js";
 
@@ -48,5 +48,6 @@ const dynamicWorkbenchWindows: WorkbenchWindowManager = {
 };
 
 export function useWorkbenchWindows() {
-  return dynamicWorkbenchWindows;
+  // 组件绑定所属 runtime；组件外调用才使用当前活动的全局服务。
+  return useWorkbenchControllerContext()?.windows ?? dynamicWorkbenchWindows;
 }

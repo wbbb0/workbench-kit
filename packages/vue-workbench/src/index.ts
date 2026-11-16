@@ -16,3 +16,5 @@ export * from "./menu/useMenuTrigger.js";
 export { default as WorkbenchErrorPanel } from "./errors/WorkbenchErrorPanel.vue";
 export * from "./errors/types.js";
 export * from "./errors/useWorkbenchErrors.js";
+
+export * from './messages/index.js';

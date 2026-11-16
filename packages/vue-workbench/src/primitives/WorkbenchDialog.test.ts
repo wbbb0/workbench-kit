@@ -1,0 +1,44 @@
+import { afterEach, expect, it, vi } from 'vitest';
+import { mount, flushPromises, type VueWrapper } from '@vue/test-utils';
+import { nextTick } from 'vue';
+import WorkbenchDialog from './WorkbenchDialog.vue';
+const wrappers: VueWrapper[] = [];
+afterEach(() => { wrappers.splice(0).forEach(wrapper => wrapper.unmount()); document.body.innerHTML = ''; document.body.style.overflow = ''; });
+it('默认关闭文案兼容，关闭实例不修改其他弹窗的滚动锁', async () => {
+  document.body.style.overflow = 'clip';
+  const first = mount(WorkbenchDialog, { props: { modelValue: true }, attachTo: document.body }); wrappers.push(first);
+  await flushPromises();
+  expect(first.get('button').text()).toBe('Close');
+  expect(document.body.style.overflow).toBe('hidden');
+  const closed = mount(WorkbenchDialog, { props: { modelValue: false }, attachTo: document.body }); wrappers.push(closed);
+  expect(document.body.style.overflow).toBe('hidden');
+  await first.setProps({ modelValue: false });
+  expect(document.body.style.overflow).toBe('clip');
+});
+it('可选焦点约束保留Tab导航、Escape与背景取消', async () => {
+  const host = mount(WorkbenchDialog, { props: { modelValue: true, closeText: '关闭详情', trapFocus: true, ariaLabel: '记录详情' }, slots: { default: '<a href="/">详情链接</a><button disabled>不可用</button>' }, attachTo: document.body }); wrappers.push(host);
+  await flushPromises();
+  const panel = host.get('[role="dialog"]').element as HTMLElement;
+  const close = host.get('button').element as HTMLButtonElement;
+  const link = host.get('a').element as HTMLAnchorElement;
+  expect(document.activeElement).toBe(panel);
+  panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+  expect(document.activeElement).toBe(close);
+  close.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+  expect(document.activeElement).toBe(link);
+  link.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }));
+  expect(document.activeElement).toBe(close);
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+  expect(host.emitted('update:modelValue')).toEqual([[false]]);
+  expect(host.emitted('cancel')).toHaveLength(1);
+  await host.trigger('click');
+  expect(host.emitted('cancel')).toHaveLength(2);
+});
+it('快速关闭不会在nextTick后重新夺取焦点', async () => {
+  const opener = document.createElement('button'); document.body.append(opener); opener.focus();
+  const host = mount(WorkbenchDialog, { props: { modelValue: true }, attachTo: document.body }); wrappers.push(host);
+  await host.setProps({ modelValue: false });
+  await nextTick();
+  expect(host.find('[role="dialog"]').exists()).toBe(false);
+  expect(document.body.style.overflow).toBe('');
+});

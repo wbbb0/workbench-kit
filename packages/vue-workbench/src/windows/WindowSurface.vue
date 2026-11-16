@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, useTemplateRef, ref, watch } from "vue";
-import { X } from "lucide-vue-next";
+import { X, Maximize2, Minimize2 } from "lucide-vue-next";
 import { canStartPointerDrag, usePointerDrag } from "../composables/usePointerDrag";
 import { resolveWindowSizing } from "./windowSizing";
 import type {
@@ -349,6 +349,11 @@ function handleHeaderDoubleClick(event: MouseEvent) {
   }
 
   event.preventDefault();
+  toggleMaximize();
+}
+
+function toggleMaximize() {
+  if (!canResize.value || props.inactive) return;
   if (props.window.maximized && props.window.restoreBounds) {
     emit("maximize", {
       maximized: false,
@@ -430,6 +435,29 @@ onBeforeUnmount(() => {
   window.visualViewport?.removeEventListener("scroll", updateVisualViewport);
 });
 
+const containFocus = computed(() => props.window.definition.modal === true && props.window.definition.trapFocus === true && !props.inactive);
+function focusWithin() {
+  const panel = surfaceRef.value;
+  if (containFocus.value && panel && !panel.contains(document.activeElement)) panel.focus();
+}
+function trapTab(event: KeyboardEvent) {
+  if (!containFocus.value || event.key !== "Tab" || !surfaceRef.value) return;
+  const panel = surfaceRef.value;
+  const controls = Array.from(panel.querySelectorAll<HTMLElement>(
+    'a[href],button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),[tabindex]'
+  )).filter(element => element.tabIndex >= 0 && !element.closest('[hidden],[inert]') && getComputedStyle(element).display !== 'none' && getComputedStyle(element).visibility !== 'hidden');
+  const first = controls[0], last = controls.at(-1), active = document.activeElement;
+  if (!first) { event.preventDefault(); panel.focus(); }
+  else if (event.shiftKey && (active === first || active === panel)) {
+    event.preventDefault(); last?.focus();
+  } else if (!event.shiftKey && (active === last || active === panel)) {
+    event.preventDefault(); first.focus();
+  }
+}
+watch([containFocus, surfaceRef], focusWithin, { flush: "post" });
+onMounted(() => { document.addEventListener("focusin", focusWithin); focusWithin(); });
+onBeforeUnmount(() => document.removeEventListener("focusin", focusWithin));
+
 function handleFocusIn() {
   if (props.inactive) {
     return;
@@ -445,6 +473,8 @@ function handleFocusIn() {
     :class="surfaceClasses"
     :style="surfaceStyle"
     role="dialog"
+    tabindex="-1"
+    @keydown="trapTab"
     :aria-label="window.definition.title"
     :aria-modal="window.definition.modal === true"
     :aria-disabled="inactive ? 'true' : 'false'"
@@ -465,6 +495,9 @@ function handleFocusIn() {
           {{ window.definition.description }}
         </div>
       </div>
+      <button v-if="canResize && window.definition.showMaximizeButton" class="btn-ghost -mt-0.5" :title="window.maximized ? '还原' : '最大化'" :aria-label="window.maximized ? '还原' : '最大化'" type="button" :disabled="inactive" @click="toggleMaximize">
+        <component :is="window.maximized ? Minimize2 : Maximize2" :size="14" :stroke-width="2" />
+      </button>
       <button v-if="showCloseButton" class="btn-ghost -mr-1 -mt-0.5" title="关闭" aria-label="关闭" type="button" :disabled="inactive" @click="emit('close')">
         <X :size="14" :stroke-width="2" />
       </button>

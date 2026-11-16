@@ -53,6 +53,12 @@ html[data-theme="dark"] {
   --scrollbar-thumb: #33445f;
   --scrollbar-thumb-hover: #415674;
 
+  --code-background: #0b1220;
+  --code-text: #d8dee9;
+  --code-keyword: #c4a7e7;
+  --code-string: #a3be8c;
+  --code-number: #ebcb8b;
+
   /* Sizing */
   --activity-bar-width: 48px;
   --font-size-ui: 13px;
@@ -64,6 +70,18 @@ html[data-theme="dark"] {
 }
 
 html[data-theme="light"] {
+  --code-background: #f4f4f4;
+  --code-text: #24292f;
+  --code-keyword: #8250df;
+  --code-string: #116329;
+  --code-number: #953800;
+  --accent: #006ab1;
+  --accent-hover: #005a9e;
+  --accent-active: #004578;
+  --success: #087f5b;
+  --warning: #8a5c00;
+  --danger: #b42336;
+  --info: #006ab1;
   --surface-app: #f4f4f4;
   --surface-sidebar: #fafafa;
   --surface-panel: #ffffff;
@@ -71,7 +89,7 @@ html[data-theme="light"] {
   --surface-muted: #e8e8e8;
   --surface-hover: #efefef;
   --surface-active: #e4e6f1;
-  --surface-selected: #0078d4;
+  --surface-selected: #dceafa;
   --surface-selected-muted: #e6eef7;
 
   --border-subtle: color-mix(in srgb, #d4d4d4 75%, transparent);

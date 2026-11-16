@@ -179,6 +179,10 @@ export type WorkbenchWindowDefinition<
   /** 可选移动端铺满；保留桌面尺寸和位置，返回桌面时恢复。 */
   mobileFullscreen?: boolean;
   showCloseButton?: boolean;
+  /** 显示桌面最大化/还原按钮；与标题栏双击共用尺寸逻辑。 */
+  showMaximizeButton?: boolean;
+  /** 模态窗口打开时聚焦窗口，并将键盘焦点保持在当前活动窗口内。 */
+  trapFocus?: boolean;
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
   footer?: WorkbenchDialogFooterMode;
