@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { WorkbenchNavItem } from "./navigation";
+import { groupWorkbenchNavItems, type WorkbenchNavItem } from "./navigation";
 
 const props = defineProps<{
   navItems: readonly WorkbenchNavItem[];
@@ -11,8 +11,7 @@ const emit = defineEmits<{
   navigate: [itemId: string];
 }>();
 
-const primaryNavItems = computed(() => props.navItems.filter((item) => item.placement === "primary"));
-const bottomNavItems = computed(() => props.navItems.filter((item) => item.placement === "bottom"));
+const navigationGroups = computed(() => groupWorkbenchNavItems(props.navItems));
 </script>
 
 <template>
@@ -22,10 +21,12 @@ const bottomNavItems = computed(() => props.navItems.filter((item) => item.place
     <!-- Top: navigation icons -->
     <div class="flex flex-col items-center">
       <button
-        v-for="item in primaryNavItems"
+        v-for="item in navigationGroups.primary"
         :key="item.id"
         class="relative flex h-(--activity-bar-width) w-(--activity-bar-width) cursor-pointer items-center justify-center border-0 bg-transparent text-text-muted transition-colors hover:text-text-secondary before:absolute before:top-1/2 before:left-0 before:h-6 before:w-0.5 before:-translate-y-1/2 before:rounded-r-xs before:bg-text-secondary before:content-[''] before:opacity-0"
-        :class="{ 'text-text-secondary before:opacity-100': activeNavItemId === item.id }"
+        :class="{
+          'text-text-secondary before:opacity-100': activeNavItemId === item.id,
+        }"
         :title="item.title"
         @click="emit('navigate', item.id)"
       >
@@ -34,12 +35,16 @@ const bottomNavItems = computed(() => props.navItems.filter((item) => item.place
       </button>
     </div>
 
-    <div class="flex flex-col items-center border-t border-border-default/70 pt-1">
+    <div
+      class="flex flex-col items-center border-t border-border-default/70 pt-1"
+    >
       <button
-        v-for="item in bottomNavItems"
+        v-for="item in navigationGroups.bottom"
         :key="item.id"
         class="relative flex h-(--activity-bar-width) w-(--activity-bar-width) cursor-pointer items-center justify-center border-0 bg-transparent text-text-muted transition-colors hover:text-text-secondary before:absolute before:top-1/2 before:left-0 before:h-6 before:w-0.5 before:-translate-y-1/2 before:rounded-r-xs before:bg-text-secondary before:content-[''] before:opacity-0"
-        :class="{ 'text-text-secondary before:opacity-100': activeNavItemId === item.id }"
+        :class="{
+          'text-text-secondary before:opacity-100': activeNavItemId === item.id,
+        }"
         :title="item.title"
         @click="emit('navigate', item.id)"
       >

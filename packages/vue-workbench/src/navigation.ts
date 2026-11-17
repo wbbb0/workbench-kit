@@ -8,6 +8,14 @@ export type WorkbenchNavItem = {
   title: string;
   /** lucide-vue-next 或业务自定义图标组件。 */
   icon: Component;
-  /** primary 显示在主导航区，bottom 显示在底部区域。 */
+  /** 桌面按 primary/bottom 分区；移动按 primary → bottom 排列，组内保留输入顺序。 */
   placement: "primary" | "bottom";
 };
+
+/** 两种布局共用位置语义，不修改消费方传入的导航数组。 */
+export function groupWorkbenchNavItems(items: readonly WorkbenchNavItem[]) {
+  return {
+    primary: items.filter((item) => item.placement === "primary"),
+    bottom: items.filter((item) => item.placement === "bottom"),
+  };
+}

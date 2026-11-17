@@ -9,6 +9,7 @@ import type { WorkbenchView } from "./types";
 type WorkbenchRootProps = {
   /** 当前激活的业务 view。 */
   view: WorkbenchView;
+  pageNavigation?: import("./runtime/pageNavigation").WorkbenchPageNavigation;
   /** Activity bar 导航项，导航行为通过 navigate 事件交给业务项目处理。 */
   navItems: readonly WorkbenchNavItem[];
   /** 当前高亮导航项 ID。 */
@@ -27,7 +28,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <WorkbenchRuntimeRoot :view="view">
+  <WorkbenchRuntimeRoot :view="view" :page-navigation="pageNavigation">
     <template #default="{ runtime }">
       <WorkbenchShell
         :runtime="runtime"

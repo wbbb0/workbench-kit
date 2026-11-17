@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { usePageMotion } from "./runtime/usePageMotion";
 import WorkbenchAreaScope from "./WorkbenchAreaScope.vue";
 import {
   createStatusbarMenuNodes,
   type WorkbenchStatusbarItem,
   type WorkbenchTopbarMenu,
 } from "./chrome";
-import type { WorkbenchNavItem } from "./navigation";
+import { groupWorkbenchNavItems, type WorkbenchNavItem } from "./navigation";
 import { useMenuTrigger } from "./menu/useMenuTrigger";
 import type { WorkbenchRuntime } from "./runtime/workbenchRuntime";
 import type { WorkbenchView } from "./types";
@@ -24,14 +25,37 @@ const emit = defineEmits<{
   navigate: [itemId: string];
 }>();
 
+const rootSurface = ref<HTMLElement | null>(null);
+const overlaySurface = ref<HTMLElement | null>(null);
+usePageMotion(
+  computed(() => ({
+    viewId: props.view.id,
+    keys: props.runtime.pages.controlled.value
+      ? props.runtime.pages.path.value.map((page) => page.key)
+      : [],
+  })),
+  () =>
+    isMobileOverlayVisible.value ? overlaySurface.value : rootSurface.value,
+);
 const mainArea = computed(() => props.view.areas.mainArea);
+const pageLabel = computed(
+  () => props.runtime.pages.current.value?.title ?? routeLabel.value,
+);
+const backLabel = computed(() =>
+  props.runtime.pages.parent.value
+    ? `返回${props.runtime.pages.parent.value.title}`
+    : "返回",
+);
 const routeLabel = computed(
   () =>
     props.view.title ||
     props.navItems.find((item) => item.id === props.activeNavItemId)?.title ||
     "",
 );
-const mobileNavItems = computed(() => props.navItems);
+const mobileNavItems = computed(() => {
+  const groups = groupWorkbenchNavItems(props.navItems);
+  return [...groups.primary, ...groups.bottom];
+});
 const mobileRootAreaId = computed(() => props.runtime.mobileRootAreaId.value);
 const mobileRootArea = computed(() => props.view.areas[mobileRootAreaId.value]);
 const activeMobileArea = computed(
@@ -82,6 +106,7 @@ watch(
 );
 
 function pushMobileHistoryEntry() {
+  if (props.runtime.pages.controlled.value) return;
   if (typeof window === "undefined") {
     return;
   }
@@ -105,6 +130,7 @@ function pushMobileHistoryEntry() {
 }
 
 function handlePopState() {
+  if (props.runtime.pages.controlled.value) return;
   if (!props.runtime.canPopMobileArea.value) {
     return;
   }
@@ -115,6 +141,7 @@ function handlePopState() {
 watch(
   () => props.runtime.mobileAreaStack.value.length,
   (stackLength) => {
+    if (props.runtime.pages.controlled.value) return;
     const desiredDepth = Math.max(0, stackLength - 1);
     if (!isMobileOverlayVisible.value) {
       mobileHistoryDepth.value = 0;
@@ -127,6 +154,10 @@ watch(
 );
 
 function goBack() {
+  if (props.runtime.pages.controlled.value) {
+    void props.runtime.pages.back();
+    return;
+  }
   if (mobileHistoryDepth.value > 0 && typeof window !== "undefined") {
     window.history.back();
     return;
@@ -138,13 +169,28 @@ function goBack() {
   }
 }
 
+function setRootSurface(element: unknown) {
+  rootSurface.value = element instanceof HTMLElement ? element : null;
+  if (!hasMobileRootArea.value) setMainRegionRef(element);
+}
+function setOverlaySurface(element: unknown) {
+  overlaySurface.value = element instanceof HTMLElement ? element : null;
+  setMainRegionRef(element);
+}
 function setMainRegionRef(element: unknown) {
   props.runtime.mainRegionRef.value =
     element instanceof HTMLElement ? element : null;
 }
 
 onMounted(() => {
-  window.addEventListener("popstate", handlePopState);
+  watch(
+    () => props.runtime.pages.controlled.value,
+    (controlled) => {
+      window.removeEventListener("popstate", handlePopState);
+      if (!controlled) window.addEventListener("popstate", handlePopState);
+    },
+    { immediate: true },
+  );
 });
 
 onUnmounted(() => {
@@ -157,16 +203,27 @@ onUnmounted(() => {
     class="fixed inset-0 flex h-full w-full overflow-hidden bg-surface-app text-text-primary"
   >
     <div
-      :ref="hasMobileRootArea ? undefined : setMainRegionRef"
-      class="absolute inset-0 flex flex-col bg-surface-app transition-transform duration-220 ease-[ease]"
+      :ref="setRootSurface"
+      :inert="isMobileOverlayVisible"
+      class="absolute inset-0 flex flex-col bg-surface-app"
     >
       <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
         <header
           class="pt-safe flex h-[calc(44px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border-default bg-surface-sidebar px-3"
         >
-          <span class="flex-1 font-semibold text-text-secondary">{{
-            routeLabel
-          }}</span>
+          <button
+            v-if="!isMobileOverlayVisible && canPopMobileArea"
+            :aria-label="backLabel"
+            :disabled="runtime.pages.pending.value"
+            class="shrink-0 text-accent"
+            @click="goBack"
+          >
+            ‹ 返回
+          </button>
+          <span
+            class="min-w-0 flex-1 truncate font-semibold text-text-secondary"
+            >{{ isMobileOverlayVisible ? routeLabel : pageLabel }}</span
+          >
           <nav class="flex gap-1">
             <button
               v-for="item in mobileNavItems"
@@ -216,19 +273,24 @@ onUnmounted(() => {
     </div>
     <div
       v-if="hasMobileRootArea"
-      :ref="setMainRegionRef"
-      class="absolute inset-0 z-10 flex flex-col bg-surface-app transition-transform duration-220 ease-[ease]"
-      :class="
+      :ref="setOverlaySurface"
+      :inert="!isActiveMobileAreaVisible"
+      class="absolute inset-0 z-10 flex flex-col bg-surface-app"
+      :class="[
         isActiveMobileAreaVisible
           ? 'translate-x-0'
-          : 'pointer-events-none translate-x-full'
-      "
+          : 'pointer-events-none translate-x-full',
+        !runtime.pages.controlled.value &&
+          'motion-safe:transition-transform motion-safe:duration-220 motion-safe:ease-[ease]',
+      ]"
     >
       <header
         class="pt-safe flex h-[calc(44px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border-default bg-surface-sidebar px-3"
       >
         <button
           v-if="canPopMobileArea"
+          :aria-label="backLabel"
+          :disabled="runtime.pages.pending.value"
           class="flex cursor-pointer items-center gap-1 border-0 bg-transparent px-0 py-1 text-ui text-accent"
           @click="goBack"
         >
@@ -246,7 +308,7 @@ onUnmounted(() => {
         </button>
         <span
           class="min-w-0 flex-1 truncate text-ui font-medium text-text-secondary"
-          >{{ routeLabel }}</span
+          >{{ pageLabel }}</span
         >
       </header>
       <div class="min-h-0 flex-1 overflow-hidden">

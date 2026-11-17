@@ -1,5 +1,8 @@
 import { computed } from "vue";
-import { useWorkbenchController } from "../runtime/workbenchController.js";
+import {
+  useWorkbenchController,
+  useWorkbenchControllerContext,
+} from "../runtime/workbenchController.js";
 export type { ToastItem, WorkbenchToastService } from "./toastService.js";
 import type { WorkbenchToastService } from "./toastService.js";
 
@@ -10,9 +13,9 @@ const dynamicWorkbenchToasts: WorkbenchToastService = {
   },
   dismiss(id) {
     useWorkbenchController().toasts.dismiss(id);
-  }
+  },
 };
 
 export function useWorkbenchToasts() {
-  return dynamicWorkbenchToasts;
+  return useWorkbenchControllerContext()?.toasts ?? dynamicWorkbenchToasts;
 }

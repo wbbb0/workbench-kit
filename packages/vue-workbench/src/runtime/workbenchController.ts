@@ -5,17 +5,26 @@ import {
   shallowRef,
   type ComputedRef,
   type InjectionKey,
-  type ShallowRef
+  type ShallowRef,
 } from "vue";
-import { createMenuRuntime, type WorkbenchMenuRuntime } from "../menu/menuRuntime.js";
-import { createWorkbenchToastService, type WorkbenchToastService } from "../toasts/toastService.js";
-import { createWorkbenchWindowService, type WorkbenchWindowManager } from "../windows/windowService.js";
+import {
+  createMenuRuntime,
+  type WorkbenchMenuRuntime,
+} from "../menu/menuRuntime.js";
+import {
+  createWorkbenchToastService,
+  type WorkbenchToastService,
+} from "../toasts/toastService.js";
+import {
+  createWorkbenchWindowService,
+  type WorkbenchWindowManager,
+} from "../windows/windowService.js";
 import type { WorkbenchView } from "../types.js";
 import {
   activateWorkbenchRuntime,
   createWorkbenchRuntime,
   provideWorkbenchRuntime,
-  type WorkbenchRuntime
+  type WorkbenchRuntime,
 } from "./workbenchRuntime.js";
 
 export type WorkbenchController = {
@@ -25,19 +34,28 @@ export type WorkbenchController = {
   windows: WorkbenchWindowManager;
 };
 
-const workbenchControllerKey: InjectionKey<WorkbenchController> = Symbol("workbench-controller");
+const workbenchControllerKey: InjectionKey<WorkbenchController> = Symbol(
+  "workbench-controller",
+);
 const activeWorkbenchController = shallowRef<WorkbenchController | null>(null);
 
-export function createWorkbenchController(view: ComputedRef<WorkbenchView>): WorkbenchController {
+export function createWorkbenchController(
+  view: ComputedRef<WorkbenchView>,
+  pageNavigation?: ComputedRef<
+    import("./pageNavigation").WorkbenchPageNavigation | undefined
+  >,
+): WorkbenchController {
   return {
-    runtime: createWorkbenchRuntime(view),
+    runtime: createWorkbenchRuntime(view, pageNavigation),
     menu: createMenuRuntime(),
     toasts: createWorkbenchToastService(),
-    windows: createWorkbenchWindowService()
+    windows: createWorkbenchWindowService(),
   };
 }
 
-export function provideWorkbenchController(controller: WorkbenchController): void {
+export function provideWorkbenchController(
+  controller: WorkbenchController,
+): void {
   provide(workbenchControllerKey, controller);
   provideWorkbenchRuntime(controller.runtime);
 }
@@ -50,14 +68,19 @@ export function useWorkbenchControllerContext(): WorkbenchController | null {
 }
 
 export function useWorkbenchController(): WorkbenchController {
-  const controller = useWorkbenchControllerContext() ?? activeWorkbenchController.value;
+  const controller =
+    useWorkbenchControllerContext() ?? activeWorkbenchController.value;
   if (!controller) {
-    throw new Error("Workbench controller is not active. Mount WorkbenchRoot before using workbench services.");
+    throw new Error(
+      "Workbench controller is not active. Mount WorkbenchRoot before using workbench services.",
+    );
   }
   return controller;
 }
 
-export function activateWorkbenchController(controller: WorkbenchController): () => void {
+export function activateWorkbenchController(
+  controller: WorkbenchController,
+): () => void {
   const previousController = activeWorkbenchController.value;
   activeWorkbenchController.value = controller;
   const deactivateRuntime = activateWorkbenchRuntime(controller.runtime);
