@@ -73,3 +73,11 @@ describe("通用消息组件", () => {
     }
   });
 });
+
+it("横向输入保留附件入口，空输入和忙碌提交被阻止", async () => {
+ const w = mount(MessageComposer, { props: { modelValue: '', layout: 'inline', attachmentButton: true } });
+ await w.get('[aria-label="添加附件"]').trigger('click');expect(w.emitted('attachment')).toHaveLength(1);
+ await w.get('form').trigger('submit');expect(w.emitted('submit')).toBeUndefined();
+ await w.setProps({ modelValue: '要求', busy: true });await w.get('form').trigger('submit');expect(w.emitted('submit')).toBeUndefined();
+ await w.setProps({ busy: false });await w.get('form').trigger('submit');expect(w.emitted('submit')).toHaveLength(1);w.unmount();
+});
