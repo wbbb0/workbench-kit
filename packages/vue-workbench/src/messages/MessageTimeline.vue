@@ -5,11 +5,13 @@ import {
   onDeactivated,
   onMounted,
   ref,
+  reactive,
   watch,
 } from "vue";
-import { VList, type VListHandle } from "virtua/vue";
+import { Virtualizer, type VirtualizerHandle } from "virtua/vue";
 import { useMessageViewport } from "./useMessageViewport";
 import WorkbenchButton from "../primitives/WorkbenchButton.vue";
+import MessageRecordHeader from "./MessageRecordHeader.vue";
 import MessageContent from "./MessageContent.vue";
 import type { MessageItem, ReadingAnchor } from "./types";
 const props = withDefaults(
@@ -22,6 +24,7 @@ const props = withDefaults(
     loading?: boolean;
     active?: boolean;
     compact?: boolean;
+    expandedRecords?: Map<string, boolean>;
   }>(),
   { active: true },
 );
@@ -34,14 +37,12 @@ const emit = defineEmits<{
   latest: [];
   action: [itemId: string, actionId: string];
 }>();
-const list = ref<VListHandle>();
-const root = ref<HTMLElement>();
+const list = ref<VirtualizerHandle & { $el: HTMLElement }>();
+const viewport = ref<HTMLElement>();
 const unread = ref(0);
 let enabled = true;
 let observer: ResizeObserver | undefined;
-let mutation: MutationObserver | undefined;
 let frame: number | undefined;
-const sizes = new WeakMap<Element, number>();
 const { following, previousAnchor, restoring, capture, restore } =
   useMessageViewport(
     list,
@@ -49,6 +50,21 @@ const { following, previousAnchor, restoring, capture, restore } =
     () => enabled && props.active !== false,
     (anchor) => emit("anchor", anchor),
   );
+const expandedRecords = reactive(new Map<string, boolean>());
+const expansion = () => props.expandedRecords ?? expandedRecords;
+const foldable = (item: MessageItem) => !!(item.heading || item.activity);
+const expanded = (item: MessageItem) =>
+  expansion().get(item.id) ?? !!item.heading;
+function toggle(item: MessageItem) {
+  capture();
+  // 折叠操作只改变阅读意图；行高与位置校正由虚拟列表统一负责。
+  following.value = false;
+  if (previousAnchor.value) {
+    previousAnchor.value = { ...previousAnchor.value, bottom: false };
+    emit("anchor", previousAnchor.value);
+  }
+  expansion().set(item.id, !expanded(item));
+}
 function openItem(event: MouseEvent, item: MessageItem) {
   const target = event.target as HTMLElement;
   if (
@@ -62,6 +78,10 @@ function openItem(event: MouseEvent, item: MessageItem) {
 }
 function scroll() {
   if (!enabled || props.active === false || restoring.value) return;
+  if (frame !== undefined) {
+    cancelAnimationFrame(frame);
+    frame = undefined;
+  }
   capture();
   const v = list.value;
   if (v && v.scrollOffset < 180 && props.older && !props.loading) emit("older");
@@ -111,41 +131,28 @@ watch(
       void restore(props.anchor);
   },
 );
-function observeRows() {
-  if (!enabled || !observer || !root.value) return;
-  observer.observe(root.value);
-  for (const row of root.value.querySelectorAll("[data-row-id]"))
-    observer.observe(row);
+function observeViewport() {
+  if (!enabled || !observer) return;
+  if (viewport.value) observer.observe(viewport.value);
+  if (list.value) observer.observe(list.value.$el);
 }
-function resize(entries: ResizeObserverEntry[]) {
-  if (!enabled || props.active === false) return;
-  let changed = false;
-  for (const entry of entries) {
-    const height = entry.contentRect.height;
-    const previous = sizes.get(entry.target);
-    sizes.set(entry.target, height);
-    if (previous !== undefined && previous !== height) changed = true;
-  }
-  if (!changed) return;
+function followResize() {
+  // 仅跟随视口/总内容的尺寸；不观察行、不在自由阅读时恢复锚点。
+  if (!enabled || props.active === false || !following.value) return;
   if (frame !== undefined) cancelAnimationFrame(frame);
   frame = requestAnimationFrame(() => {
     frame = undefined;
-    void restore(
-      following.value ? undefined : (previousAnchor.value ?? props.anchor),
-    );
+    if (following.value) void restore();
   });
 }
 onMounted(() => {
-  observer = new ResizeObserver(resize);
-  mutation = new MutationObserver(observeRows);
-  if (root.value)
-    mutation.observe(root.value, { childList: true, subtree: true });
-  observeRows();
+  observer = new ResizeObserver(followResize);
+  observeViewport();
   void restore(props.anchor);
 });
 onActivated(() => {
   enabled = true;
-  observeRows();
+  observeViewport();
   void restore(props.anchor ?? previousAnchor.value);
 });
 onDeactivated(() => {
@@ -156,51 +163,124 @@ onDeactivated(() => {
 });
 onBeforeUnmount(() => {
   observer?.disconnect();
-  mutation?.disconnect();
   if (frame !== undefined) cancelAnimationFrame(frame);
 });
 
 defineExpose({ capture, restore });
 </script>
 <template>
-  <div ref="root" class="relative min-h-0 flex-1">
-    <VList
-      ref="list"
-      :data="items"
-      :item-props="({ item }: { item: MessageItem }) => ({ key: item.id })"
-      class="h-full overflow-y-auto"
-      @scroll="scroll"
-      ><template #default="{ item }"
-        ><article
-          :data-row-id="item.id"
-          @click="openItem($event, item)"
-          class="mx-auto w-full max-w-4xl border-b border-border-default"
-          :class="[compact ? 'px-3 py-3' : 'px-5 py-5', item.author === '你' ? 'bg-surface-panel/40' : '']"
-        >
-          <header class="mb-2 flex items-center gap-2 text-xs text-text-muted">
+  <div class="relative min-h-0 flex-1">
+    <div ref="viewport" class="h-full overflow-y-auto">
+      <Virtualizer
+        ref="list"
+        :data="items"
+        :item-props="({ item }: { item: MessageItem }) => ({ key: item.id })"
+        :scroll-ref="viewport"
+        @scroll="scroll"
+        ><template #default="{ item }"
+          ><article
+            :data-row-id="item.id"
+            @click="openItem($event, item)"
+            class="mx-auto w-full max-w-4xl border-b border-border-default"
+            :class="[
+              foldable(item) ? 'p-0' : compact ? 'px-3 py-3' : 'px-5 py-5',
+              item.identity?.tone === 'accent' ? 'bg-surface-panel/40' : '',
+              item.identity && !foldable(item) ? 'flex items-start gap-3' : '',
+            ]"
+          >
             <button
-              class="font-medium text-text-secondary"
-              :aria-label="
-                item.kind === 'message'
-                  ? '查看消息详情'
-                  : item.kind === 'turn'
-                    ? '查看处理过程详情'
-                    : item.kind === 'tool_call'
-                      ? '查看工具执行详情'
-                      : item.kind === 'model_call'
-                        ? '查看模型请求详情'
-                        : '查看记录详情'
+              v-if="item.identity && !foldable(item)"
+              class="flex size-6 shrink-0 items-center justify-center rounded"
+              :class="
+                item.identity.tone === 'accent'
+                  ? 'bg-accent text-white'
+                  : 'bg-surface-muted text-text-muted'
               "
+              :title="item.author || item.kind"
+              :aria-label="(item.author || item.kind) + '：查看详情'"
               @click="emit('detail', item.id)"
             >
-              {{ item.author || item.kind }}
+              <component
+                :is="item.identity.icon"
+                :size="15"
+                aria-hidden="true"
+              />
             </button>
-          </header>
-          <MessageContent :parts="item.parts" :class="{ 'text-danger': item.tone === 'danger', 'text-warning': item.tone === 'warning', 'text-success': item.tone === 'success' }" />
-          <div v-if="item.actions?.length" class="mt-2 flex flex-wrap gap-2">
-            <WorkbenchButton v-for="action in item.actions" :key="action.id" :label="action.label" variant="secondary" :disabled="action.disabled" @click="emit('action', item.id, action.id)" />
-          </div></article></template></VList
-    ><button
+            <MessageRecordHeader
+              v-if="foldable(item)"
+              :label="item.heading || item.activity!.label"
+              :icon="item.identity?.icon"
+              :state="item.state?.label"
+              :danger="item.tone === 'danger'"
+              :expanded="expanded(item)"
+              @toggle="toggle(item)"
+              @detail="emit('detail', item.id)"
+            />
+            <div
+              v-if="!foldable(item) || expanded(item)"
+              class="min-w-0 flex-1"
+              :class="foldable(item) ? 'px-3 py-2' : ''"
+            >
+              <header
+                v-if="!item.identity && !foldable(item)"
+                class="mb-2 flex items-center gap-2 text-xs text-text-muted"
+              >
+                <button
+                  class="font-medium text-text-secondary"
+                  :aria-label="
+                    item.kind === 'message'
+                      ? '查看消息详情'
+                      : item.kind === 'turn'
+                        ? '查看处理过程详情'
+                        : item.kind === 'tool_call'
+                          ? '查看工具执行详情'
+                          : item.kind === 'model_call'
+                            ? '查看模型请求详情'
+                            : '查看记录详情'
+                  "
+                  @click="emit('detail', item.id)"
+                >
+                  {{ item.author || item.kind }}
+                </button>
+              </header>
+              <MessageContent
+                :compact="compact"
+                :parts="item.parts"
+                :class="{
+                  'text-danger': item.tone === 'danger',
+                  'text-warning': item.tone === 'warning',
+                  'text-success': item.tone === 'success',
+                }"
+              />
+              <footer
+                v-if="item.metrics?.length"
+                class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] leading-4 text-text-muted"
+                aria-label="性能统计"
+              >
+                <span
+                  v-for="metric in item.metrics"
+                  :key="metric.label"
+                  :title="metric.title"
+                  >{{ metric.label }} {{ metric.value }}</span
+                >
+              </footer>
+              <div
+                v-if="item.actions?.length"
+                class="mt-2 flex flex-wrap gap-2"
+              >
+                <WorkbenchButton
+                  v-for="action in item.actions"
+                  :key="action.id"
+                  :label="action.label"
+                  variant="secondary"
+                  :disabled="action.disabled"
+                  @click="emit('action', item.id, action.id)"
+                />
+              </div>
+            </div></article></template
+      ></Virtualizer>
+    </div>
+    <button
       v-if="unread || unseen || newer"
       class="absolute bottom-4 right-5 border border-border-default bg-surface-panel px-4 py-2 text-xs"
       @click="latest"

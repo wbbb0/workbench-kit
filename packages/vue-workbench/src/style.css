@@ -387,3 +387,9 @@ body {
 .wb-message-content .hljs-keyword,.wb-message-content .hljs-selector-tag { color: var(--code-keyword, #c4a7e7); }
 .wb-message-content .hljs-string { color: var(--code-string, #a3be8c); }
 .wb-message-content .hljs-number,.wb-message-content .hljs-literal { color: var(--code-number, #ebcb8b); }
+
+/* 紧凑清单中首尾正文贴合行内图标，保留段落之间的间距。 */
+.wb-message-content-compact > :first-child { margin-top: 0; }
+.wb-message-content-compact > div:first-child > :first-child { margin-top: 0; }
+.wb-message-content-compact > :last-child { margin-bottom: 0; }
+.wb-message-content-compact > div:last-child > :last-child { margin-bottom: 0; }

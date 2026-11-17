@@ -70,3 +70,61 @@ describe("正向消息阅读锚点", () => {
     expect(scrollToIndex).toHaveBeenLastCalledWith(1, { align: "end" });
   });
 });
+
+function scrollFixture(offset = 700) {
+  const view = {
+    scrollOffset: offset,
+    scrollSize: 1000,
+    viewportSize: 300,
+    findItemIndex: () => 1,
+    getItemOffset: () => 600,
+    scrollToIndex: vi.fn(),
+  };
+  const viewport = useMessageViewport(
+    shallowRef(view as unknown as VListHandle),
+    () => [row("A"), row("B")],
+    () => true,
+    () => {},
+  );
+  return { view, viewport };
+}
+
+it("离开底部少量距离也退出跟随，实际回到底部才恢复", async () => {
+  const { view, viewport } = scrollFixture();
+  viewport.capture();
+  expect(viewport.following.value).toBe(true);
+  view.scrollOffset -= 40;
+  viewport.capture();
+  expect(viewport.following.value).toBe(false);
+  await viewport.restore(viewport.previousAnchor.value);
+  expect(view.scrollToIndex).toHaveBeenLastCalledWith(1, { offset: 60 });
+  view.scrollOffset = 699.5;
+  viewport.capture();
+  expect(viewport.following.value).toBe(true);
+});
+
+it("用户滚动取代尚未执行的恢复，旧请求不能重新贴底", async () => {
+  const { view, viewport } = scrollFixture();
+  viewport.capture();
+  const pending = viewport.restore(viewport.previousAnchor.value);
+  view.scrollOffset -= 40;
+  viewport.capture();
+  await pending;
+  expect(view.scrollToIndex).not.toHaveBeenCalled();
+  expect(viewport.previousAnchor.value).toEqual({
+    id: "B",
+    offset: 60,
+    bottom: false,
+  });
+  expect(viewport.restoring.value).toBe(false);
+});
+
+it("连续恢复只执行最新的阅读位置", async () => {
+  const { view, viewport } = scrollFixture();
+  await Promise.all([
+    viewport.restore(),
+    viewport.restore({ id: "A", offset: 12, bottom: false }),
+  ]);
+  expect(view.scrollToIndex).toHaveBeenCalledExactlyOnceWith(0, { offset: 12 });
+  expect(viewport.restoring.value).toBe(false);
+});

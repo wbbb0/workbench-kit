@@ -24,6 +24,10 @@ npm install vue lucide-vue-next
 
 完整接入方式见仓库根目录的 `docs/usage.md`。
 
+## 导航位置
+
+`WorkbenchNavItem.placement` 在两种布局中含义一致：桌面将 `primary` 放主区域、`bottom` 放底部；移动标题栏按 `primary → bottom` 排列。同组内保留传入顺序，不修改原数组。设置等辅助入口只需标为 `bottom`，消费项目无需为手机另外排序。工作台菜单是独立的外壳入口，不属于业务导航项。
+
 ## 样式接入
 
 业务项目可以直接选择内置主题模板，再引入 Tailwind 和 workbench 基础样式：
@@ -375,5 +379,20 @@ const statusbarItems: WorkbenchStatusbarItem[] = [
 聚合入口 `@workbench-kit/vue` 导出 `MessageWindow`、`MessageTimeline`、`MessageContent`、`MessageComposer` 和 `useMessageViewport`。
 它们只接受通用 `MessageItem` / `MessagePart`、受控草稿文本与阅读锚点，并发出 submit / selection / older / newer / anchor / detail / reference 事件；不请求业务 API、不解析业务 ID、不管理消息队列。
 `MessageTimeline` 使用正向可变高度虚拟清单；宿主提供连续有界消息区间、分页游标对应的布尔标记及可选 `unseen` 数量。
-`active` 默认 true；隐藏时不滚动、不观察行高。Markdown 默认禁用原始 HTML，代码可复制，长代码可展开，图片不可用时保留说明。
+`active` 默认 true；隐藏时不滚动、不观察尺寸。Markdown 默认禁用原始 HTML，代码可复制，长代码可展开，图片不可用时保留说明。
 样式仍通过原有 `@workbench-kit/vue/style.css` 单入口提供。
+
+### 紧凑工具栏按钮
+
+`WorkbenchButton` 的可选 `size="sm"` 使用 28px 高度，纯图标按钮宽度也为 28px，适用于 36px 工具栏。默认尺寸与既有行为保持不变。`WorkbenchIconButton` 将自身 `size` 传递给底层按钮；`variant="secondary"` 使用主题的边框外观。
+
+### 消息与窗口可选展示
+
+MessageComposer 新增 layout="inline"、attachmentButton 和 attachment(MouseEvent)；inputLabel、placeholder、submitLabel 可定制用途，宿主提供附件菜单。默认 stacked 布局保留。MessageItem.identity 可提供 icon 和 accent/muted tone，时间线显示侧边图标并将作者转为可访问提示；未传入仍使用标题。MessageContent.compact 只移除首尾段落外边距。
+
+runtime dialog 可设 showFooterCloseButton=false，隐藏底部关闭按钮并保留业务 actions；footer="auto" 且没有动作时不显示空 footer。默认仍保留底部关闭，供没有顶部入口的消费者使用。
+
+MessageComposer 可选 flush 模式去掉 form 外侧 padding 和内部容器边框，保留最大宽度与水平居中；默认外观不变。
+
+
+MessageTimeline 的 heading/activity 记录共用折叠头部，分别默认展开/收起；expandedRecords 可注入按记录 ID 的 Map，跨虚拟化及页面挂载保存用户选择。折叠切换退出贴底，由虚拟列表负责行高与阅读位置校正；上层不逐行观察、不在行高变化时恢复旧锚点，只观察视口和总内容尺寸以跟随最新。显式锚点恢复仅用于初始化、切页、跳转和历史窗口变化。离开底部后退出跟随，实际回到底部才恢复。完整详情使用独立按钮。MessageItem.metrics 接受已格式化 label/value/title 清单，位于展开区底部；kit 不计算供应商用量或业务聚合。

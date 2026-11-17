@@ -11,23 +11,30 @@ export function useMessageViewport(
   const following = ref(true);
   const previousAnchor = shallowRef<ReadingAnchor>();
   const restoring = ref(false);
+  let revision = 0;
   function capture() {
     const view = list.value;
     if (!view || !items().length) return;
     const index = view.findItemIndex(view.scrollOffset),
       row = items()[index];
     if (!row) return;
+    // 新的阅读位置取代尚未执行的异步恢复。
+    revision++;
+    restoring.value = false;
     const anchor = {
       id: row.id,
       offset: view.scrollOffset - view.getItemOffset(index),
-      bottom: view.scrollSize - view.viewportSize - view.scrollOffset < 96,
+      // 只容忍像素取整误差；靠近底部不代表用户仍想跟随。
+      bottom: view.scrollSize - view.viewportSize - view.scrollOffset <= 1,
     };
     following.value = anchor.bottom;
     previousAnchor.value = anchor;
     onAnchor(anchor);
   }
   async function restore(anchor?: ReadingAnchor) {
+    const current = ++revision;
     await nextTick();
+    if (current !== revision) return;
     const view = list.value;
     if (!view || !active()) return;
     restoring.value = true;
@@ -40,7 +47,7 @@ export function useMessageViewport(
       if (index >= 0) view.scrollToIndex(index, { offset: anchor.offset });
     }
     await nextTick();
-    restoring.value = false;
+    if (current === revision) restoring.value = false;
   }
   return { following, previousAnchor, restoring, capture, restore };
 }

@@ -3,7 +3,7 @@ import { computed } from "vue";
 import MarkdownIt from "markdown-it";
 import hljs from "highlight.js/lib/common";
 import type { MessagePart } from "./types";
-const props = defineProps<{ parts: MessagePart[] }>();
+const props = defineProps<{ parts: MessagePart[]; compact?: boolean }>();
 const md: MarkdownIt = new MarkdownIt({
   html: false,
   linkify: true,
@@ -66,6 +66,7 @@ function copy(event: MouseEvent) {
 <template>
   <div
     class="wb-message-content break-words text-[15px] leading-7"
+    :class="{ 'wb-message-content-compact': compact }"
     @click="copy"
   >
     <template v-for="(block, i) in blocks" :key="i"

@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, h } from "vue";
-import { mount } from "@vue/test-utils";
+import { defineComponent, h, markRaw } from "vue";
+import { flushPromises, mount } from "@vue/test-utils";
 import MessageTimeline from "./MessageTimeline.vue";
 vi.mock("virtua/vue", () => ({
-  VList: defineComponent({
+  Virtualizer: defineComponent({
+    name: "Virtualizer",
     props: ["data"],
     setup: (props, { slots, expose }) => {
       expose({
@@ -22,7 +23,10 @@ vi.mock("virtua/vue", () => ({
     },
   }),
 }));
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 describe("正文详情入口", () => {
   it("点击和键盘打开，链接、代码复制和选择文本保持独立", async () => {
     const host = mount(MessageTimeline, {
@@ -61,15 +65,107 @@ describe("正文详情入口", () => {
 });
 
 it("错误语义着色，通用行操作不打开详情，禁用操作不可触发", async () => {
-  const item = { id: 'error', version: 1, kind: 'status', tone: 'danger' as const, parts: [{ type: 'text' as const, text: '请求未完成' }], actions: [{ id: 'retry', label: '重试', disabled: false }] };
+  const item = {
+    id: "error",
+    version: 1,
+    kind: "status",
+    tone: "danger" as const,
+    parts: [{ type: "text" as const, text: "请求未完成" }],
+    actions: [{ id: "retry", label: "重试", disabled: false }],
+  };
   const host = mount(MessageTimeline, { props: { items: [item] } });
-  expect(host.get('.wb-message-content').classes()).toContain('text-danger');
-  const action = () => host.findAll('button').find(button => button.text() === '重试')!;
-  await action().trigger('click');
-  expect(host.emitted('action')).toEqual([['error', 'retry']]);
-  expect(host.emitted('detail')).toBeUndefined();
-  await host.setProps({ items: [{ ...item, actions: [{ ...item.actions[0]!, disabled: true }] }] });
-  await action().trigger('click');
-  expect(host.emitted('action')).toHaveLength(1);
+  expect(host.get(".wb-message-content").classes()).toContain("text-danger");
+  const action = () =>
+    host.findAll("button").find((button) => button.text() === "重试")!;
+  await action().trigger("click");
+  expect(host.emitted("action")).toEqual([["error", "retry"]]);
+  expect(host.emitted("detail")).toBeUndefined();
+  await host.setProps({
+    items: [{ ...item, actions: [{ ...item.actions[0]!, disabled: true }] }],
+  });
+  await action().trigger("click");
+  expect(host.emitted("action")).toHaveLength(1);
+  host.unmount();
+});
+
+it("活动行只显示标签，正文摘要留在详情且能键盘打开", async () => {
+  const w = mount(MessageTimeline, {
+    props: {
+      items: [
+        {
+          id: "call",
+          version: 1,
+          kind: "tool_call",
+          author: "工具调用",
+          identity: {
+            icon: markRaw(defineComponent({ render: () => h("svg") })),
+            tone: "muted",
+          },
+          activity: { label: "shell_run" },
+          parts: [{ type: "text", text: "不应在清单展开的工具输出" }],
+        },
+      ],
+    },
+  });
+  expect(w.text()).toContain("shell_run");
+  expect(w.find(".wb-message-content").exists()).toBe(false);
+  await w.get('[aria-label="展开：shell_run"]').trigger("click");
+  expect(w.find(".wb-message-content").exists()).toBe(true);
+  await w.get('[aria-label="收起：shell_run"]').trigger("click");
+  expect(w.find(".wb-message-content").exists()).toBe(false);
+  expect(w.find("header").exists()).toBe(true);
+  await w.get('[aria-label="查看详情：shell_run"]').trigger("click");
+  expect(w.emitted("detail")).toEqual([["call"]]);
+  w.unmount();
+});
+
+it("只观察视口和总内容，折叠后自由阅读不主动校正位置", async () => {
+  let resize!: ResizeObserverCallback;
+  const observe = vi.fn();
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(callback: ResizeObserverCallback) {
+        resize = callback;
+      }
+      observe = observe;
+      disconnect() {}
+    },
+  );
+  const schedule = vi.fn(() => 42);
+  const cancel = vi.fn();
+  vi.stubGlobal("requestAnimationFrame", schedule);
+  vi.stubGlobal("cancelAnimationFrame", cancel);
+  const host = mount(MessageTimeline, {
+    props: {
+      items: [
+        {
+          id: "last",
+          version: 1,
+          kind: "model_call",
+          activity: { label: "调用" },
+          parts: [],
+        },
+      ],
+    },
+  });
+  await flushPromises();
+  expect(observe.mock.calls.map(([element]) => element)).toEqual([
+    host.get(".overflow-y-auto").element,
+    host.findComponent({ name: "Virtualizer" }).element,
+  ]);
+  // 贴底时容器变高仍跟随；滚动会取消尚未执行的跟随。
+  resize([], {} as ResizeObserver);
+  expect(schedule).toHaveBeenCalledTimes(1);
+  host.findComponent({ name: "Virtualizer" }).vm.$emit("scroll");
+  expect(cancel).toHaveBeenCalledWith(42);
+  schedule.mockClear();
+  await host.get("[aria-expanded]").trigger("click");
+  resize([], {} as ResizeObserver);
+  expect(schedule).not.toHaveBeenCalled();
+  // 行的增删完全由虚拟列表负责，不会新增尺寸观察目标。
+  await host.setProps({ items: [] });
+  await flushPromises();
+  expect(observe).toHaveBeenCalledTimes(2);
   host.unmount();
 });
