@@ -229,6 +229,19 @@ body {
   white-space: nowrap;
   transition: background 0.1s;
 }
+.workbench-button.btn.workbench-button-sm {
+  box-sizing: border-box;
+  height: 1.75rem;
+  min-height: 0;
+  flex-shrink: 0;
+  padding: 0 0.5rem;
+  line-height: 1;
+}
+.workbench-button.btn.workbench-button-sm.workbench-button-icon-only {
+  width: 1.75rem;
+  justify-content: center;
+  padding: 0;
+}
 .btn-primary {
   background: var(--accent);
   color: var(--text-on-accent);

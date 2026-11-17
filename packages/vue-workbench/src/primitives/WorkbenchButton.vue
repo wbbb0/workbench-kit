@@ -1,34 +1,42 @@
 <script setup lang="ts">
 import { computed, useAttrs, type Component, type CSSProperties } from "vue";
-import type { WorkbenchButtonColors, WorkbenchButtonVariant } from "./buttonTypes.js";
+import type {
+  WorkbenchButtonColors,
+  WorkbenchButtonVariant,
+} from "./buttonTypes.js";
 
 defineOptions({ inheritAttrs: false });
 
-const props = withDefaults(defineProps<{
-  icon?: Component;
-  label?: string;
-  title?: string;
-  disabled?: boolean;
-  active?: boolean;
-  variant?: WorkbenchButtonVariant;
-  iconPosition?: "start" | "end";
-  iconSize?: number;
-  strokeWidth?: number;
-  type?: "button" | "submit" | "reset";
-  colors?: WorkbenchButtonColors;
-}>(), {
-  icon: undefined,
-  label: "",
-  title: "",
-  disabled: false,
-  active: false,
-  variant: "secondary",
-  iconPosition: "start",
-  iconSize: 16,
-  strokeWidth: 2,
-  type: "button",
-  colors: undefined
-});
+const props = withDefaults(
+  defineProps<{
+    size?: "sm" | "md";
+    icon?: Component;
+    label?: string;
+    title?: string;
+    disabled?: boolean;
+    active?: boolean;
+    variant?: WorkbenchButtonVariant;
+    iconPosition?: "start" | "end";
+    iconSize?: number;
+    strokeWidth?: number;
+    type?: "button" | "submit" | "reset";
+    colors?: WorkbenchButtonColors;
+  }>(),
+  {
+    size: "md",
+    icon: undefined,
+    label: "",
+    title: "",
+    disabled: false,
+    active: false,
+    variant: "secondary",
+    iconPosition: "start",
+    iconSize: 16,
+    strokeWidth: 2,
+    type: "button",
+    colors: undefined,
+  },
+);
 
 const emit = defineEmits<{
   click: [event: MouseEvent];
@@ -41,9 +49,12 @@ const forwardedAttrs = computed(() => {
   return rest;
 });
 
-const accessibleLabel = computed(() => (
-  props.label || props.title || (typeof attrs["aria-label"] === "string" ? attrs["aria-label"] : undefined)
-));
+const accessibleLabel = computed(
+  () =>
+    props.label ||
+    props.title ||
+    (typeof attrs["aria-label"] === "string" ? attrs["aria-label"] : undefined),
+);
 
 const colorStyle = computed<CSSProperties>(() => {
   const colors = props.colors;
@@ -63,7 +74,7 @@ const colorStyle = computed<CSSProperties>(() => {
     "--workbench-button-active-border": colors.activeBorder,
     "--workbench-button-disabled-text": colors.disabledText,
     "--workbench-button-disabled-background": colors.disabledBackground,
-    "--workbench-button-disabled-border": colors.disabledBorder
+    "--workbench-button-disabled-border": colors.disabledBorder,
   } as CSSProperties;
 });
 </script>
@@ -80,8 +91,12 @@ const colorStyle = computed<CSSProperties>(() => {
       'workbench-button btn',
       `btn-${variant}`,
       `workbench-button-${iconPosition}`,
-      { 'is-active': active },
-      attrs.class
+      {
+        'is-active': active,
+        'workbench-button-sm': size === 'sm',
+        'workbench-button-icon-only': !!icon && !label && !$slots.default,
+      },
+      attrs.class,
     ]"
     :style="[attrs.style, colorStyle]"
     @click="emit('click', $event)"
