@@ -39,7 +39,7 @@ const showFooter = computed(() => {
   if (footerMode.value === "close") {
     return true;
   }
-  return fields.value.length > 0 || actions.value.length > 0;
+  return actions.value.length > 0 || (fields.value.length > 0 && props.definition.showFooterCloseButton !== false);
 });
 
 function isPlainRecord(value: unknown): value is DialogValues {
@@ -253,6 +253,7 @@ function handleClose() {
 
     <div v-if="showFooter" class="flex flex-wrap items-center justify-end gap-2 border-t border-border-default p-4">
       <button
+        v-if="definition.showFooterCloseButton !== false"
         class="btn btn-secondary max-w-full whitespace-normal text-left"
         :disabled="isBusy"
         data-action-kind="close"

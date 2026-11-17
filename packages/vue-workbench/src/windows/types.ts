@@ -186,6 +186,8 @@ export type WorkbenchWindowDefinition<
   closeOnBackdrop?: boolean;
   closeOnEscape?: boolean;
   footer?: WorkbenchDialogFooterMode;
+  /** 默认保留底部关闭按钮；宿主有顶部关闭入口时可隐藏。 */
+  showFooterCloseButton?: boolean;
   /** Optional label for the footer close button. Defaults to 取消. */
   closeLabel?: string;
   context?: WorkbenchWindowContext;

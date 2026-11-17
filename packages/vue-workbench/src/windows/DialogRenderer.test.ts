@@ -158,3 +158,10 @@ describe("DialogRenderer value ownership", () => {
     wrapper.unmount();
   });
 });
+
+it("顶部已有关闭入口时可去掉底部关闭，保留业务动作", async () => {
+ const w = mount(DialogRenderer, { props: { windowId: 'single-close', definition: { kind: 'dialog', title: '详情', size: 'md', showFooterCloseButton: false, actions: [{ id: 'save', label: '保存' }] } } });
+ expect(w.find('[data-action-kind="close"]').exists()).toBe(false);
+ await w.get('[data-action-id="save"]').trigger('click');
+ expect(w.emitted('resolve')?.[0]?.[0]).toMatchObject({ reason: 'action', actionId: 'save' });w.unmount();
+});
