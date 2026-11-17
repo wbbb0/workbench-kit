@@ -33,11 +33,21 @@ export interface SchemaMeta {
   options?: SchemaMeta[];
   discriminator?: string;
   values?: unknown[];
+  /** string 格式控制原生输入类型；未知格式仍用普通文本。 */
+  format?: string;
+  step?: number;
+  /** format=duration 的默认显示单位；数值存储为毫秒，缺省显示毫秒。 */
+  timescale?: "ms" | "s" | "min" | "h" | "d";
+  control?: "number" | "range";
   integer?: boolean;
   min?: number;
   max?: number;
   value?: unknown;
   dynamicRef?: string;
+  /** 页面式设置编辑的通用字段展示信息。 */
+  secret?: boolean;
+  multiline?: boolean;
+  reference?: { path: string[]; label: string };
 }
 
 /** SchemaNode 使用的递归 UI 树。 */

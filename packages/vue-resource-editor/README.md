@@ -301,3 +301,13 @@ onMounted(() => {
 - 页面布局和 toolbar。
 - toast 和导航接线。
 - 权限、认证、业务字段含义。
+
+### 设置页的默认值与外部搜索
+
+`SchemaSettingsPage` 可设置 `defaultsAsPlaceholders`：`values` 用于结构/引用解析及默认提示，`overrides` 提供实际输入值（应包含宿主尚未保存的编辑缓冲）。未覆盖输入为空，默认值作为 placeholder；显式 `0`、`false` 不会被视为缺失。清空普通标量输入发出 `reset`；布尔字段未覆盖时显示未定态。默认关闭此选项，原有有效值展示不变。
+
+`searchEnabled=false` 允许宿主在侧栏复用 `searchSettings` 与 `pageState.query`；此时查询不覆盖详情表单，导航不清空外部查询。非文本控件与标签同行，窄容器自动换行。
+
+### 类型化输入
+
+SchemaMeta.format 支持 date/time/datetime-local/date-time/email/url/http-url；数值具有有限 min/max 时自动使用滑条+输入框，step 支持步长，control="number" 强制只用输入框。format="duration" 表示毫秒时长，timescale（ms/s/min/h/d，默认 ms）指定初始显示单位；切换单位不发出更新事件，编辑值转换为毫秒。preserveRawNumber 继续保留未完成输入，最终校验由宿主负责。

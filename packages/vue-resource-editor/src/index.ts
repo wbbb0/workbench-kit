@@ -7,3 +7,7 @@ export * from "./resourceEditorClient.js";
 export * from "./resourceEditorState.js";
 export * from "./useEditorDraftState.js";
 export { projectSchemaVariant } from "./schemaVariant.js";
+
+export { default as SchemaSettingsPage } from "./components/SchemaSettingsPage.vue";
+export * from "./settingsPages.js";
+export * from "./settingsPageState.js";
