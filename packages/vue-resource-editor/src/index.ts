@@ -14,3 +14,4 @@ export * from "./settingsPageState.js";
 
 export { default as SchemaSectionForm } from "./components/SchemaSectionForm.vue";
 export * from "./schemaSections.js";
+export * from "./settingsActivation.js";

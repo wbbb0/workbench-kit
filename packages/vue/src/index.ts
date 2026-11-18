@@ -9,3 +9,4 @@ export type {
 export * from "../../vue-resource-editor/src/index.js";
 export * from "../../vue-file-workspace/src/index.js";
 
+export * from "../../schema/src/index.js";

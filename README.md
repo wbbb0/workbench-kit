@@ -7,6 +7,7 @@ This repository is public for convenience, but it is maintained for personal pro
 ## Packages
 
 - `@workbench-kit/vue`: recommended aggregate entry for application projects.
+- [`@workbench-kit/schema`](packages/schema/README.md)：服务端和客户端共用的配置生效规则。
 - `@workbench-kit/vue-workbench`: workbench shell, navigation, menus, toasts, windows, layout primitives, and base styles.
 - `@workbench-kit/vue-resource-editor`: schema-driven resource editor state and Vue components.
 - `@workbench-kit/vue-file-workspace`: file tree and file workspace contracts.

@@ -1,3 +1,5 @@
+import type { ActivationPolicy } from "../../schema/src/index.js";
+
 /** Resource list 中的一条资源摘要。 */
 export interface EditorResourceSummary {
   /** 资源稳定 key，用于 load/validate/save。 */
@@ -18,7 +20,7 @@ export interface ObjectFieldMeta {
   schema: SchemaMeta;
 }
 
-export interface SchemaMeta {
+export interface SchemaMeta extends ActivationPolicy {
   kind: string;
   title?: string;
   description?: string;
