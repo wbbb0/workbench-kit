@@ -6,12 +6,12 @@ import type {
   WorkbenchWindowPosition,
   WorkbenchWindowResult,
   WorkbenchWindowSizedBounds,
-  WorkbenchWindowSizePx
+  WorkbenchWindowSizePx,
 } from "./types.js";
 
 type ManagedWorkbenchWindow<
   TValues extends Record<string, unknown> = Record<string, unknown>,
-  TResult = unknown
+  TResult = unknown,
 > = {
   id: string;
   order: number;
@@ -26,31 +26,49 @@ type ManagedWorkbenchWindow<
 type WorkbenchWindowMode = "desktop" | "mobile";
 
 type WorkbenchWindowStore = {
-  openSync<TValues extends Record<string, unknown> = Record<string, unknown>, TResult = unknown>(
-    definition: WorkbenchWindowDefinition<TValues, TResult>
+  openSync<
+    TValues extends Record<string, unknown> = Record<string, unknown>,
+    TResult = unknown,
+  >(
+    definition: WorkbenchWindowDefinition<TValues, TResult>,
   ): ManagedWorkbenchWindow<TValues, TResult>;
-  open<TValues extends Record<string, unknown> = Record<string, unknown>, TResult = unknown>(
-    definition: WorkbenchWindowDefinition<TValues, TResult>
+  open<
+    TValues extends Record<string, unknown> = Record<string, unknown>,
+    TResult = unknown,
+  >(
+    definition: WorkbenchWindowDefinition<TValues, TResult>,
   ): Promise<WorkbenchWindowResult<TResult, TValues>>;
   focus(windowId: string): ManagedWorkbenchWindow | undefined;
-  move(windowId: string, position: WorkbenchWindowPosition): ManagedWorkbenchWindow | undefined;
-  setBounds(windowId: string, bounds: WorkbenchWindowBounds): ManagedWorkbenchWindow | undefined;
+  move(
+    windowId: string,
+    position: WorkbenchWindowPosition,
+  ): ManagedWorkbenchWindow | undefined;
+  setBounds(
+    windowId: string,
+    bounds: WorkbenchWindowBounds,
+  ): ManagedWorkbenchWindow | undefined;
   setMaximized(
     windowId: string,
-    payload: WorkbenchWindowMaximizePayload
+    payload: WorkbenchWindowMaximizePayload,
   ): ManagedWorkbenchWindow | undefined;
-  close<TValues extends Record<string, unknown> = Record<string, unknown>, TResult = unknown>(
+  close<
+    TValues extends Record<string, unknown> = Record<string, unknown>,
+    TResult = unknown,
+  >(
     windowId: string,
-    result: WorkbenchWindowResult<TResult, TValues>
+    result: WorkbenchWindowResult<TResult, TValues>,
   ): void;
-  closeByContext(context: WorkbenchWindowContext, result?: WorkbenchWindowResult): void;
+  closeByContext(
+    context: WorkbenchWindowContext,
+    result?: WorkbenchWindowResult,
+  ): void;
   get(windowId: string): ManagedWorkbenchWindow | undefined;
   snapshot(): ManagedWorkbenchWindow[];
   visibleStack(mode: WorkbenchWindowMode): ManagedWorkbenchWindow[];
 };
 
 function cloneDefinition<TValues extends Record<string, unknown>, TResult>(
-  definition: WorkbenchWindowDefinition<TValues, TResult>
+  definition: WorkbenchWindowDefinition<TValues, TResult>,
 ): WorkbenchWindowDefinition<TValues, TResult> {
   const cloneValue = (value: unknown): unknown => {
     if (Array.isArray(value)) {
@@ -62,14 +80,16 @@ function cloneDefinition<TValues extends Record<string, unknown>, TResult>(
         return value;
       }
       if (
-        "setup" in value
-        || "render" in value
-        || "__vccOpts" in value
-        || "__asyncLoader" in value
+        "setup" in value ||
+        "render" in value ||
+        "__vccOpts" in value ||
+        "__asyncLoader" in value
       ) {
         return value;
       }
-      return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, cloneValue(entry)]));
+      return Object.fromEntries(
+        Object.entries(value).map(([key, entry]) => [key, cloneValue(entry)]),
+      );
     }
     return value;
   };
@@ -79,42 +99,54 @@ function cloneDefinition<TValues extends Record<string, unknown>, TResult>(
 
 function cloneWindow<
   TValues extends Record<string, unknown> = Record<string, unknown>,
-  TResult = unknown
->(window: ManagedWorkbenchWindow<TValues, TResult>): ManagedWorkbenchWindow<TValues, TResult> {
+  TResult = unknown,
+>(
+  window: ManagedWorkbenchWindow<TValues, TResult>,
+): ManagedWorkbenchWindow<TValues, TResult> {
   return {
     id: window.id,
     order: window.order,
     position: { ...window.position },
     ...(window.sizePx ? { sizePx: { ...window.sizePx } } : {}),
     maximized: window.maximized,
-    ...(window.restoreBounds ? { restoreBounds: cloneSizedBounds(window.restoreBounds) } : {}),
+    ...(window.restoreBounds
+      ? { restoreBounds: cloneSizedBounds(window.restoreBounds) }
+      : {}),
     definition: cloneDefinition(window.definition),
-    ...(window.parentId ? { parentId: window.parentId } : {})
+    ...(window.parentId ? { parentId: window.parentId } : {}),
   };
 }
 
 function cloneBounds(bounds: WorkbenchWindowBounds): WorkbenchWindowBounds {
   return {
     position: { ...bounds.position },
-    ...(bounds.sizePx ? { sizePx: { ...bounds.sizePx } } : {})
+    ...(bounds.sizePx ? { sizePx: { ...bounds.sizePx } } : {}),
   };
 }
 
-function cloneSizedBounds(bounds: WorkbenchWindowSizedBounds): WorkbenchWindowSizedBounds {
+function cloneSizedBounds(
+  bounds: WorkbenchWindowSizedBounds,
+): WorkbenchWindowSizedBounds {
   return {
     position: { ...bounds.position },
-    sizePx: { ...bounds.sizePx }
+    sizePx: { ...bounds.sizePx },
   };
 }
 
-function createDismissResult(): WorkbenchWindowResult<unknown, Record<string, unknown>> {
+function createDismissResult(): WorkbenchWindowResult<
+  unknown,
+  Record<string, unknown>
+> {
   return {
     reason: "dismiss",
-    values: {}
+    values: {},
   };
 }
 
-function sameWindowContext(a: WorkbenchWindowContext | undefined, b: WorkbenchWindowContext) {
+function sameWindowContext(
+  a: WorkbenchWindowContext | undefined,
+  b: WorkbenchWindowContext,
+) {
   return a?.kind === b.kind && a.id === b.id;
 }
 
@@ -124,7 +156,7 @@ export function createWindowManager(): WorkbenchWindowStore {
   let nextWindowIndex = 1;
 
   function buildWindowId<TValues extends Record<string, unknown>, TResult>(
-    definition: WorkbenchWindowDefinition<TValues, TResult>
+    definition: WorkbenchWindowDefinition<TValues, TResult>,
   ) {
     return definition.id ?? `window-${nextWindowIndex++}`;
   }
@@ -182,16 +214,20 @@ export function createWindowManager(): WorkbenchWindowStore {
       .filter(({ candidate }) => isDescendantOf(windowId, candidate.id))
       .map(({ index }) => index);
 
-    const insertIndex = descendantIndexes.length > 0 ? Math.min(...descendantIndexes) : windows.length;
+    const insertIndex =
+      descendantIndexes.length > 0
+        ? Math.min(...descendantIndexes)
+        : windows.length;
     windows.splice(insertIndex, 0, window);
     resequenceOrders();
 
     return window;
   }
 
-  function openSync<TValues extends Record<string, unknown> = Record<string, unknown>, TResult = unknown>(
-    definition: WorkbenchWindowDefinition<TValues, TResult>
-  ) {
+  function openSync<
+    TValues extends Record<string, unknown> = Record<string, unknown>,
+    TResult = unknown,
+  >(definition: WorkbenchWindowDefinition<TValues, TResult>) {
     const id = buildWindowId(definition);
     if (getWindow(id)) {
       throw new Error(`Duplicate window id: ${id}`);
@@ -202,9 +238,11 @@ export function createWindowManager(): WorkbenchWindowStore {
       id,
       order: windows.length + 1,
       position: { x: 0, y: 0 },
-      maximized: false,
+      maximized: storedDefinition.initialMaximized === true,
       definition: storedDefinition as WorkbenchWindowDefinition,
-      ...(storedDefinition.parentId ? { parentId: storedDefinition.parentId } : {})
+      ...(storedDefinition.parentId
+        ? { parentId: storedDefinition.parentId }
+        : {}),
     });
 
     placeWindow(id);
@@ -212,15 +250,21 @@ export function createWindowManager(): WorkbenchWindowStore {
     if (!openedWindow) {
       throw new Error(`Unknown window: ${id}`);
     }
-    return cloneWindow(openedWindow as ManagedWorkbenchWindow<TValues, TResult>);
+    return cloneWindow(
+      openedWindow as ManagedWorkbenchWindow<TValues, TResult>,
+    );
   }
 
-  function open<TValues extends Record<string, unknown> = Record<string, unknown>, TResult = unknown>(
-    definition: WorkbenchWindowDefinition<TValues, TResult>
-  ) {
+  function open<
+    TValues extends Record<string, unknown> = Record<string, unknown>,
+    TResult = unknown,
+  >(definition: WorkbenchWindowDefinition<TValues, TResult>) {
     const window = openSync(definition);
     return new Promise<WorkbenchWindowResult<TResult, TValues>>((resolve) => {
-      resolvers.set(window.id, resolve as (result: WorkbenchWindowResult) => void);
+      resolvers.set(
+        window.id,
+        resolve as (result: WorkbenchWindowResult) => void,
+      );
     });
   }
 
@@ -258,7 +302,10 @@ export function createWindowManager(): WorkbenchWindowStore {
     return cloneWindow(window);
   }
 
-  function setMaximized(windowId: string, payload: WorkbenchWindowMaximizePayload) {
+  function setMaximized(
+    windowId: string,
+    payload: WorkbenchWindowMaximizePayload,
+  ) {
     const window = getWindow(windowId);
     if (!window) {
       throw new Error(`Unknown window: ${windowId}`);
@@ -275,10 +322,10 @@ export function createWindowManager(): WorkbenchWindowStore {
     return cloneWindow(window);
   }
 
-  function close<TValues extends Record<string, unknown> = Record<string, unknown>, TResult = unknown>(
-    windowId: string,
-    result: WorkbenchWindowResult<TResult, TValues>
-  ) {
+  function close<
+    TValues extends Record<string, unknown> = Record<string, unknown>,
+    TResult = unknown,
+  >(windowId: string, result: WorkbenchWindowResult<TResult, TValues>) {
     if (!getWindow(windowId)) {
       throw new Error(`Unknown window: ${windowId}`);
     }
@@ -310,7 +357,10 @@ export function createWindowManager(): WorkbenchWindowStore {
     }
   }
 
-  function closeByContext(context: WorkbenchWindowContext, result: WorkbenchWindowResult = createDismissResult()) {
+  function closeByContext(
+    context: WorkbenchWindowContext,
+    result: WorkbenchWindowResult = createDismissResult(),
+  ) {
     const matchingWindowIds = windows
       .filter((window) => sameWindowContext(window.definition.context, context))
       .map((window) => window.id);
@@ -351,6 +401,6 @@ export function createWindowManager(): WorkbenchWindowStore {
     closeByContext,
     get,
     snapshot,
-    visibleStack
+    visibleStack,
   };
 }

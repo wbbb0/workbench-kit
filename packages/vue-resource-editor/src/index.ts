@@ -11,3 +11,6 @@ export { projectSchemaVariant } from "./schemaVariant.js";
 export { default as SchemaSettingsPage } from "./components/SchemaSettingsPage.vue";
 export * from "./settingsPages.js";
 export * from "./settingsPageState.js";
+
+export { default as SchemaSectionForm } from "./components/SchemaSectionForm.vue";
+export * from "./schemaSections.js";

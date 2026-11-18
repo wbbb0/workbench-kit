@@ -7,7 +7,7 @@ import type {
   WorkbenchDialogField,
   WorkbenchWindowDialogController,
   WorkbenchWindowDefinition,
-  WorkbenchWindowResult
+  WorkbenchWindowResult,
 } from "./types";
 
 type DialogValues = Record<string, unknown>;
@@ -27,11 +27,17 @@ const busyActionId = ref<string | null>(null);
 const isBusy = computed(() => busyActionId.value !== null);
 
 const blocks = computed(() => props.definition.blocks ?? []);
-const blocksGrow = computed(() => blocks.value.some(block => block.kind === "component" && block.grow === true));
+const blocksGrow = computed(() =>
+  blocks.value.some(
+    (block) => block.kind === "component" && block.grow === true,
+  ),
+);
 const fields = computed(() => props.definition.schema?.fields ?? []);
 const actions = computed(() => props.definition.actions ?? []);
 const footerMode = computed(() => props.definition.footer ?? "auto");
-const showEmptyContent = computed(() => blocks.value.length === 0 && fields.value.length === 0);
+const showEmptyContent = computed(
+  () => blocks.value.length === 0 && fields.value.length === 0,
+);
 const showFooter = computed(() => {
   if (footerMode.value === "hidden") {
     return false;
@@ -39,7 +45,11 @@ const showFooter = computed(() => {
   if (footerMode.value === "close") {
     return true;
   }
-  return actions.value.length > 0 || (fields.value.length > 0 && props.definition.showFooterCloseButton !== false);
+  return (
+    actions.value.length > 0 ||
+    (fields.value.length > 0 &&
+      props.definition.showFooterCloseButton !== false)
+  );
 });
 
 function isPlainRecord(value: unknown): value is DialogValues {
@@ -103,22 +113,33 @@ function createDefaultValue(field: WorkbenchDialogField<DialogValues>) {
     case "group":
       return reconcileFields(field.fields, {});
     case "custom":
-      return "defaultValue" in field ? clonePlain(field.defaultValue) : undefined;
+      return "defaultValue" in field
+        ? clonePlain(field.defaultValue)
+        : undefined;
   }
 }
 
-function createFieldValue(field: WorkbenchDialogField<DialogValues>, currentValues: DialogValues) {
+function createFieldValue(
+  field: WorkbenchDialogField<DialogValues>,
+  currentValues: DialogValues,
+) {
   if (Object.prototype.hasOwnProperty.call(currentValues, field.key)) {
     const currentValue = currentValues[field.key];
     if (field.kind === "group") {
-      return reconcileFields(field.fields, isPlainRecord(currentValue) ? currentValue : {});
+      return reconcileFields(
+        field.fields,
+        isPlainRecord(currentValue) ? currentValue : {},
+      );
     }
     return clonePlain(currentValue);
   }
   return createDefaultValue(field);
 }
 
-function reconcileFields(fieldsToReconcile: readonly WorkbenchDialogField<DialogValues>[], currentValues: DialogValues) {
+function reconcileFields(
+  fieldsToReconcile: readonly WorkbenchDialogField<DialogValues>[],
+  currentValues: DialogValues,
+) {
   return fieldsToReconcile.reduce<DialogValues>((accumulator, field) => {
     accumulator[field.key] = createFieldValue(field, currentValues);
     return accumulator;
@@ -128,7 +149,10 @@ function reconcileFields(fieldsToReconcile: readonly WorkbenchDialogField<Dialog
 let schemaKeys = new Set<string>();
 
 function syncValues() {
-  const nextValues = reconcileFields(fields.value, toRaw(values) as DialogValues);
+  const nextValues = reconcileFields(
+    fields.value,
+    toRaw(values) as DialogValues,
+  );
 
   // Only schema-owned fields may be removed; component blocks own their other values.
   for (const key of schemaKeys) {
@@ -148,16 +172,18 @@ function snapshotValues() {
 }
 
 defineExpose<WorkbenchWindowDialogController<DialogValues>>({
-  snapshotValues
+  snapshotValues,
 });
 
 function resolveBlockProps(block: WorkbenchDialogBlock<DialogValues>) {
   return block.kind === "component"
     ? {
-        ...(typeof block.props === "function" ? block.props() : block.props ?? {}),
+        ...(typeof block.props === "function"
+          ? block.props()
+          : (block.props ?? {})),
         values,
         windowId: props.windowId,
-        busy: isBusy.value
+        busy: isBusy.value,
       }
     : {};
 }
@@ -178,7 +204,9 @@ function actionDisabled(action: WorkbenchDialogAction<DialogValues, unknown>) {
     : action.disabled === true;
 }
 
-async function handleAction(action: WorkbenchDialogAction<DialogValues, unknown>) {
+async function handleAction(
+  action: WorkbenchDialogAction<DialogValues, unknown>,
+) {
   if (busyActionId.value !== null || actionDisabled(action)) {
     return;
   }
@@ -189,15 +217,16 @@ async function handleAction(action: WorkbenchDialogAction<DialogValues, unknown>
     const result = action.run
       ? await action.run({
           values: currentValues,
-          windowId: props.windowId
+          windowId: props.windowId,
         })
       : undefined;
 
+    if (action.closeOnSuccess === false) return;
     emit("resolve", {
       reason: "action",
       actionId: action.id,
       values: currentValues,
-      result
+      result,
     });
   } catch {
     return;
@@ -213,14 +242,18 @@ function handleClose() {
 
   emit("resolve", {
     reason: "close",
-    values: snapshotValues()
+    values: snapshotValues(),
   });
 }
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-1 flex-col text-small leading-5 text-text-secondary">
-    <div class="scrollbar-thin flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+  <div
+    class="flex min-h-0 flex-1 flex-col text-small leading-5 text-text-secondary"
+  >
+    <div
+      class="scrollbar-thin flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4"
+    >
       <div
         v-if="blocks.length"
         class="flex min-h-0 flex-col gap-3"
@@ -228,11 +261,22 @@ function handleClose() {
         data-dialog-blocks
       >
         <template v-for="(block, index) in blocks" :key="index">
-          <p v-if="block.kind === 'text'" class="whitespace-pre-wrap text-text-secondary">
+          <p
+            v-if="block.kind === 'text'"
+            class="whitespace-pre-wrap text-text-secondary"
+          >
             {{ block.content }}
           </p>
-          <hr v-else-if="block.kind === 'separator'" class="border-border-default" />
-          <component v-else :is="resolveComponentReference(block.component)" class="min-h-0 flex-1" v-bind="resolveBlockProps(block)" />
+          <hr
+            v-else-if="block.kind === 'separator'"
+            class="border-border-default"
+          />
+          <component
+            v-else
+            :is="resolveComponentReference(block.component)"
+            class="min-h-0 flex-1"
+            v-bind="resolveBlockProps(block)"
+          />
         </template>
       </div>
 
@@ -251,7 +295,10 @@ function handleClose() {
       <p v-if="showEmptyContent" class="text-text-muted">暂无窗口内容</p>
     </div>
 
-    <div v-if="showFooter" class="flex flex-wrap items-center justify-end gap-2 border-t border-border-default p-4">
+    <div
+      v-if="showFooter"
+      class="flex flex-wrap items-center justify-end gap-2 border-t border-border-default p-4"
+    >
       <button
         v-if="definition.showFooterCloseButton !== false"
         class="btn btn-secondary max-w-full whitespace-normal text-left"
@@ -272,7 +319,7 @@ function handleClose() {
             ? 'btn btn-danger'
             : action.variant === 'secondary'
               ? 'btn btn-secondary'
-              : 'btn btn-primary'
+              : 'btn btn-primary',
         ]"
         :data-action-id="action.id"
         :disabled="isBusy || actionDisabled(action)"

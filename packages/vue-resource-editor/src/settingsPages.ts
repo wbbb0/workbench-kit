@@ -33,9 +33,11 @@ export function settingAt(
   for (let i = 0; i < path.length; i++) {
     schema = settingBranch(schema, settingValue(values, path.slice(0, i)));
     schema =
-      schema.kind === "record"
-        ? schema.recordValue
-        : schema.fields?.[path[i]!]?.schema;
+      schema.kind === "array" && /^(0|[1-9]\d*)$/.test(path[i]!)
+        ? schema.item
+        : schema.kind === "record"
+          ? schema.recordValue
+          : schema.fields?.[path[i]!]?.schema;
     if (!schema) return;
   }
   return schema;
@@ -59,6 +61,7 @@ export function initialSettingValue(schema: SchemaMeta): unknown {
   if (schema.kind === "literal") return schema.value;
   if (schema.hasDefault) return JSON.parse(JSON.stringify(schema.defaultValue));
   if (schema.kind === "record") return {};
+  if (schema.kind === "array" || schema.kind === "enum-set") return [];
   if (schema.kind === "number") return schema.min ?? 0;
   if (schema.kind === "boolean") return false;
   return "";
@@ -80,7 +83,12 @@ export function searchSettings(
     )
       results.push({ path, title: node.title ?? path.at(-1)! });
     const branch = settingBranch(node, settingValue(values, path));
-    if (branch.kind === "record")
+    if (branch.kind === "array")
+      for (const key of Object.keys(
+        (settingValue(values, path) ?? []) as object,
+      ))
+        walk(branch.item!, [...path, key]);
+    else if (branch.kind === "record")
       for (const key of Object.keys(
         (settingValue(values, path) ?? {}) as object,
       ))
@@ -94,7 +102,7 @@ export function searchSettings(
 }
 
 export const isSettingPage = (schema: SchemaMeta) =>
-  ["object", "record", "union"].includes(schema.kind);
+  ["object", "record", "union", "array"].includes(schema.kind);
 export interface SettingsPageLocation {
   path: string[];
   title: string;
@@ -116,10 +124,15 @@ export function resolveSettingsPage(
     const key = target[i]!;
     const branch = settingBranch(node, value);
     const field = branch.fields?.[key];
-    const child = branch.kind === "record" ? branch.recordValue : field?.schema;
+    const child =
+      branch.kind === "array" && /^(0|[1-9]\d*)$/.test(key)
+        ? branch.item
+        : branch.kind === "record"
+          ? branch.recordValue
+          : field?.schema;
     if (
       !child ||
-      (branch.kind === "record" &&
+      (["record", "array"].includes(branch.kind) &&
         (!value || typeof value !== "object" || !Object.hasOwn(value, key)))
     ) {
       valid = false;

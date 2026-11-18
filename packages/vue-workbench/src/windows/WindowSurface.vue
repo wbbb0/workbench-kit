@@ -1,13 +1,23 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, useTemplateRef, ref, watch } from "vue";
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  useTemplateRef,
+  ref,
+  watch,
+} from "vue";
 import { X, Maximize2, Minimize2 } from "lucide-vue-next";
-import { canStartPointerDrag, usePointerDrag } from "../composables/usePointerDrag";
+import {
+  canStartPointerDrag,
+  usePointerDrag,
+} from "../composables/usePointerDrag";
 import { resolveWindowSizing } from "./windowSizing";
 import type {
   WorkbenchWindowBounds,
   WorkbenchWindowMaximizePayload,
   WorkbenchWindowSizedBounds,
-  WorkbenchWindowSizePx
+  WorkbenchWindowSizePx,
 } from "./types";
 import type { WorkbenchRuntimeWindow } from "./useWorkbenchWindows";
 
@@ -27,62 +37,102 @@ const emit = defineEmits<{
 
 const surfaceRef = useTemplateRef<HTMLElement>("surface");
 
-const mobileFullscreen = computed(() => props.isMobile && props.window.definition.mobileFullscreen === true);
+const mobileFullscreen = computed(
+  () => props.isMobile && props.window.definition.mobileFullscreen === true,
+);
 const visualViewport = ref({ width: 0, height: 0, left: 0, top: 0 });
 
-const sizing = computed(() => resolveWindowSizing(props.window.definition.size, props.isMobile));
-const minWindowSize: WorkbenchWindowSizePx = {
+// grow 内容需要由窗口提供确定的可用高度，不能靠异步内容反推窗口尺寸。
+const contentGrows = computed(
+  () =>
+    props.window.definition.blocks?.some(
+      (block) => block.kind === "component" && block.grow === true,
+    ) ?? false,
+);
+const sizing = computed(() =>
+  resolveWindowSizing(
+    props.window.definition.size,
+    props.isMobile,
+    contentGrows.value,
+  ),
+);
+const minWindowSize = computed<WorkbenchWindowSizePx>(() => ({
   width: 320,
-  height: 180
-};
+  height: contentGrows.value ? 320 : 180,
+}));
 const viewportMargin = 16;
 
-const surfaceClasses = computed(() => [
-  "pointer-events-auto fixed left-1/2 top-1/2 flex min-h-0 min-w-0 flex-col overflow-hidden border border-border-strong bg-surface-panel shadow-[0_22px_70px_rgba(0,0,0,0.45)]",
-  sizing.value.className,
-  props.inactive ? "window-inactive" : "opacity-100"
-].join(" "));
+const surfaceClasses = computed(() =>
+  [
+    "pointer-events-auto fixed left-1/2 top-1/2 flex min-h-0 min-w-0 flex-col overflow-hidden border border-border-strong bg-surface-panel shadow-[0_22px_70px_rgba(0,0,0,0.45)]",
+    sizing.value.className,
+    props.inactive ? "window-inactive" : "opacity-100",
+  ].join(" "),
+);
 
-const bodyClasses = computed(() => [
-  "min-h-0 flex-1 overflow-hidden flex flex-col",
-  props.inactive ? "pointer-events-none select-none" : ""
-].join(" ").trim());
+const bodyClasses = computed(() =>
+  [
+    "min-h-0 flex-1 overflow-hidden flex flex-col",
+    props.inactive ? "pointer-events-none select-none" : "",
+  ]
+    .join(" ")
+    .trim(),
+);
 
-const showCloseButton = computed(() => (
-  props.window.definition.showCloseButton ?? ((props.window.definition.actions?.length ?? 0) === 0)
-));
+const showCloseButton = computed(
+  () =>
+    props.window.definition.showCloseButton ??
+    (props.window.definition.actions?.length ?? 0) === 0,
+);
 
-const surfaceStyle = computed(() => mobileFullscreen.value ? {
-  width: visualViewport.value.width ? `${visualViewport.value.width}px` : "100vw",
-  height: visualViewport.value.height ? `${visualViewport.value.height}px` : "100dvh",
-  left: `${visualViewport.value.left}px`,
-  top: `${visualViewport.value.top}px`,
-  maxWidth: "none",
-  maxHeight: "none",
-  borderRadius: "0",
-  paddingTop: "env(safe-area-inset-top, 0px)",
-  paddingBottom: "env(safe-area-inset-bottom, 0px)",
-  paddingLeft: "env(safe-area-inset-left, 0px)",
-  paddingRight: "env(safe-area-inset-right, 0px)",
-  boxSizing: "border-box" as const,
-  zIndex: String(props.window.order * 2),
-  transform: "none"
-} : ({
-  ...sizing.value.style,
-  ...(props.window.sizePx ? {
-    width: `${props.window.sizePx.width}px`,
-    height: `${props.window.sizePx.height}px`,
-    maxWidth: "calc(100vw - 2rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))"
-  } : {}),
-  maxHeight: sizing.value.style.maxHeight ?? "calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
-  zIndex: String(props.window.order * 2),
-  transform: `translate3d(calc(-50% + ${props.window.position.x}px), calc(-50% + ${props.window.position.y}px), 0)`
-}));
+const surfaceStyle = computed(() =>
+  mobileFullscreen.value
+    ? {
+        width: visualViewport.value.width
+          ? `${visualViewport.value.width}px`
+          : "100vw",
+        height: visualViewport.value.height
+          ? `${visualViewport.value.height}px`
+          : "100dvh",
+        left: `${visualViewport.value.left}px`,
+        top: `${visualViewport.value.top}px`,
+        maxWidth: "none",
+        maxHeight: "none",
+        borderRadius: "0",
+        paddingTop: "env(safe-area-inset-top, 0px)",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        paddingLeft: "env(safe-area-inset-left, 0px)",
+        paddingRight: "env(safe-area-inset-right, 0px)",
+        boxSizing: "border-box" as const,
+        zIndex: String(props.window.order * 2),
+        transform: "none",
+      }
+    : {
+        ...sizing.value.style,
+        ...(props.window.sizePx
+          ? {
+              width: `${props.window.sizePx.width}px`,
+              height: `${props.window.sizePx.height}px`,
+              maxWidth:
+                "calc(100vw - 2rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px))",
+            }
+          : {}),
+        maxHeight:
+          sizing.value.style.maxHeight ??
+          "calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))",
+        zIndex: String(props.window.order * 2),
+        transform: `translate3d(calc(-50% + ${props.window.position.x}px), calc(-50% + ${props.window.position.y}px), 0)`,
+      },
+);
 
-const canResize = computed(() => !props.isMobile && props.window.definition.resizable !== false);
-const headerCursorClass = computed(() => (
-  props.isMobile || props.window.definition.movable === false ? "" : "cursor-move"
-));
+const canResize = computed(
+  () => !props.isMobile && props.window.definition.resizable !== false,
+);
+const headerCursorClass = computed(() =>
+  props.isMobile || props.window.definition.movable === false
+    ? ""
+    : "cursor-move",
+);
 
 type ResizeDirection = {
   x: -1 | 0 | 1;
@@ -94,14 +144,50 @@ const resizeHandles: Array<{
   direction: ResizeDirection;
   className: string;
 }> = [
-  { key: "n", direction: { x: 0, y: -1 }, className: "left-2 right-2 top-0 h-2 -translate-y-1/2 cursor-n-resize" },
-  { key: "s", direction: { x: 0, y: 1 }, className: "bottom-0 left-2 right-2 h-2 translate-y-1/2 cursor-s-resize" },
-  { key: "w", direction: { x: -1, y: 0 }, className: "bottom-2 left-0 top-2 w-2 -translate-x-1/2 cursor-w-resize" },
-  { key: "e", direction: { x: 1, y: 0 }, className: "bottom-2 right-0 top-2 w-2 translate-x-1/2 cursor-e-resize" },
-  { key: "nw", direction: { x: -1, y: -1 }, className: "left-0 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize" },
-  { key: "ne", direction: { x: 1, y: -1 }, className: "right-0 top-0 h-2 w-2 translate-x-1/2 -translate-y-1/2 cursor-ne-resize" },
-  { key: "sw", direction: { x: -1, y: 1 }, className: "bottom-0 left-0 h-2 w-2 -translate-x-1/2 translate-y-1/2 cursor-sw-resize" },
-  { key: "se", direction: { x: 1, y: 1 }, className: "bottom-0 right-0 h-2 w-2 translate-x-1/2 translate-y-1/2 cursor-se-resize" }
+  {
+    key: "n",
+    direction: { x: 0, y: -1 },
+    className: "left-2 right-2 top-0 h-2 -translate-y-1/2 cursor-n-resize",
+  },
+  {
+    key: "s",
+    direction: { x: 0, y: 1 },
+    className: "bottom-0 left-2 right-2 h-2 translate-y-1/2 cursor-s-resize",
+  },
+  {
+    key: "w",
+    direction: { x: -1, y: 0 },
+    className: "bottom-2 left-0 top-2 w-2 -translate-x-1/2 cursor-w-resize",
+  },
+  {
+    key: "e",
+    direction: { x: 1, y: 0 },
+    className: "bottom-2 right-0 top-2 w-2 translate-x-1/2 cursor-e-resize",
+  },
+  {
+    key: "nw",
+    direction: { x: -1, y: -1 },
+    className:
+      "left-0 top-0 h-2 w-2 -translate-x-1/2 -translate-y-1/2 cursor-nw-resize",
+  },
+  {
+    key: "ne",
+    direction: { x: 1, y: -1 },
+    className:
+      "right-0 top-0 h-2 w-2 translate-x-1/2 -translate-y-1/2 cursor-ne-resize",
+  },
+  {
+    key: "sw",
+    direction: { x: -1, y: 1 },
+    className:
+      "bottom-0 left-0 h-2 w-2 -translate-x-1/2 translate-y-1/2 cursor-sw-resize",
+  },
+  {
+    key: "se",
+    direction: { x: 1, y: 1 },
+    className:
+      "bottom-0 right-0 h-2 w-2 translate-x-1/2 translate-y-1/2 cursor-se-resize",
+  },
 ];
 
 type WindowDragState = {
@@ -118,7 +204,11 @@ function isInteractiveTarget(target: EventTarget | null) {
   if (!(target instanceof Element)) {
     return false;
   }
-  return Boolean(target.closest("button, input, textarea, select, a, [role='button'], [data-window-no-focus]"));
+  return Boolean(
+    target.closest(
+      "button, input, textarea, select, a, [role='button'], [data-window-no-focus]",
+    ),
+  );
 }
 
 function handleSurfacePointerDown(event: PointerEvent) {
@@ -134,38 +224,52 @@ function handleSurfacePointerDown(event: PointerEvent) {
 function getViewportSize() {
   return {
     width: window.innerWidth || document.documentElement.clientWidth || 1024,
-    height: window.innerHeight || document.documentElement.clientHeight || 768
+    height: window.innerHeight || document.documentElement.clientHeight || 768,
   };
 }
 
 function getMaxWindowSize() {
   const viewport = getViewportSize();
   return {
-    width: Math.max(minWindowSize.width, viewport.width - viewportMargin * 2),
-    height: Math.max(minWindowSize.height, viewport.height - viewportMargin * 2)
+    width: Math.max(
+      minWindowSize.value.width,
+      viewport.width - viewportMargin * 2,
+    ),
+    height: Math.max(
+      minWindowSize.value.height,
+      viewport.height - viewportMargin * 2,
+    ),
   };
 }
 
 function resolveCurrentSize(): WorkbenchWindowSizePx {
   const rect = surfaceRef.value?.getBoundingClientRect();
   return {
-    width: props.window.sizePx?.width ?? rect?.width ?? minWindowSize.width,
-    height: props.window.sizePx?.height ?? rect?.height ?? minWindowSize.height
+    width:
+      props.window.sizePx?.width ?? rect?.width ?? minWindowSize.value.width,
+    height:
+      props.window.sizePx?.height ?? rect?.height ?? minWindowSize.value.height,
   };
 }
 
 function resolveCurrentBounds(): WorkbenchWindowSizedBounds {
   return {
     position: { ...props.window.position },
-    sizePx: resolveCurrentSize()
+    sizePx: resolveCurrentSize(),
   };
 }
 
 function clampSize(size: WorkbenchWindowSizePx) {
   const maxSize = getMaxWindowSize();
   return {
-    width: Math.min(maxSize.width, Math.max(minWindowSize.width, Math.round(size.width))),
-    height: Math.min(maxSize.height, Math.max(minWindowSize.height, Math.round(size.height)))
+    width: Math.min(
+      maxSize.width,
+      Math.max(minWindowSize.value.width, Math.round(size.width)),
+    ),
+    height: Math.min(
+      maxSize.height,
+      Math.max(minWindowSize.value.height, Math.round(size.height)),
+    ),
   };
 }
 
@@ -178,69 +282,78 @@ function clampPosition(position: { x: number; y: number }) {
   const visibleBottom = 56;
   const visibleTop = 0;
 
-  const minX = visibleSide - (viewportWidth / 2) - (surfaceWidth / 2);
-  const maxX = (viewportWidth / 2) - visibleSide + (surfaceWidth / 2);
-  const minY = visibleTop - (viewportHeight / 2) + (surfaceHeight / 2);
-  const maxY = (viewportHeight / 2) - visibleBottom + (surfaceHeight / 2);
+  const minX = visibleSide - viewportWidth / 2 - surfaceWidth / 2;
+  const maxX = viewportWidth / 2 - visibleSide + surfaceWidth / 2;
+  const minY = visibleTop - viewportHeight / 2 + surfaceHeight / 2;
+  const maxY = viewportHeight / 2 - visibleBottom + surfaceHeight / 2;
 
   return {
     x: Math.min(maxX, Math.max(minX, position.x)),
-    y: Math.min(maxY, Math.max(minY, position.y))
+    y: Math.min(maxY, Math.max(minY, position.y)),
   };
 }
 
 function resolveBoundsEdges(bounds: WorkbenchWindowSizedBounds) {
   const viewport = getViewportSize();
-  const left = (viewport.width / 2) + bounds.position.x - (bounds.sizePx.width / 2);
-  const top = (viewport.height / 2) + bounds.position.y - (bounds.sizePx.height / 2);
+  const left = viewport.width / 2 + bounds.position.x - bounds.sizePx.width / 2;
+  const top =
+    viewport.height / 2 + bounds.position.y - bounds.sizePx.height / 2;
   return {
     left,
     top,
     right: left + bounds.sizePx.width,
-    bottom: top + bounds.sizePx.height
+    bottom: top + bounds.sizePx.height,
   };
 }
 
 function createBoundsFromEdges(
   edges: { left: number; top: number; right: number; bottom: number },
   originEdges: { left: number; top: number; right: number; bottom: number },
-  direction: ResizeDirection
+  direction: ResizeDirection,
 ) {
   const viewport = getViewportSize();
   const sizePx = clampSize({
     width: edges.right - edges.left,
-    height: edges.bottom - edges.top
+    height: edges.bottom - edges.top,
   });
-  const left = direction.x < 0 && edges.right - edges.left !== sizePx.width
-    ? originEdges.right - sizePx.width
-    : edges.left;
-  const top = direction.y < 0 && edges.bottom - edges.top !== sizePx.height
-    ? originEdges.bottom - sizePx.height
-    : edges.top;
+  const left =
+    direction.x < 0 && edges.right - edges.left !== sizePx.width
+      ? originEdges.right - sizePx.width
+      : edges.left;
+  const top =
+    direction.y < 0 && edges.bottom - edges.top !== sizePx.height
+      ? originEdges.bottom - sizePx.height
+      : edges.top;
 
   return {
     position: {
-      x: Math.round(left + (sizePx.width / 2) - (viewport.width / 2)),
-      y: Math.round(top + (sizePx.height / 2) - (viewport.height / 2))
+      x: Math.round(left + sizePx.width / 2 - viewport.width / 2),
+      y: Math.round(top + sizePx.height / 2 - viewport.height / 2),
     },
-    sizePx
+    sizePx,
   };
 }
 
-function clampBounds(bounds: WorkbenchWindowSizedBounds): WorkbenchWindowSizedBounds {
+function clampBounds(
+  bounds: WorkbenchWindowSizedBounds,
+): WorkbenchWindowSizedBounds {
   const viewport = getViewportSize();
   const sizePx = clampSize(bounds.sizePx);
-  const minCenterX = viewportMargin + (sizePx.width / 2) - (viewport.width / 2);
-  const maxCenterX = (viewport.width / 2) - viewportMargin - (sizePx.width / 2);
-  const minCenterY = viewportMargin + (sizePx.height / 2) - (viewport.height / 2);
-  const maxCenterY = (viewport.height / 2) - viewportMargin - (sizePx.height / 2);
+  const minCenterX = viewportMargin + sizePx.width / 2 - viewport.width / 2;
+  const maxCenterX = viewport.width / 2 - viewportMargin - sizePx.width / 2;
+  const minCenterY = viewportMargin + sizePx.height / 2 - viewport.height / 2;
+  const maxCenterY = viewport.height / 2 - viewportMargin - sizePx.height / 2;
 
   return {
     position: {
-      x: Math.round(Math.min(maxCenterX, Math.max(minCenterX, bounds.position.x))),
-      y: Math.round(Math.min(maxCenterY, Math.max(minCenterY, bounds.position.y)))
+      x: Math.round(
+        Math.min(maxCenterX, Math.max(minCenterX, bounds.position.x)),
+      ),
+      y: Math.round(
+        Math.min(maxCenterY, Math.max(minCenterY, bounds.position.y)),
+      ),
     },
-    sizePx
+    sizePx,
   };
 }
 
@@ -250,12 +363,24 @@ function resolveMaximizedBounds(): WorkbenchWindowSizedBounds {
   return {
     position: {
       x: 0,
-      y: 0
+      y: 0,
     },
     sizePx: {
-      width: Math.min(sizePx.width, Math.max(minWindowSize.width, viewport.width - viewportMargin * 2)),
-      height: Math.min(sizePx.height, Math.max(minWindowSize.height, viewport.height - viewportMargin * 2))
-    }
+      width: Math.min(
+        sizePx.width,
+        Math.max(
+          minWindowSize.value.width,
+          viewport.width - viewportMargin * 2,
+        ),
+      ),
+      height: Math.min(
+        sizePx.height,
+        Math.max(
+          minWindowSize.value.height,
+          viewport.height - viewportMargin * 2,
+        ),
+      ),
+    },
   };
 }
 
@@ -265,22 +390,25 @@ function restoreFromMaximize() {
   }
   const restored = clampBounds({
     position: props.window.restoreBounds.position,
-    sizePx: props.window.restoreBounds.sizePx ?? resolveCurrentSize()
+    sizePx: props.window.restoreBounds.sizePx ?? resolveCurrentSize(),
   });
   emit("maximize", {
     maximized: false,
-    bounds: restored
+    bounds: restored,
   });
   return restored;
 }
 
 const windowDrag = usePointerDrag<WindowDragState>({
   onMove({ state, deltaX, deltaY }) {
-    emit("move", clampPosition({
-      x: state.originX + deltaX,
-      y: state.originY + deltaY
-    }));
-  }
+    emit(
+      "move",
+      clampPosition({
+        x: state.originX + deltaX,
+        y: state.originY + deltaY,
+      }),
+    );
+  },
 });
 
 function handleHeaderPointerDown(event: PointerEvent) {
@@ -288,27 +416,35 @@ function handleHeaderPointerDown(event: PointerEvent) {
     return;
   }
   if (props.inactive) {
-    if (props.isMobile || props.window.definition.movable === false || isInteractiveTarget(event.target)) {
+    if (
+      props.isMobile ||
+      props.window.definition.movable === false ||
+      isInteractiveTarget(event.target)
+    ) {
       return;
     }
     const restored = restoreFromMaximize();
     windowDrag.start(event, {
       originX: restored?.position.x ?? props.window.position.x,
-      originY: restored?.position.y ?? props.window.position.y
+      originY: restored?.position.y ?? props.window.position.y,
     });
     return;
   }
 
   emit("focus");
 
-  if (props.isMobile || props.window.definition.movable === false || isInteractiveTarget(event.target)) {
+  if (
+    props.isMobile ||
+    props.window.definition.movable === false ||
+    isInteractiveTarget(event.target)
+  ) {
     return;
   }
 
   const restored = restoreFromMaximize();
   windowDrag.start(event, {
     originX: restored?.position.x ?? props.window.position.x,
-    originY: restored?.position.y ?? props.window.position.y
+    originY: restored?.position.y ?? props.window.position.y,
   });
 }
 
@@ -316,17 +452,30 @@ const windowResize = usePointerDrag<WindowResizeState>({
   onMove({ state, deltaX, deltaY }) {
     const originEdges = resolveBoundsEdges(state.originBounds);
     const nextEdges = {
-      left: state.direction.x < 0 ? originEdges.left + deltaX : originEdges.left,
-      right: state.direction.x > 0 ? originEdges.right + deltaX : originEdges.right,
+      left:
+        state.direction.x < 0 ? originEdges.left + deltaX : originEdges.left,
+      right:
+        state.direction.x > 0 ? originEdges.right + deltaX : originEdges.right,
       top: state.direction.y < 0 ? originEdges.top + deltaY : originEdges.top,
-      bottom: state.direction.y > 0 ? originEdges.bottom + deltaY : originEdges.bottom
+      bottom:
+        state.direction.y > 0
+          ? originEdges.bottom + deltaY
+          : originEdges.bottom,
     };
 
-    emit("bounds", clampBounds(createBoundsFromEdges(nextEdges, originEdges, state.direction)));
-  }
+    emit(
+      "bounds",
+      clampBounds(
+        createBoundsFromEdges(nextEdges, originEdges, state.direction),
+      ),
+    );
+  },
 });
 
-function handleResizePointerDown(direction: ResizeDirection, event: PointerEvent) {
+function handleResizePointerDown(
+  direction: ResizeDirection,
+  event: PointerEvent,
+) {
   if (!canResize.value || !canStartPointerDrag(event)) {
     return;
   }
@@ -339,7 +488,7 @@ function handleResizePointerDown(direction: ResizeDirection, event: PointerEvent
   const restored = restoreFromMaximize();
   windowResize.start(event, {
     direction,
-    originBounds: restored ?? resolveCurrentBounds()
+    originBounds: restored ?? resolveCurrentBounds(),
   });
 }
 
@@ -359,8 +508,8 @@ function toggleMaximize() {
       maximized: false,
       bounds: clampBounds({
         position: props.window.restoreBounds.position,
-        sizePx: props.window.restoreBounds.sizePx ?? resolveCurrentSize()
-      })
+        sizePx: props.window.restoreBounds.sizePx ?? resolveCurrentSize(),
+      }),
     });
     return;
   }
@@ -368,7 +517,7 @@ function toggleMaximize() {
   emit("maximize", {
     maximized: true,
     bounds: resolveMaximizedBounds(),
-    restoreBounds: resolveCurrentBounds()
+    restoreBounds: resolveCurrentBounds(),
   });
 }
 
@@ -381,7 +530,7 @@ function clampWindowToViewport() {
     emit("maximize", {
       maximized: true,
       bounds: resolveMaximizedBounds(),
-      restoreBounds: props.window.restoreBounds ?? resolveCurrentBounds()
+      restoreBounds: props.window.restoreBounds ?? resolveCurrentBounds(),
     });
     return;
   }
@@ -389,8 +538,8 @@ function clampWindowToViewport() {
   const nextBounds = clampBounds(resolveCurrentBounds());
   if (!props.window.sizePx) {
     if (
-      nextBounds.position.x === props.window.position.x
-      && nextBounds.position.y === props.window.position.y
+      nextBounds.position.x === props.window.position.x &&
+      nextBounds.position.y === props.window.position.y
     ) {
       return;
     }
@@ -399,10 +548,10 @@ function clampWindowToViewport() {
   }
 
   if (
-    nextBounds.position.x === props.window.position.x
-    && nextBounds.position.y === props.window.position.y
-    && nextBounds.sizePx.width === props.window.sizePx.width
-    && nextBounds.sizePx.height === props.window.sizePx.height
+    nextBounds.position.x === props.window.position.x &&
+    nextBounds.position.y === props.window.position.y &&
+    nextBounds.sizePx.width === props.window.sizePx.width &&
+    nextBounds.sizePx.height === props.window.sizePx.height
   ) {
     return;
   }
@@ -412,16 +561,25 @@ function clampWindowToViewport() {
 
 function updateVisualViewport() {
   const viewport = window.visualViewport;
-  visualViewport.value = { width: viewport?.width ?? window.innerWidth, height: viewport?.height ?? window.innerHeight, left: viewport?.offsetLeft ?? 0, top: viewport?.offsetTop ?? 0 };
+  visualViewport.value = {
+    width: viewport?.width ?? window.innerWidth,
+    height: viewport?.height ?? window.innerHeight,
+    left: viewport?.offsetLeft ?? 0,
+    top: viewport?.offsetTop ?? 0,
+  };
 }
 
-watch(() => props.isMobile, () => {
-  windowDrag.stop();
-  windowResize.stop();
-});
+watch(
+  () => props.isMobile,
+  () => {
+    windowDrag.stop();
+    windowResize.stop();
+  },
+);
 
 onMounted(() => {
   updateVisualViewport();
+  if (props.window.maximized) clampWindowToViewport();
   window.addEventListener("resize", clampWindowToViewport);
   window.addEventListener("resize", updateVisualViewport);
   window.visualViewport?.addEventListener("resize", updateVisualViewport);
@@ -435,27 +593,50 @@ onBeforeUnmount(() => {
   window.visualViewport?.removeEventListener("scroll", updateVisualViewport);
 });
 
-const containFocus = computed(() => props.window.definition.modal === true && props.window.definition.trapFocus === true && !props.inactive);
+const containFocus = computed(
+  () =>
+    props.window.definition.modal === true &&
+    props.window.definition.trapFocus === true &&
+    !props.inactive,
+);
 function focusWithin() {
   const panel = surfaceRef.value;
-  if (containFocus.value && panel && !panel.contains(document.activeElement)) panel.focus();
+  if (containFocus.value && panel && !panel.contains(document.activeElement))
+    panel.focus();
 }
 function trapTab(event: KeyboardEvent) {
   if (!containFocus.value || event.key !== "Tab" || !surfaceRef.value) return;
   const panel = surfaceRef.value;
-  const controls = Array.from(panel.querySelectorAll<HTMLElement>(
-    'a[href],button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),[tabindex]'
-  )).filter(element => element.tabIndex >= 0 && !element.closest('[hidden],[inert]') && getComputedStyle(element).display !== 'none' && getComputedStyle(element).visibility !== 'hidden');
-  const first = controls[0], last = controls.at(-1), active = document.activeElement;
-  if (!first) { event.preventDefault(); panel.focus(); }
-  else if (event.shiftKey && (active === first || active === panel)) {
-    event.preventDefault(); last?.focus();
+  const controls = Array.from(
+    panel.querySelectorAll<HTMLElement>(
+      "a[href],button:not(:disabled),input:not(:disabled),textarea:not(:disabled),select:not(:disabled),[tabindex]",
+    ),
+  ).filter(
+    (element) =>
+      element.tabIndex >= 0 &&
+      !element.closest("[hidden],[inert]") &&
+      getComputedStyle(element).display !== "none" &&
+      getComputedStyle(element).visibility !== "hidden",
+  );
+  const first = controls[0],
+    last = controls.at(-1),
+    active = document.activeElement;
+  if (!first) {
+    event.preventDefault();
+    panel.focus();
+  } else if (event.shiftKey && (active === first || active === panel)) {
+    event.preventDefault();
+    last?.focus();
   } else if (!event.shiftKey && (active === last || active === panel)) {
-    event.preventDefault(); first.focus();
+    event.preventDefault();
+    first.focus();
   }
 }
 watch([containFocus, surfaceRef], focusWithin, { flush: "post" });
-onMounted(() => { document.addEventListener("focusin", focusWithin); focusWithin(); });
+onMounted(() => {
+  document.addEventListener("focusin", focusWithin);
+  focusWithin();
+});
 onBeforeUnmount(() => document.removeEventListener("focusin", focusWithin));
 
 function handleFocusIn() {
@@ -491,14 +672,37 @@ function handleFocusIn() {
         <div class="truncate text-ui font-medium text-text-secondary">
           {{ window.definition.title }}
         </div>
-        <div v-if="window.definition.description" class="mt-1 text-small leading-5 text-text-muted">
+        <div
+          v-if="window.definition.description"
+          class="mt-1 text-small leading-5 text-text-muted"
+        >
           {{ window.definition.description }}
         </div>
       </div>
-      <button v-if="canResize && window.definition.showMaximizeButton" class="btn-ghost -mt-0.5" :title="window.maximized ? '还原' : '最大化'" :aria-label="window.maximized ? '还原' : '最大化'" type="button" :disabled="inactive" @click="toggleMaximize">
-        <component :is="window.maximized ? Minimize2 : Maximize2" :size="14" :stroke-width="2" />
+      <button
+        v-if="canResize && window.definition.showMaximizeButton"
+        class="btn-ghost -mt-0.5"
+        :title="window.maximized ? '还原' : '最大化'"
+        :aria-label="window.maximized ? '还原' : '最大化'"
+        type="button"
+        :disabled="inactive"
+        @click="toggleMaximize"
+      >
+        <component
+          :is="window.maximized ? Minimize2 : Maximize2"
+          :size="14"
+          :stroke-width="2"
+        />
       </button>
-      <button v-if="showCloseButton" class="btn-ghost -mr-1 -mt-0.5" title="关闭" aria-label="关闭" type="button" :disabled="inactive" @click="emit('close')">
+      <button
+        v-if="showCloseButton"
+        class="btn-ghost -mr-1 -mt-0.5"
+        title="关闭"
+        aria-label="关闭"
+        type="button"
+        :disabled="inactive"
+        @click="emit('close')"
+      >
         <X :size="14" :stroke-width="2" />
       </button>
     </header>

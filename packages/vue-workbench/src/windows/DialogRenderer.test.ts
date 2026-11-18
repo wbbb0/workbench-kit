@@ -1,23 +1,35 @@
 import { defineComponent, h, nextTick, onMounted, reactive } from "vue";
-import { mount } from "@vue/test-utils";
-import { describe, expect, it } from "vitest";
+import { flushPromises, mount } from "@vue/test-utils";
+import { describe, expect, it, vi } from "vitest";
 import DialogRenderer from "./DialogRenderer.vue";
 import { createWindowManager } from "./windowManager.js";
 
 const CustomBlock = defineComponent({
   name: "CustomBlock",
-  setup: () => () => h("div", { "data-test": "custom-block" }, "content")
+  setup: () => () => h("div", { "data-test": "custom-block" }, "content"),
 });
 
 describe("DialogRenderer", () => {
   it("preserves the default close label and result while accepting an optional caption", async () => {
-    const definition = { kind: "dialog" as const, title: "Info", size: "auto" as const, footer: "close" as const };
-    const wrapper = mount(DialogRenderer, { props: { windowId: "close-label", definition } });
+    const definition = {
+      kind: "dialog" as const,
+      title: "Info",
+      size: "auto" as const,
+      footer: "close" as const,
+    };
+    const wrapper = mount(DialogRenderer, {
+      props: { windowId: "close-label", definition },
+    });
     expect(wrapper.get('[data-action-kind="close"]').text()).toBe("取消");
-    await wrapper.setProps({ definition: { ...definition, closeLabel: "知道了" } });
+    await wrapper.setProps({
+      definition: { ...definition, closeLabel: "知道了" },
+    });
     expect(wrapper.get('[data-action-kind="close"]').text()).toBe("知道了");
     await wrapper.get('[data-action-kind="close"]').trigger("click");
-    expect(wrapper.emitted("resolve")?.[0]?.[0]).toMatchObject({ reason: "close", values: {} });
+    expect(wrapper.emitted("resolve")?.[0]?.[0]).toMatchObject({
+      reason: "close",
+      values: {},
+    });
     wrapper.unmount();
   });
 
@@ -29,13 +41,15 @@ describe("DialogRenderer", () => {
           kind: "dialog",
           title: "Growing block",
           size: "lg",
-          blocks: [{ kind: "component", component: CustomBlock, grow: true }]
-        }
-      }
+          blocks: [{ kind: "component", component: CustomBlock, grow: true }],
+        },
+      },
     });
 
     expect(wrapper.get("[data-dialog-blocks]").classes()).toContain("flex-1");
-    expect(wrapper.get('[data-test="custom-block"]').classes()).toContain("flex-1");
+    expect(wrapper.get('[data-test="custom-block"]').classes()).toContain(
+      "flex-1",
+    );
   });
 
   it("keeps ordinary dialog blocks content-sized by default", () => {
@@ -46,26 +60,33 @@ describe("DialogRenderer", () => {
           kind: "dialog",
           title: "Content-sized block",
           size: "sm",
-          blocks: [{ kind: "component", component: CustomBlock }]
-        }
-      }
+          blocks: [{ kind: "component", component: CustomBlock }],
+        },
+      },
     });
 
-    expect(wrapper.get("[data-dialog-blocks]").classes()).not.toContain("flex-1");
+    expect(wrapper.get("[data-dialog-blocks]").classes()).not.toContain(
+      "flex-1",
+    );
   });
 
   it("derives footer action state from values written by a component block", async () => {
     const StateBlock = defineComponent({
       props: { values: { type: Object, required: true } },
       setup(props) {
-        return () => h("button", {
-          "data-test": "make-valid",
-          onClick: () => {
-            props.values.valid = true;
-            props.values.updating = true;
-          }
-        }, "make valid");
-      }
+        return () =>
+          h(
+            "button",
+            {
+              "data-test": "make-valid",
+              onClick: () => {
+                props.values.valid = true;
+                props.values.updating = true;
+              },
+            },
+            "make valid",
+          );
+      },
     });
     const wrapper = mount(DialogRenderer, {
       props: {
@@ -75,13 +96,15 @@ describe("DialogRenderer", () => {
           title: "Dynamic action",
           size: "lg",
           blocks: [{ kind: "component", component: StateBlock }],
-          actions: [{
-            id: "save",
-            label: ({ values }) => values.updating ? "Update" : "Add",
-            disabled: ({ values }) => values.valid !== true
-          }]
-        }
-      }
+          actions: [
+            {
+              id: "save",
+              label: ({ values }) => (values.updating ? "Update" : "Add"),
+              disabled: ({ values }) => values.valid !== true,
+            },
+          ],
+        },
+      },
     });
 
     const action = wrapper.get('[data-action-id="save"]');
@@ -93,34 +116,63 @@ describe("DialogRenderer", () => {
   });
 });
 
-
 describe("DialogRenderer live props factories", () => {
   it("preserves controller callbacks and live state through window snapshots", async () => {
     const state = reactive({ label: "Initial", ready: false });
     const controller: { apply?: () => string } = {};
     const Consumer = defineComponent({
-      props: { controller: { type: Object, required: true }, label: { type: String, required: true } },
+      props: {
+        controller: { type: Object, required: true },
+        label: { type: String, required: true },
+      },
       setup(props) {
-        onMounted(() => { props.controller.apply = () => props.label; });
+        onMounted(() => {
+          props.controller.apply = () => props.label;
+        });
         return () => h("span", { "data-test": "live-label" }, props.label);
-      }
+      },
     });
     const manager = createWindowManager();
     manager.openSync({
-      id: "factory", kind: "dialog", title: "Tool", size: "full",
-      blocks: [{ kind: "component", component: Consumer, props: () => ({ controller, label: state.label }) }],
-      actions: [{ id: "apply", label: "Apply", disabled: () => !state.ready, run: () => controller.apply?.() }]
+      id: "factory",
+      kind: "dialog",
+      title: "Tool",
+      size: "full",
+      blocks: [
+        {
+          kind: "component",
+          component: Consumer,
+          props: () => ({ controller, label: state.label }),
+        },
+      ],
+      actions: [
+        {
+          id: "apply",
+          label: "Apply",
+          disabled: () => !state.ready,
+          run: () => controller.apply?.(),
+        },
+      ],
     });
     const definition = manager.snapshot()[0]!.definition;
-    const wrapper = mount(DialogRenderer, { props: { windowId: "factory", definition } });
+    const wrapper = mount(DialogRenderer, {
+      props: { windowId: "factory", definition },
+    });
     expect(controller.apply?.()).toBe("Initial");
-    expect((wrapper.get('[data-action-id="apply"]').element as HTMLButtonElement).disabled).toBe(true);
-    state.label = "Updated"; state.ready = true;
+    expect(
+      (wrapper.get('[data-action-id="apply"]').element as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    state.label = "Updated";
+    state.ready = true;
     await nextTick();
     expect(wrapper.get('[data-test="live-label"]').text()).toBe("Updated");
     expect(controller.apply?.()).toBe("Updated");
     await wrapper.get('[data-action-id="apply"]').trigger("click");
-    expect(wrapper.emitted("resolve")?.[0]?.[0]).toMatchObject({ reason: "action", result: "Updated" });
+    expect(wrapper.emitted("resolve")?.[0]?.[0]).toMatchObject({
+      reason: "action",
+      result: "Updated",
+    });
     wrapper.unmount();
   });
 });
@@ -135,33 +187,105 @@ describe("DialogRenderer value ownership", () => {
           props.values.entry = { settings: { limit: 32768 } };
         });
         return () => h("div");
-      }
+      },
     });
     const manager = createWindowManager();
     manager.openSync({
-      id: "state", kind: "dialog", title: "Custom form", size: "lg",
-      schema: { fields: [{ kind: "string", key: "oldField", label: "Old", defaultValue: "old" }] },
+      id: "state",
+      kind: "dialog",
+      title: "Custom form",
+      size: "lg",
+      schema: {
+        fields: [
+          {
+            kind: "string",
+            key: "oldField",
+            label: "Old",
+            defaultValue: "old",
+          },
+        ],
+      },
       blocks: [{ kind: "component", component: StateBlock }],
-      actions: [{ id: "save", label: "Save", disabled: ({ values }) => values.canSubmit !== true }]
+      actions: [
+        {
+          id: "save",
+          label: "Save",
+          disabled: ({ values }) => values.canSubmit !== true,
+        },
+      ],
     });
-    const wrapper = mount(DialogRenderer, { props: { windowId: "state", definition: manager.get("state")!.definition } });
+    const wrapper = mount(DialogRenderer, {
+      props: {
+        windowId: "state",
+        definition: manager.get("state")!.definition,
+      },
+    });
     await nextTick();
     manager.move("state", { x: 10, y: 20 });
     await wrapper.setProps({ definition: manager.get("state")!.definition });
-    expect((wrapper.get('[data-action-id="save"]').element as HTMLButtonElement).disabled).toBe(false);
-    await wrapper.setProps({ definition: { ...manager.get("state")!.definition, schema: { fields: [] } } });
+    expect(
+      (wrapper.get('[data-action-id="save"]').element as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+    await wrapper.setProps({
+      definition: {
+        ...manager.get("state")!.definition,
+        schema: { fields: [] },
+      },
+    });
     await wrapper.get('[data-action-id="save"]').trigger("click");
     expect(wrapper.emitted("resolve")?.[0]?.[0]).toMatchObject({
-      values: { canSubmit: true, entry: { settings: { limit: 32768 } } }
+      values: { canSubmit: true, entry: { settings: { limit: 32768 } } },
     });
-    expect((wrapper.emitted("resolve")?.[0]?.[0] as any).values).not.toHaveProperty("oldField");
+    expect(
+      (wrapper.emitted("resolve")?.[0]?.[0] as any).values,
+    ).not.toHaveProperty("oldField");
     wrapper.unmount();
   });
 });
 
 it("顶部已有关闭入口时可去掉底部关闭，保留业务动作", async () => {
- const w = mount(DialogRenderer, { props: { windowId: 'single-close', definition: { kind: 'dialog', title: '详情', size: 'md', showFooterCloseButton: false, actions: [{ id: 'save', label: '保存' }] } } });
- expect(w.find('[data-action-kind="close"]').exists()).toBe(false);
- await w.get('[data-action-id="save"]').trigger('click');
- expect(w.emitted('resolve')?.[0]?.[0]).toMatchObject({ reason: 'action', actionId: 'save' });w.unmount();
+  const w = mount(DialogRenderer, {
+    props: {
+      windowId: "single-close",
+      definition: {
+        kind: "dialog",
+        title: "详情",
+        size: "md",
+        showFooterCloseButton: false,
+        actions: [{ id: "save", label: "保存" }],
+      },
+    },
+  });
+  expect(w.find('[data-action-kind="close"]').exists()).toBe(false);
+  await w.get('[data-action-id="save"]').trigger("click");
+  expect(w.emitted("resolve")?.[0]?.[0]).toMatchObject({
+    reason: "action",
+    actionId: "save",
+  });
+  w.unmount();
+});
+it("成功后保持窗口的动作支持重复提交，普通关闭仍可用", async () => {
+  const run = vi.fn().mockResolvedValue("saved");
+  const wrapper = mount(DialogRenderer, {
+    props: {
+      windowId: "continuous",
+      definition: {
+        kind: "dialog",
+        title: "连续添加",
+        size: "md",
+        actions: [{ id: "add", label: "添加", run, closeOnSuccess: false }],
+        showFooterCloseButton: true,
+      },
+    },
+  });
+  await wrapper.get('[data-action-id="add"]').trigger("click");
+  await flushPromises();
+  await wrapper.get('[data-action-id="add"]').trigger("click");
+  await flushPromises();
+  expect(run).toHaveBeenCalledTimes(2);
+  expect(wrapper.emitted("resolve")).toBeUndefined();
+  await wrapper.get('[data-action-kind="close"]').trigger("click");
+  expect(wrapper.emitted("resolve")?.[0]?.[0]).toMatchObject({reason: "close"});
+  wrapper.unmount();
 });

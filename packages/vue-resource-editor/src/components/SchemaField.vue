@@ -77,6 +77,19 @@ function onDynamicRefChange(e: Event) {
   emit("update:modelValue", value || undefined);
 }
 
+function toggleEnumValue(value: unknown, checked: boolean) {
+  const selected = new Set(
+    Array.isArray(displayedValue.value) ? displayedValue.value : [],
+  );
+  if (checked) selected.add(value);
+  else selected.delete(value);
+  emit("update:modelValue", [
+    ...(props.schema.values ?? []).filter((item) => selected.has(item)),
+    ...[...selected].filter(
+      (item) => !(props.schema.values ?? []).includes(item),
+    ),
+  ]);
+}
 function currentStringValue(): string {
   return displayedValue.value !== undefined ? String(displayedValue.value) : "";
 }
@@ -156,6 +169,51 @@ const readOnlyMultiline = computed(() => {
     }}</span>
   </label>
 
+  <fieldset
+    v-else-if="schema.kind === 'enum-set'"
+    :id="inputId"
+    class="flex flex-wrap gap-x-3 gap-y-2"
+    :disabled="disabled"
+  >
+    <span v-if="displayedValue === undefined" class="text-text-muted"
+      >未知</span
+    >
+    <label
+      v-for="value in schema.values"
+      :key="String(value)"
+      class="flex cursor-pointer items-center gap-1.5"
+    >
+      <input
+        type="checkbox"
+        :value="String(value)"
+        :checked="
+          Array.isArray(displayedValue) && displayedValue.includes(value)
+        "
+        @change="
+          toggleEnumValue(value, ($event.target as HTMLInputElement).checked)
+        "
+      />
+      <span>{{ schema.valueLabels?.[String(value)] ?? value }}</span>
+    </label>
+    <label
+      v-for="value in (Array.isArray(displayedValue)
+        ? displayedValue
+        : []
+      ).filter((item) => !(schema.values ?? []).includes(item))"
+      :key="String(value)"
+      class="flex items-center gap-1.5"
+    >
+      <input
+        type="checkbox"
+        checked
+        :value="String(value)"
+        @change="
+          toggleEnumValue(value, ($event.target as HTMLInputElement).checked)
+        "
+      />
+      <span>{{ value }}（不支持）</span>
+    </label>
+  </fieldset>
   <!-- enum -->
   <select
     :id="inputId"
@@ -172,11 +230,21 @@ const readOnlyMultiline = computed(() => {
       {{ placeholder }}
     </option>
     <option
+      v-if="
+        displayedValue !== undefined &&
+        !(schema.values ?? []).includes(displayedValue)
+      "
+      :value="String(displayedValue)"
+      disabled
+    >
+      {{ displayedValue }}（不支持）
+    </option>
+    <option
       v-for="opt in schema.values"
       :key="String(opt)"
       :value="String(opt)"
     >
-      {{ opt }}
+      {{ schema.valueLabels?.[String(opt)] ?? opt }}
     </option>
   </select>
 

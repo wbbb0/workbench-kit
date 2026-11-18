@@ -23,6 +23,8 @@ export interface SchemaMeta {
   title?: string;
   description?: string;
   optional: boolean;
+  /** 分支仍可展示当前值，但不能作为新的选择。 */
+  disabled?: boolean;
   hasDefault: boolean;
   defaultValue?: unknown;
   fields?: Record<string, ObjectFieldMeta>;
@@ -33,6 +35,7 @@ export interface SchemaMeta {
   options?: SchemaMeta[];
   discriminator?: string;
   values?: unknown[];
+  valueLabels?: Record<string, string>;
   /** string 格式控制原生输入类型；未知格式仍用普通文本。 */
   format?: string;
   step?: number;
@@ -53,7 +56,11 @@ export interface SchemaMeta {
 /** SchemaNode 使用的递归 UI 树。 */
 export type UiNode =
   | { kind: "field"; schema: SchemaMeta }
-  | { kind: "group"; schema: SchemaMeta; children: Record<string, { field: ObjectFieldMeta; node: UiNode }> }
+  | {
+      kind: "group";
+      schema: SchemaMeta;
+      children: Record<string, { field: ObjectFieldMeta; node: UiNode }>;
+    }
   | { kind: "array"; schema: SchemaMeta; item: UiNode }
   | { kind: "record"; schema: SchemaMeta; key: UiNode; value: UiNode }
   | { kind: "union"; schema: SchemaMeta; options: UiNode[] };
@@ -61,7 +68,15 @@ export type UiNode =
 /** 由消费方注入的节点操作；组件库不解释业务路径与行为。 */
 export interface EditorNodeAction {
   key: string;
-  icon: "trash" | "up" | "down" | "pencil" | "check" | "restore" | "copy" | "play";
+  icon:
+    | "trash"
+    | "up"
+    | "down"
+    | "pencil"
+    | "check"
+    | "restore"
+    | "copy"
+    | "play";
   title: string;
   label?: string;
   disabled?: boolean;
@@ -75,7 +90,9 @@ export interface EditorNodeActionContext {
   path: Array<string | number>;
   value: unknown;
 }
-export type EditorNodeActions = (context: EditorNodeActionContext) => EditorNodeAction[];
+export type EditorNodeActions = (
+  context: EditorNodeActionContext,
+) => EditorNodeAction[];
 
 /** 动态分组选项中的一个可选值。key 只用于选择器身份，value 是最终写回草稿的完整值。 */
 export interface EditorOption {
@@ -99,7 +116,12 @@ export type EditorOptionsResult =
 
 /** record 节点显式结构变更通知，供调用方处理跨资源联动。 */
 export type EditorRecordMutationEvent =
-  | { kind: "rename"; path: Array<string | number>; key: string; nextKey: string }
+  | {
+      kind: "rename";
+      path: Array<string | number>;
+      key: string;
+      nextKey: string;
+    }
   | { kind: "remove"; path: Array<string | number>; key: string }
   | { kind: "add"; path: Array<string | number> };
 
@@ -117,10 +139,7 @@ export type EditorDraftEffectiveMode =
   | "record_inheritance";
 
 /** unset 操作展示和行为模式。 */
-export type EditorUnsetMode =
-  | "disabled"
-  | "optional"
-  | "reference";
+export type EditorUnsetMode = "disabled" | "optional" | "reference";
 
 /** 编辑器功能开关。业务后端按资源类型返回，前端只按契约渲染。 */
 export interface EditorFeatures {

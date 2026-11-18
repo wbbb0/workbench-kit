@@ -15,6 +15,8 @@ import {
   Plus,
   Trash2,
   RotateCcw,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-vue-next";
 import {
   WorkbenchBreadcrumbs,
@@ -40,6 +42,11 @@ import {
 const props = withDefaults(
   defineProps<{
     schema: SchemaMeta;
+    /** 宿主为具体字段提供过滤、排序后的引用选项；地址使用 settingKey。 */
+    referenceOptions?: Record<
+      string,
+      { value: string; label?: string; group?: string }[]
+    >;
     values: Record<string, unknown>;
     overrides: Record<string, unknown>;
     path: string[];
@@ -144,6 +151,16 @@ const title = computed(() =>
 const rows = computed(() => {
   const node = current.value;
   if (!node) return [];
+  if (node.kind === "array")
+    return ((settingValue(props.values, props.path) ?? []) as unknown[]).map(
+      (value, index) => ({
+        key: String(index),
+        schema: node.item!,
+        path: [...props.path, String(index)],
+        title: `${index + 1}. ${node.item?.title ?? "条目"}`,
+        entry: true,
+      }),
+    );
   if (node.kind === "record")
     return Object.keys(
       (settingValue(props.values, props.path) ?? {}) as object,
@@ -183,10 +200,15 @@ const breadcrumbs = computed(() =>
     (page) => ({ label: page.title, onSelect: () => go(page.path) }),
   ),
 );
-const options = (schema: SchemaMeta) =>
+const options = (schema: SchemaMeta, path: string[]) =>
+  props.referenceOptions?.[settingKey(path)] ??
   Object.keys(
     (settingValue(props.values, schema.reference?.path ?? []) ?? {}) as object,
-  );
+  ).map((value) => ({
+    value,
+    label: value,
+    group: undefined as string | undefined,
+  }));
 const inlineField = (schema: SchemaMeta) =>
   schema.kind !== "string" || !!schema.reference || !!schema.format;
 const inputValue = (path: string[]) =>
@@ -234,6 +256,35 @@ function add() {
   );
   names[settingKey(props.path)] = "";
   go([...props.path, key]);
+}
+function addArrayItem() {
+  const items = [
+    ...((settingValue(props.values, props.path) ?? []) as unknown[]),
+  ];
+  items.push(initialSettingValue(current.value!.item!));
+  emit("edit", props.path, items);
+  go([...props.path, String(items.length - 1)]);
+}
+function removeEntry(path: string[]) {
+  if (current.value?.kind !== "array") {
+    emit("reset", path);
+    return;
+  }
+  const items = [
+    ...((settingValue(props.values, props.path) ?? []) as unknown[]),
+  ];
+  items.splice(Number(path.at(-1)), 1);
+  emit("edit", props.path, items);
+}
+function moveEntry(path: string[], offset: number) {
+  const items = [
+    ...((settingValue(props.values, props.path) ?? []) as unknown[]),
+  ];
+  const from = Number(path.at(-1)),
+    to = from + offset;
+  if (to < 0 || to >= items.length) return;
+  [items[from], items[to]] = [items[to], items[from]];
+  emit("edit", props.path, items);
 }
 function changeVariant(event: Event) {
   const option =
@@ -342,7 +393,7 @@ function changeVariant(event: Event) {
             :disabled="disabled"
             @change="changeVariant"
           >
-            <option v-for="(option, i) in original.options" :key="i" :value="i">
+            <option v-for="(option, i) in original.options" :key="i" :value="i" :disabled="option.disabled">
               {{ option.title ?? option.kind }}
             </option>
           </select>
@@ -362,6 +413,22 @@ function changeVariant(event: Event) {
               <span class="truncate">{{ row.title }}</span
               ><ChevronRight :size="16" />
             </button>
+            <template v-if="current?.kind === 'array'">
+              <WorkbenchIconButton
+                :icon="ArrowUp"
+                title="上移条目"
+                size="sm"
+                :disabled="disabled || row.key === '0'"
+                @click="moveEntry(row.path, -1)"
+              />
+              <WorkbenchIconButton
+                :icon="ArrowDown"
+                title="下移条目"
+                size="sm"
+                :disabled="disabled || Number(row.key) === rows.length - 1"
+                @click="moveEntry(row.path, 1)"
+              />
+            </template>
             <WorkbenchIconButton
               v-if="row.entry"
               :icon="Trash2"
@@ -370,7 +437,7 @@ function changeVariant(event: Event) {
               variant="secondary"
               class="mr-3"
               :disabled="disabled"
-              @click="emit('reset', row.path)"
+              @click="removeEntry(row.path)"
             />
           </div>
           <div
@@ -392,14 +459,36 @@ function changeVariant(event: Event) {
                   : "用户覆盖"
               }}</span
             >
+            <template v-if="current?.kind === 'array'">
+              <WorkbenchIconButton
+                :icon="ArrowUp"
+                title="上移条目"
+                size="sm"
+                :disabled="disabled || row.key === '0'"
+                @click="moveEntry(row.path, -1)"
+              />
+              <WorkbenchIconButton
+                :icon="ArrowDown"
+                title="下移条目"
+                size="sm"
+                :disabled="disabled || Number(row.key) === rows.length - 1"
+                @click="moveEntry(row.path, 1)"
+              />
+            </template>
             <WorkbenchIconButton
-              :icon="RotateCcw"
+              :icon="current?.kind === 'array' ? Trash2 : RotateCcw"
               size="sm"
               variant="secondary"
-              :title="'恢复默认 ' + row.title"
+              :title="
+                (current?.kind === 'array' ? '删除 ' : '恢复默认 ') + row.title
+              "
               :class="inlineField(row.schema) ? 'order-2' : ''"
               :disabled="disabled"
-              @click="emit('reset', row.path)"
+              @click="
+                current?.kind === 'array'
+                  ? removeEntry(row.path)
+                  : emit('reset', row.path)
+              "
             />
             <div
               :class="
@@ -414,14 +503,16 @@ function changeVariant(event: Event) {
               >
                 <input
                   :id="'setting-' + settingKey(row.path)"
-                  type="password"
-                  autocomplete="new-password"
+                  type="text"
+                  autocomplete="off"
+                  autocapitalize="off"
+                  :spellcheck="false"
                   :placeholder="
                     secrets?.[settingKey(row.path)]
                       ? '已设置，输入以替换'
                       : '未设置'
                   "
-                  class="input-base min-w-0 flex-1 px-2 py-1"
+                  class="input-base min-w-0 flex-1 px-2 py-1 [-webkit-text-security:disc]"
                   :value="secretInputs?.[settingKey(row.path)] ?? ''"
                   :disabled="disabled"
                   @input="
@@ -476,17 +567,32 @@ function changeVariant(event: Event) {
                       : "未选择"
                   }}
                 </option>
-                <option
-                  v-for="option in options(row.schema)"
-                  :key="option"
-                  :value="option"
+                <template
+                  v-for="(option, index) in options(row.schema, row.path)"
+                  :key="option.value"
                 >
-                  {{ option }}
-                </option>
+                  <option
+                    v-if="
+                      option.group &&
+                      index > 0 &&
+                      option.group !==
+                        options(row.schema, row.path)[index - 1]?.group
+                    "
+                    disabled
+                    value="__group_separator__"
+                  >
+                    ──────── {{ option.group }} ────────
+                  </option>
+                  <option :value="option.value">
+                    {{ option.label ?? option.value }}
+                  </option>
+                </template>
                 <option
                   v-if="
                     inputValue(row.path) &&
-                    !options(row.schema).includes(String(inputValue(row.path)))
+                    !options(row.schema, row.path).some(
+                      (option) => option.value === String(inputValue(row.path)),
+                    )
                   "
                   :value="String(inputValue(row.path))"
                 >
@@ -523,6 +629,18 @@ function changeVariant(event: Event) {
               {{ issue.message }}
             </p>
           </div>
+        </div>
+        <div
+          v-if="current?.kind === 'array'"
+          class="border-b border-border-default p-3"
+        >
+          <WorkbenchButton
+            :icon="Plus"
+            label="新增条目"
+            size="sm"
+            :disabled="disabled"
+            @click="addArrayItem"
+          />
         </div>
         <form
           v-if="current?.kind === 'record'"

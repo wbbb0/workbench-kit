@@ -365,3 +365,23 @@ The consuming app owns its final theme values, but it does not need to define ev
 
 此能力不含供应商、模型、网络或业务目录规则。未提供 `discriminator` 的 union 继续使用原有行为；
 旧 SchemaMeta 不需要修改。只读和禁用状态不触发切换，外部值刷新后重新按判别字段选择分支。
+
+### 分区式 schema 表单
+
+`SchemaSectionForm` 用于需要在同一滚动区连续编辑的配置，如模型添加窗口。它和 `SchemaSettingsPage` 共用 `SchemaMeta`、`SchemaField` 及路径语义；普通设置导航仍可继续使用页面式 renderer。
+
+```vue
+<SchemaSectionForm
+  :schema="schema"
+  :values="draft"
+  :issues="issues"
+  @edit="(path, value) => updateDraft(path, value)"
+  @reset="(path) => resetDraft(path)"
+/>
+```
+
+对象层次合并为分区标题；数组条目展开为重复分区，增删与排序发出整条数组的 `edit`。组件不保存草稿，不请求服务。枚举集合使用 `kind: "enum-set"`、`values` 和可选 `valueLabels`；未设置、显式空集合和重置保持不同语义。`union` 按当前判别字段展示分支，禁用分支可保留现有值。字段问题沿用原始路径。
+
+当前分区表单支持普通对象、数组、判别分支及标准标量控件。`record`、秘密和引用字段明确显示不支持，需使用页面式编辑器；不会隐式丢弃字段。
+
+窗口中的 `component` block 设置 `grow: true` 可获得确定的初始视口。`initialMaximized: true` 可默认最大化，仍支持还原。需要连续提交的 footer action 设置 `closeOnSuccess: false`；业务回调成功后自行清理选择或输入。

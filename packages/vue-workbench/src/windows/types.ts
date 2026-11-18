@@ -49,11 +49,11 @@ export type WorkbenchWindowMaximizePayload =
 type WorkbenchDialogGroupValues<TValue> = unknown extends TValue
   ? Record<string, unknown>
   : NonNullable<TValue> extends Record<string, unknown>
-  ? NonNullable<TValue>
-  : never;
+    ? NonNullable<TValue>
+    : never;
 
 export type WorkbenchDialogSchema<
-  TValues extends Record<string, unknown> = Record<string, unknown>
+  TValues extends Record<string, unknown> = Record<string, unknown>,
 > = {
   /** 表单字段列表，字段 key 会写入 action 收到的 values。 */
   fields: WorkbenchDialogField<TValues>[];
@@ -106,28 +106,36 @@ type WorkbenchDialogLeafField<TValues extends Record<string, unknown>> =
     };
 
 type WorkbenchDialogGroupField<TValues extends Record<string, unknown>> = {
-  [TGroupKey in keyof TValues & string]: NonNullable<TValues[TGroupKey]> extends Record<string, unknown>
+  [TGroupKey in keyof TValues & string]: NonNullable<
+    TValues[TGroupKey]
+  > extends Record<string, unknown>
     ? {
         kind: "group";
         key: TGroupKey;
         label: string;
-        fields: WorkbenchDialogLeafField<WorkbenchDialogGroupValues<TValues[TGroupKey]>>[];
+        fields: WorkbenchDialogLeafField<
+          WorkbenchDialogGroupValues<TValues[TGroupKey]>
+        >[];
       }
     : unknown extends TValues[TGroupKey]
       ? {
           kind: "group";
           key: TGroupKey;
           label: string;
-          fields: WorkbenchDialogLeafField<WorkbenchDialogGroupValues<TValues[TGroupKey]>>[];
+          fields: WorkbenchDialogLeafField<
+            WorkbenchDialogGroupValues<TValues[TGroupKey]>
+          >[];
         }
-    : never;
+      : never;
 }[keyof TValues & string];
 
-export type WorkbenchDialogField<TValues extends Record<string, unknown> = Record<string, unknown>> =
-  | WorkbenchDialogLeafField<TValues>
-  | WorkbenchDialogGroupField<TValues>;
+export type WorkbenchDialogField<
+  TValues extends Record<string, unknown> = Record<string, unknown>,
+> = WorkbenchDialogLeafField<TValues> | WorkbenchDialogGroupField<TValues>;
 
-export type WorkbenchDialogBlock<TValues extends Record<string, unknown> = Record<string, unknown>> =
+export type WorkbenchDialogBlock<
+  TValues extends Record<string, unknown> = Record<string, unknown>,
+> =
   | {
       kind: "text";
       content: string;
@@ -146,23 +154,32 @@ export type WorkbenchDialogBlock<TValues extends Record<string, unknown> = Recor
 
 export type WorkbenchDialogAction<
   TValues extends Record<string, unknown> = Record<string, unknown>,
-  TResult = unknown
+  TResult = unknown,
 > = {
   /** 稳定动作 ID，会出现在窗口关闭结果中。 */
   id: string;
   /** 可根据 component block 写入的实时 values 动态调整按钮文案。 */
-  label: string | ((context: { values: Readonly<TValues>; windowId: string }) => string);
+  label:
+    | string
+    | ((context: { values: Readonly<TValues>; windowId: string }) => string);
   variant?: "primary" | "secondary" | "danger";
   /** 可根据实时 values 禁用动作；执行期间仍由窗口统一禁用全部 footer 动作。 */
-  disabled?: boolean | ((context: { values: Readonly<TValues>; windowId: string }) => boolean);
+  disabled?:
+    | boolean
+    | ((context: { values: Readonly<TValues>; windowId: string }) => boolean);
+  /** 成功执行后是否关闭窗口；false 用于可重复提交的窗口动作。默认 true。 */
+  closeOnSuccess?: boolean;
   /** 点击动作时执行。返回值会作为 action result 回传给 open/openDialog。 */
-  run?: (context: { values: TValues; windowId: string }) => Promise<TResult> | TResult;
+  run?: (context: {
+    values: TValues;
+    windowId: string;
+  }) => Promise<TResult> | TResult;
 };
 
 /** 运行时窗口定义。业务项目通常通过 useWorkbenchWindows().openDialog 传入。 */
 export type WorkbenchWindowDefinition<
   TValues extends Record<string, unknown> = Record<string, unknown>,
-  TResult = unknown
+  TResult = unknown,
 > = {
   id?: string;
   kind: WorkbenchWindowKind;
@@ -178,6 +195,8 @@ export type WorkbenchWindowDefinition<
   resizable?: boolean;
   /** 可选移动端铺满；保留桌面尺寸和位置，返回桌面时恢复。 */
   mobileFullscreen?: boolean;
+  /** 桌面首次打开即最大化；仍保留可还原的初始尺寸。 */
+  initialMaximized?: boolean;
   showCloseButton?: boolean;
   /** 显示桌面最大化/还原按钮；与标题栏双击共用尺寸逻辑。 */
   showMaximizeButton?: boolean;
@@ -196,20 +215,23 @@ export type WorkbenchWindowDefinition<
 /** 对话框便捷定义。kind 可省略，默认会按 dialog 处理。 */
 export type WorkbenchDialogDefinition<
   TValues extends Record<string, unknown> = Record<string, unknown>,
-  TResult = unknown
+  TResult = unknown,
 > = Omit<WorkbenchWindowDefinition<TValues, TResult>, "kind"> & {
   kind?: Extract<WorkbenchWindowKind, "dialog" | "child-dialog">;
 };
 
 export type WorkbenchWindowDialogController<
-  TValues extends Record<string, unknown> = Record<string, unknown>
+  TValues extends Record<string, unknown> = Record<string, unknown>,
 > = {
   /** 读取当前表单值，用于关闭窗口前生成 result。 */
   snapshotValues: () => TValues;
 };
 
 /** 窗口关闭结果。action 表示按钮动作，close 表示主动关闭，dismiss 表示背景/Escape 等取消。 */
-export type WorkbenchWindowResult<TResult = unknown, TValues extends Record<string, unknown> = Record<string, unknown>> =
+export type WorkbenchWindowResult<
+  TResult = unknown,
+  TValues extends Record<string, unknown> = Record<string, unknown>,
+> =
   | { reason: "action"; actionId: string; values: TValues; result?: TResult }
   | { reason: "close"; values: TValues }
   | { reason: "dismiss"; values: TValues };

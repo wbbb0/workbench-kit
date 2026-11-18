@@ -58,7 +58,11 @@ it("schema 新字段自动成为页面控件，数值原文和秘密输入分别
   });
   await w.get('input[inputmode="decimal"]').setValue("2e");
   expect(w.emitted("edit")?.at(-1)).toEqual([["service", "port"], "2e"]);
-  await w.get('input[type="password"]').setValue("secret-test");
+  const secretInput = w.get('input[autocomplete="off"]');
+  expect(secretInput.attributes("type")).toBe("text");
+  expect(secretInput.attributes("autocapitalize")).toBe("off");
+  expect(secretInput.attributes("spellcheck")).toBe("false");
+  await secretInput.setValue("secret-test");
   expect(w.emitted("secretInput")?.at(-1)).toEqual([
     ["service", "credential"],
     "secret-test",
@@ -232,5 +236,61 @@ it("占位默认值模式保留明确的 0 和 false，清空数值恢复默认�
   expect(w.emitted("reset")?.at(-1)).toEqual([["count"]]);
   await checkbox.setValue(true);
   expect(w.emitted("edit")?.at(-1)).toEqual([["enabled"], true]);
+  w.unmount();
+});
+it("有序对象数组使用schema详情，支持添加删除排序与分组引用选项", async () => {
+  const candidate: SchemaMeta = {
+    ...text,
+    kind: "object",
+    fields: {
+      model: {
+        schema: { ...text, reference: { path: ["catalog"], label: "模型" } },
+      },
+    },
+  };
+  const root: SchemaMeta = {
+    ...text,
+    kind: "object",
+    fields: { routes: { schema: { ...text, kind: "array", item: candidate } } },
+  };
+  const values = {
+    routes: [{ model: "org/native.v1" }, { model: "org/adapted.v2" }],
+  };
+  const w = mount(SchemaSettingsPage, {
+    props: { schema: root, values, overrides: values, path: ["routes"] },
+  });
+  expect(
+    w.findAll("button").some((button) => button.text().includes("1.")),
+  ).toBe(true);
+  await w.get('button[title="下移条目"]').trigger("click");
+  expect(w.emitted("edit")?.at(-1)).toEqual([
+    ["routes"],
+    [values.routes[1], values.routes[0]],
+  ]);
+  await w.get('button[title="删除 1. 条目"]').trigger("click");
+  expect(w.emitted("edit")?.at(-1)).toEqual([["routes"], [values.routes[1]]]);
+  await w.setProps({
+    path: ["routes", "0"],
+    referenceOptions: {
+      '["routes","0","model"]': [
+        { value: "org/native.v1", group: "原生能力" },
+        { value: "org/adapted.v2", group: "兼容适配" },
+      ],
+    },
+  });
+  const options = w.findAll("select option");
+  expect(options.map((option) => option.text())).toContain(
+    "──────── 兼容适配 ────────",
+  );
+  expect(
+    options
+      .find((option) => option.text().includes("兼容适配"))!
+      .attributes("disabled"),
+  ).toBeDefined();
+  await w.get("select").setValue("org/adapted.v2");
+  expect(w.emitted("edit")?.at(-1)).toEqual([
+    ["routes", "0", "model"],
+    "org/adapted.v2",
+  ]);
   w.unmount();
 });
