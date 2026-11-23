@@ -38,3 +38,13 @@ describe("WorkbenchTabStrip", () => {
     wrapper.unmount();
   });
 });
+
+it("整行高度与等宽分布为可选参数", async () => {
+  const host = mount(WorkbenchTabStrip, { props: { items, modelValue: "one" } });
+  expect(host.element.style.height).toBe("");
+  await host.setProps({ rowHeight: "36px", equalWidth: true, bordered: true });
+  expect(host.element.style.height).toBe("36px");
+  expect(host.element.style.boxSizing).toBe("border-box");
+  expect(host.get('[role="tab"]').classes()).toContain("flex-1");
+  host.unmount();
+});

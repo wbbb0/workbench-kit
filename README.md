@@ -143,3 +143,5 @@ and save failures retain valid partial cache for an explicit retry.
 `SchemaNode` 的可选 `nodeActions` 回调会获得 `{ node, path, value }`，并返回 `EditorNodeAction[]`。组件会递归传递回调，将动作与已有的重命名、排序、复制、删除操作一起展示。动作支持图标、可选文字标签和禁用状态，点击不改变草稿；具体行为由调用方决定。只读或禁用节点不会执行这些操作，未传回调时保持原有行为。
 
 相关 `EditorNodeActions`、`EditorNodeAction` 类型通过 `@workbench-kit/vue` 聚合入口导出。请在业务项目按资源与节点路径选择操作，组件库不解释业务目录名称或调用业务 API。
+
+虚拟时间线的真实布局验收使用 Chromium。安装依赖后运行 `npx playwright install chromium`，再运行 `npm run test:browser`。

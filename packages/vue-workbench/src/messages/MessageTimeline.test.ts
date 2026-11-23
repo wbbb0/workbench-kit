@@ -37,6 +37,7 @@ describe("正文详情入口", () => {
             version: 1,
             kind: "message",
             author: "助手",
+            detailLabel: "查看事件详情",
             parts: [
               {
                 type: "text",
@@ -57,7 +58,7 @@ describe("正文详情入口", () => {
     expect(host.emitted("detail")).toBeUndefined();
     vi.mocked(window.getSelection).mockReturnValue(null);
     await host.get("article").trigger("click");
-    await host.get("header button").trigger("click");
+    await host.get('[aria-label="查看事件详情"]').trigger("click");
     expect(host.emitted("detail")).toEqual([["a"], ["a"]]);
     expect(host.find("details").exists()).toBe(false);
     host.unmount();

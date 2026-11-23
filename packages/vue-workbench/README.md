@@ -396,3 +396,7 @@ MessageComposer 可选 flush 模式去掉 form 外侧 padding 和内部容器边
 
 
 MessageTimeline 的 heading/activity 记录共用折叠头部，分别默认展开/收起；expandedRecords 可注入按记录 ID 的 Map，跨虚拟化及页面挂载保存用户选择。折叠切换退出贴底，由虚拟列表负责行高与阅读位置校正；上层不逐行观察、不在行高变化时恢复旧锚点，只观察视口和总内容尺寸以跟随最新。显式锚点恢复仅用于初始化、切页、跳转和历史窗口变化。离开底部后退出跟随，实际回到底部才恢复。完整详情使用独立按钮。MessageItem.metrics 接受已格式化 label/value/title 清单，位于展开区底部；kit 不计算供应商用量或业务聚合。
+
+页面标签可用 `WorkbenchTabStrip.rowHeight` 指定含边框的 CSS 高度（例如主题变量），用 `equalWidth` 均分标签。省略时沿用原尺寸与分布。消息时间线可用 `MessageItem.detailLabel` 指定详情操作的可访问名称。
+
+组件中使用 `useScopedDialog(defaults)` 可持有一个活动窗口。再次 open 会替换旧窗口，组件停用或卸载时关闭，用户关闭后焦点回到仍挂载的触发元素。外观与业务按钮由 defaults 和本次 open 的参数决定。

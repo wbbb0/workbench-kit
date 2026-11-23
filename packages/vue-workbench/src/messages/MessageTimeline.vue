@@ -197,7 +197,7 @@ defineExpose({ capture, restore });
                   : 'bg-surface-muted text-text-muted'
               "
               :title="item.author || item.kind"
-              :aria-label="(item.author || item.kind) + '：查看详情'"
+              :aria-label="item.detailLabel ?? (item.author || item.kind) + '：查看详情'"
               @click="emit('detail', item.id)"
             >
               <component
@@ -209,6 +209,7 @@ defineExpose({ capture, restore });
             <MessageRecordHeader
               v-if="foldable(item)"
               :label="item.heading || item.activity!.label"
+              :detail-label="item.detailLabel"
               :icon="item.identity?.icon"
               :state="item.state?.label"
               :danger="item.tone === 'danger'"
@@ -227,17 +228,7 @@ defineExpose({ capture, restore });
               >
                 <button
                   class="font-medium text-text-secondary"
-                  :aria-label="
-                    item.kind === 'message'
-                      ? '查看消息详情'
-                      : item.kind === 'turn'
-                        ? '查看处理过程详情'
-                        : item.kind === 'tool_call'
-                          ? '查看工具执行详情'
-                          : item.kind === 'model_call'
-                            ? '查看模型请求详情'
-                            : '查看记录详情'
-                  "
+                  :aria-label="item.detailLabel ?? '查看记录详情'"
                   @click="emit('detail', item.id)"
                 >
                   {{ item.author || item.kind }}

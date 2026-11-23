@@ -7,6 +7,8 @@ const props = withDefaults(defineProps<{
   modelValue: string;
   size?: "sm" | "md";
   bordered?: boolean;
+  rowHeight?: string;
+  equalWidth?: boolean;
 }>(), {
   size: "md",
   bordered: false
@@ -59,6 +61,7 @@ function onTabKeydown(event: KeyboardEvent) {
       bordered ? 'border-b border-border-default' : '',
       size === 'sm' ? 'px-3' : ''
     ]"
+    :style="rowHeight ? { height: rowHeight, boxSizing: 'border-box', flexShrink: 0 } : undefined"
     role="tablist"
   >
     <button
@@ -75,7 +78,8 @@ function onTabKeydown(event: KeyboardEvent) {
       :disabled="item.disabled"
       :class="[
         'flex shrink-0 items-center gap-1 border-0 border-b-2 border-transparent bg-transparent text-small whitespace-nowrap text-text-muted transition-colors hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50',
-        size === 'sm' ? 'h-9 px-2.5' : 'h-10 px-3',
+        rowHeight ? 'h-auto self-stretch' : size === 'sm' ? 'h-9' : 'h-10',
+        equalWidth ? 'min-w-0 flex-1 justify-center px-0' : size === 'sm' ? 'px-2.5' : 'px-3',
         selectedItemId === item.id ? 'border-b-accent text-text-secondary' : ''
       ]"
       @click="$emit('update:modelValue', item.id)"

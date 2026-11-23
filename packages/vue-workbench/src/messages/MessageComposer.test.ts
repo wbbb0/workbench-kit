@@ -51,6 +51,14 @@ describe("通用消息组件", () => {
     expect(host.html()).toContain("hljs-keyword");
     host.unmount();
   });
+  it("结构化代码中的围栏和标签保持原文", () => {
+    const text = ["before", "```", "<i>after</i>"].join("\n");
+    const host = mount(MessageContent, { props: { parts: [{ type: "code", text, language: "md" }] } });
+    expect(host.findAll("pre")).toHaveLength(1);
+    expect(host.get("pre").element.textContent).toBe(text);
+    expect(host.find("i").exists()).toBe(false);
+    host.unmount();
+  });
   it("HTTP环境缺少clipboard时选中代码供用户复制，不抛异常", async () => {
     const descriptor = Object.getOwnPropertyDescriptor(navigator, "clipboard");
     Object.defineProperty(navigator, "clipboard", {

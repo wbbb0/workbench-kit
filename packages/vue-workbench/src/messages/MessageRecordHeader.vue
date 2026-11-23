@@ -4,6 +4,7 @@ import { ChevronRight, ExternalLink } from "lucide-vue-next";
 defineProps<{
   label: string;
   expanded: boolean;
+  detailLabel?: string;
   icon?: Component;
   state?: string;
   danger?: boolean;
@@ -16,6 +17,7 @@ const emit = defineEmits<{ toggle: []; detail: [] }>();
     :class="expanded ? 'border-b border-border-default' : ''"
   >
     <button
+      type="button"
       class="flex min-w-0 flex-1 items-center gap-2 text-left"
       :title="label"
       :aria-label="(expanded ? '收起：' : '展开：') + label"
@@ -43,7 +45,7 @@ const emit = defineEmits<{ toggle: []; detail: [] }>();
     <button
       type="button"
       class="flex size-6 shrink-0 items-center justify-center"
-      :aria-label="'查看详情：' + label"
+      :aria-label="detailLabel ?? ('查看详情：' + label)"
       title="查看完整详情"
       @click="emit('detail')"
     >

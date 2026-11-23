@@ -20,6 +20,7 @@ export interface MessageItem {
   state?: { label: string; tone?: string };
   references?: { id: string; label: string }[];
   detail?: boolean;
+  detailLabel?: string;
   tone?: "danger" | "warning" | "success";
   actions?: { id: string; label: string; disabled?: boolean }[];
 }

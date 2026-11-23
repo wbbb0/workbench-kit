@@ -20,3 +20,5 @@ export * from "./windows/types.js";
 export * from "./windows/useWorkbenchWindows.js";
 export * from "./windows/windowManager.js";
 export * from "./windows/windowSizing.js";
+
+export { useScopedDialog } from "./windows/useScopedDialog.js";

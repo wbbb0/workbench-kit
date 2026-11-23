@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import MarkdownIt from "markdown-it";
+import Token from "markdown-it/lib/token.mjs";
 import hljs from "highlight.js/lib/common";
 import type { MessagePart } from "./types";
 const props = defineProps<{ parts: MessagePart[]; compact?: boolean }>();
@@ -33,6 +34,12 @@ md.renderer.rules.fence = (tokens, index, options, env, renderer) => {
         "</details>"
     : content;
 };
+function renderCode(text: string, language = "") {
+  const token = new Token("fence", "code", 0);
+  token.content = text;
+  token.info = language;
+  return md.renderer.render([token], md.options, {});
+}
 const blocks = computed(() =>
   props.parts.map((p) => ({
     ...p,
@@ -40,7 +47,7 @@ const blocks = computed(() =>
       p.type === "text"
         ? md.render(p.text)
         : p.type === "code"
-          ? md.render("```" + (p.language ?? "") + "\n" + p.text + "\n```")
+          ? renderCode(p.text, p.language)
           : "",
   })),
 );

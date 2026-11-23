@@ -1,4 +1,4 @@
-import type { SettingsActivationStatus } from "../../schema/src/index.js";
+import type { SettingsActivationStatus } from "@workbench-kit/schema";
 import { settingAt } from "./settingsPages.js";
 import type { SchemaMeta } from "./types.js";
 
