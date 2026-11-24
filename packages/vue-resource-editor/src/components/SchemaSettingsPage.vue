@@ -4,6 +4,7 @@ import {
   ref,
   nextTick,
   watch,
+  useId,
   onActivated,
   onDeactivated,
   onMounted,
@@ -38,6 +39,7 @@ import {
   searchSettings,
   resolveSettingsPage,
   isSettingPage,
+  type SettingsStructureEdit,
 } from "../settingsPages";
 const props = withDefaults(
   defineProps<{
@@ -62,6 +64,10 @@ const props = withDefaults(
     showTitle?: boolean;
     focusPath?: string[];
     pageState?: SettingsPageState;
+    selectedPath?: string[];
+    returnPath?: string[];
+    structurePending?: boolean;
+    applyStructure?: (edit: SettingsStructureEdit) => Promise<boolean>;
   }>(),
   {
     showHeader: true,
@@ -88,6 +94,8 @@ const query = computed({
   },
 });
 const content = ref<HTMLElement>();
+const idPrefix = useId();
+const fieldId = (path: string[]) => idPrefix + "-setting-" + settingKey(path);
 const positions = ui.positions;
 function savePosition() {
   if (content.value)
@@ -100,19 +108,27 @@ async function restorePosition() {
   focusField();
 }
 function focusField() {
-  if (!props.focusPath || !content.value) return;
-  const target = Array.from(
-    content.value.querySelectorAll<HTMLElement>("[data-setting-path]"),
-  ).find(
-    (element) => element.dataset.settingPath === settingKey(props.focusPath!),
-  );
-  target?.scrollIntoView?.({ block: "nearest" });
+  const path = props.focusPath ?? props.returnPath;
+  if (!path || !content.value) return;
+  const key = settingKey(path);
+  const row = Array.from(content.value.querySelectorAll<HTMLElement>("[data-setting-path]"))
+    .find((element) => element.dataset.settingPath === key);
+  const variant = content.value.querySelector<HTMLSelectElement>("[data-setting-variant]");
+  const target = props.focusPath && variant?.dataset.settingVariant === key &&
+    (original.value?.discriminator || !row)
+    ? variant
+    : row?.querySelector<HTMLElement>(
+      props.returnPath && !props.focusPath
+        ? "[data-setting-entry]"
+        : "[id], [data-setting-entry]",
+    ) ?? row;
+  target?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   target?.focus({ preventScroll: true });
 }
 onMounted(restorePosition);
-onBeforeUnmount(savePosition);
+onBeforeUnmount(() => { if (!props.applyStructure) savePosition(); });
 watch(
-  () => props.focusPath,
+  () => [props.focusPath, props.returnPath],
   () => nextTick(focusField),
   { deep: true },
 );
@@ -126,7 +142,7 @@ watch(
     focusField();
   },
 );
-onDeactivated(savePosition);
+onDeactivated(() => { if (!props.applyStructure) savePosition(); });
 onActivated(restorePosition);
 const names = ui.names;
 const error = ref("");
@@ -257,17 +273,27 @@ function add() {
   names[settingKey(props.path)] = "";
   go([...props.path, key]);
 }
-function addArrayItem() {
+async function addArrayItem() {
+  const value = initialSettingValue(current.value!.item!);
+  if (props.applyStructure) {
+    await props.applyStructure({ type: "array", path: props.path, operation: "append", value });
+    return;
+  }
   const items = [
     ...((settingValue(props.values, props.path) ?? []) as unknown[]),
   ];
-  items.push(initialSettingValue(current.value!.item!));
+  items.push(value);
   emit("edit", props.path, items);
   go([...props.path, String(items.length - 1)]);
 }
 function removeEntry(path: string[]) {
   if (current.value?.kind !== "array") {
-    emit("reset", path);
+    if (props.applyStructure) void props.applyStructure({ type: "reset", path });
+    else emit("reset", path);
+    return;
+  }
+  if (props.applyStructure) {
+    void props.applyStructure({ type: "array", path: props.path, operation: "remove", index: Number(path.at(-1)) });
     return;
   }
   const items = [
@@ -283,6 +309,10 @@ function moveEntry(path: string[], offset: number) {
   const from = Number(path.at(-1)),
     to = from + offset;
   if (to < 0 || to >= items.length) return;
+  if (props.applyStructure) {
+    void props.applyStructure({ type: "array", path: props.path, operation: "move", from, to });
+    return;
+  }
   [items[from], items[to]] = [items[to], items[from]];
   emit("edit", props.path, items);
 }
@@ -291,7 +321,9 @@ function changeVariant(event: Event) {
     original.value!.options![
       Number((event.target as HTMLSelectElement).value)
     ]!;
-  emit("edit", props.path, initialSettingValue(option));
+  const value = initialSettingValue(option);
+  if (props.applyStructure) void props.applyStructure({ type: "set", path: props.path, value });
+  else emit("edit", props.path, value);
 }
 </script>
 <template>
@@ -320,7 +352,7 @@ function changeVariant(event: Event) {
         :class="showTitle === false ? 'w-full' : 'w-36'"
       />
     </header>
-    <div ref="content" class="min-h-0 flex-1 overflow-auto">
+    <div ref="content" @scroll="savePosition" class="min-h-0 flex-1 overflow-auto">
       <template v-if="searchEnabled && query.trim()">
         <button
           v-for="result in results"
@@ -370,7 +402,7 @@ function changeVariant(event: Event) {
           <WorkbenchButton
             label="重命名"
             size="sm"
-            :disabled="disabled"
+            :disabled="disabled || structurePending"
             @click="
               emit(
                 'rename',
@@ -387,10 +419,10 @@ function changeVariant(event: Event) {
           <label class="text-sm">类型</label>
           <select
             aria-label="类型"
-            :data-setting-path="settingKey(path)"
+            :data-setting-variant="settingKey(path)"
             class="input-base min-w-0 flex-1 px-2 py-1"
             :value="original.options?.indexOf(current!)"
-            :disabled="disabled"
+            :disabled="disabled || structurePending"
             @change="changeVariant"
           >
             <option v-for="(option, i) in original.options" :key="i" :value="i" :disabled="option.disabled">
@@ -408,6 +440,9 @@ function changeVariant(event: Event) {
           <div v-if="complex(row.schema)" class="flex items-center">
             <button
               class="flex min-w-0 flex-1 items-center justify-between gap-2 px-4 py-3 text-left text-sm hover:bg-surface-hover"
+              data-setting-entry
+              :class="{ 'bg-surface-selected': selectedPath && settingKey(selectedPath) === settingKey(row.path) }"
+              :aria-current="selectedPath && settingKey(selectedPath) === settingKey(row.path) ? 'true' : undefined"
               @click="go(row.path)"
             >
               <span class="truncate">{{ row.title }}</span
@@ -418,14 +453,14 @@ function changeVariant(event: Event) {
                 :icon="ArrowUp"
                 title="上移条目"
                 size="sm"
-                :disabled="disabled || row.key === '0'"
+                :disabled="disabled || structurePending || row.key === '0'"
                 @click="moveEntry(row.path, -1)"
               />
               <WorkbenchIconButton
                 :icon="ArrowDown"
                 title="下移条目"
                 size="sm"
-                :disabled="disabled || Number(row.key) === rows.length - 1"
+                :disabled="disabled || structurePending || Number(row.key) === rows.length - 1"
                 @click="moveEntry(row.path, 1)"
               />
             </template>
@@ -436,7 +471,7 @@ function changeVariant(event: Event) {
               size="sm"
               variant="secondary"
               class="mr-3"
-              :disabled="disabled"
+              :disabled="disabled || structurePending"
               @click="removeEntry(row.path)"
             />
           </div>
@@ -447,7 +482,7 @@ function changeVariant(event: Event) {
             <label
               class="min-w-0 flex-1 text-sm"
               :class="inlineField(row.schema) ? 'min-w-[min(100%,8rem)]' : ''"
-              :for="'setting-' + settingKey(row.path)"
+              :for="fieldId(row.path)"
               >{{ row.title }}</label
             >
             <span
@@ -464,14 +499,14 @@ function changeVariant(event: Event) {
                 :icon="ArrowUp"
                 title="上移条目"
                 size="sm"
-                :disabled="disabled || row.key === '0'"
+                :disabled="disabled || structurePending || row.key === '0'"
                 @click="moveEntry(row.path, -1)"
               />
               <WorkbenchIconButton
                 :icon="ArrowDown"
                 title="下移条目"
                 size="sm"
-                :disabled="disabled || Number(row.key) === rows.length - 1"
+                :disabled="disabled || structurePending || Number(row.key) === rows.length - 1"
                 @click="moveEntry(row.path, 1)"
               />
             </template>
@@ -502,7 +537,7 @@ function changeVariant(event: Event) {
                 class="flex flex-wrap items-center gap-2"
               >
                 <input
-                  :id="'setting-' + settingKey(row.path)"
+                  :id="fieldId(row.path)"
                   type="text"
                   autocomplete="off"
                   autocapitalize="off"
@@ -549,7 +584,7 @@ function changeVariant(event: Event) {
               </div>
               <select
                 v-else-if="row.schema.reference"
-                :id="'setting-' + settingKey(row.path)"
+                :id="fieldId(row.path)"
                 class="input-base w-full min-w-0 px-2 py-1"
                 :value="inputValue(row.path) ?? ''"
                 :disabled="disabled"
@@ -601,7 +636,7 @@ function changeVariant(event: Event) {
               </select>
               <SchemaField
                 v-else
-                :input-id="'setting-' + settingKey(row.path)"
+                :input-id="fieldId(row.path)"
                 :schema="row.schema"
                 :default-value="placeholderFor(row.path, row.schema)"
                 :default-presentation="
@@ -638,7 +673,7 @@ function changeVariant(event: Event) {
             :icon="Plus"
             label="新增条目"
             size="sm"
-            :disabled="disabled"
+            :disabled="disabled || structurePending"
             @click="addArrayItem"
           />
         </div>

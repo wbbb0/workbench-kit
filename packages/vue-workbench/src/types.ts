@@ -23,6 +23,8 @@ export type WorkbenchViewLayout = {
   mobile: {
     /** 移动端根区域。其他区域会作为覆盖层进入 mobile area stack。 */
     rootArea: WorkbenchAreaId;
+    /** 由内容区接管页面转场，并使用移动单栏布局。 */
+    pageMotion?: "content";
   };
   desktop: {
     primarySidebar?: WorkbenchAreaSize;

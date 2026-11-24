@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="TItem">
+import { ref } from "vue";
 import WorkbenchAreaHeader from "./WorkbenchAreaHeader.vue";
 import WorkbenchEmptyState from "./WorkbenchEmptyState.vue";
 
@@ -17,6 +18,9 @@ withDefaults(defineProps<{
   itemKey: undefined
 });
 
+const scrollElement = ref<HTMLElement>();
+defineExpose({ scrollElement });
+
 function getItemKey(item: TItem, index: number): string | number {
   return typeof item === "object" && item !== null && "id" in item && typeof item.id === "string"
     ? item.id
@@ -32,7 +36,7 @@ function getItemKey(item: TItem, index: number): string | number {
         <slot name="actions" />
       </template>
     </WorkbenchAreaHeader>
-    <div class="min-h-0 flex-1 overflow-y-auto">
+    <div ref="scrollElement" class="min-h-0 flex-1 overflow-y-auto">
       <slot name="before-list" />
       <template v-for="(item, index) in items" :key="itemKey ? itemKey(item, index) : getItemKey(item, index)">
         <slot name="item" :item="item" :index="index" />

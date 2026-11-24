@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, provide, ref, watch } from "vue";
+import { ArrowLeft } from "lucide-vue-next";
+import { mobilePageColumns } from "./runtime/pageColumns";
 import { usePageMotion } from "./runtime/usePageMotion";
 import WorkbenchAreaScope from "./WorkbenchAreaScope.vue";
 import {
@@ -25,12 +27,15 @@ const emit = defineEmits<{
   navigate: [itemId: string];
 }>();
 
+const contentMotion = computed(() => props.view.layout.mobile.pageMotion === "content");
+provide(mobilePageColumns, contentMotion);
+
 const rootSurface = ref<HTMLElement | null>(null);
 const overlaySurface = ref<HTMLElement | null>(null);
 usePageMotion(
   computed(() => ({
     viewId: props.view.id,
-    keys: props.runtime.pages.controlled.value
+    keys: !contentMotion.value && props.runtime.pages.controlled.value
       ? props.runtime.pages.path.value.map((page) => page.key)
       : [],
   })),
@@ -218,13 +223,14 @@ onUnmounted(() => {
             class="shrink-0 text-accent"
             @click="goBack"
           >
-            ‹ 返回
+            <ArrowLeft v-if="contentMotion" :size="20" aria-hidden="true" />
+            <span v-else>‹ 返回</span>
           </button>
           <span
             class="min-w-0 flex-1 truncate font-semibold text-text-secondary"
             >{{ isMobileOverlayVisible ? routeLabel : pageLabel }}</span
           >
-          <nav class="flex gap-1">
+          <nav v-if="!contentMotion || !canPopMobileArea" class="flex gap-1">
             <button
               v-for="item in mobileNavItems"
               :key="item.id"

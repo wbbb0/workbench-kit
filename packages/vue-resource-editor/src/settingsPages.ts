@@ -156,3 +156,10 @@ export function resolveSettingsPage(
   }
   return { pages, path: pages.at(-1)!.path, focusPath, valid };
 }
+
+export type SettingsStructureEdit =
+  | { type: "array"; path: string[]; operation: "append"; value: unknown }
+  | { type: "array"; path: string[]; operation: "remove"; index: number }
+  | { type: "array"; path: string[]; operation: "move"; from: number; to: number }
+  | { type: "reset"; path: string[] }
+  | { type: "set"; path: string[]; value: unknown };

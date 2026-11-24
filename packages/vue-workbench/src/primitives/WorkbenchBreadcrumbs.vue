@@ -12,6 +12,7 @@ const props = withDefaults(defineProps<{
   /** 根据实际可用宽度折叠中间路径；maxItems 仍作为显式上限。 */
   autoCollapse?: boolean;
   overflowLabel?: string;
+  omitTrailingSeparator?: boolean;
 }>(), { overflowLabel: "完整路径" });
 const controller = useWorkbenchControllerContext();
 const menuId = useId();
@@ -51,7 +52,7 @@ function observe() {
     measure();
   } else measuredLimit.value = undefined;
 }
-watch(() => [props.items, props.maxItems, props.autoCollapse], () => {
+watch(() => [props.items, props.maxItems, props.autoCollapse, props.omitTrailingSeparator], () => {
   if (mounted) observe();
 }, { deep: true, flush: "post" });
 onMounted(() => {
@@ -79,7 +80,7 @@ function openAncestors(event: MouseEvent) {
       <button v-if="item.onSelect" type="button" class="hover:text-text-secondary" :class="autoCollapse ? 'min-w-0 truncate' : 'shrink-0'" :title="autoCollapse ? item.label : undefined" @click="item.onSelect()">{{ item.label }}</button>
       <a v-else-if="item.href" :href="item.href" class="hover:text-text-secondary" :class="autoCollapse ? 'min-w-0 truncate' : 'shrink-0'" :title="autoCollapse ? item.label : undefined">{{ item.label }}</a>
       <span v-else class="text-text-subtle" :class="autoCollapse ? 'min-w-0 truncate' : 'shrink-0'" :title="autoCollapse ? item.label : undefined">{{ item.label }}</span>
-      <span class="shrink-0 text-text-subtle" aria-hidden="true">/</span>
+      <span v-if="!omitTrailingSeparator || items.length > 1" class="shrink-0 text-text-subtle" aria-hidden="true">/</span>
     </template>
     <template v-if="collapsed">
       <button type="button" class="flex size-6 shrink-0 items-center justify-center rounded hover:bg-surface-hover" :title="overflowLabel" :aria-label="overflowLabel" aria-haspopup="menu" data-menu-trigger="true" @click="openAncestors"><Ellipsis class="size-4" aria-hidden="true" /></button>
@@ -89,10 +90,10 @@ function openAncestors(event: MouseEvent) {
       <button v-if="item.onSelect" type="button" class="min-w-0 truncate hover:text-text-secondary" :title="item.label" @click="item.onSelect()">{{ item.label }}</button>
       <a v-else-if="item.href" :href="item.href" class="min-w-0 truncate hover:text-text-secondary" :title="item.label">{{ item.label }}</a>
       <span v-else class="min-w-0 truncate text-text-subtle" :title="item.label">{{ item.label }}</span>
-      <span class="shrink-0 text-text-subtle" aria-hidden="true">/</span>
+      <span v-if="!omitTrailingSeparator || index < trailing.length - 1" class="shrink-0 text-text-subtle" aria-hidden="true">/</span>
     </template>
     <div v-if="autoCollapse" ref="measuring" class="pointer-events-none invisible absolute left-0 top-0 flex w-max items-center gap-1 whitespace-nowrap" aria-hidden="true" inert>
-      <span v-for="(item, index) in items" :key="index" data-breadcrumb-measure-item class="flex shrink-0 items-center gap-1"><span>{{ item.label }}</span><span>/</span></span>
+      <span v-for="(item, index) in items" :key="index" data-breadcrumb-measure-item class="flex shrink-0 items-center gap-1"><span>{{ item.label }}</span><span v-if="!omitTrailingSeparator || index < items.length - 1">/</span></span>
       <span data-breadcrumb-measure-overflow class="flex shrink-0 items-center gap-1"><span class="flex size-6 items-center justify-center"><Ellipsis class="size-4" /></span><span>/</span></span>
     </div>
   </nav>

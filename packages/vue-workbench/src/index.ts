@@ -18,3 +18,6 @@ export * from "./errors/types.js";
 export * from "./errors/useWorkbenchErrors.js";
 
 export * from './messages/index.js';
+
+export { default as WorkbenchPageColumns } from "./layouts/WorkbenchPageColumns.vue";
+export type { WorkbenchColumnPage } from "./runtime/pageColumns.js";
