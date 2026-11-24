@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, KeepAlive, type Component } from "vue";
-import { provideWorkbenchAreaId } from "./runtime/workbenchAreaContext.js";
+import { KeepAlive, type Component } from "vue";
+import WorkbenchAreaContent from "./WorkbenchAreaContent.vue";
+import type { WorkbenchPageLocation } from "./runtime/pageNavigation.js";
 import type { WorkbenchAreaId } from "./types.js";
-const props = withDefaults(
+withDefaults(
   defineProps<{
     areaId: WorkbenchAreaId;
     component?: Component;
@@ -10,18 +11,26 @@ const props = withDefaults(
     cache?: boolean;
     cacheMax?: number;
     visible?: boolean;
+    leavingPath?: readonly WorkbenchPageLocation[];
   }>(),
   { visible: true },
 );
-provideWorkbenchAreaId(computed(() => props.areaId));
 </script>
 <template>
   <KeepAlive :max="cacheMax ?? 8">
-    <component
-      :is="component"
-      v-if="cache && component && visible !== false"
+    <WorkbenchAreaContent
+      v-if="cache && component && visible"
       :key="`${viewId}:${areaId}`"
+      :area-id="areaId"
+      :component="component"
+      :leaving-path="leavingPath"
     />
   </KeepAlive>
-  <component :is="component" v-if="!cache && component && visible !== false" />
+  <WorkbenchAreaContent
+    v-if="!cache && component && visible"
+    :key="`${viewId}:${areaId}`"
+    :area-id="areaId"
+    :component="component"
+    :leaving-path="leavingPath"
+  />
 </template>

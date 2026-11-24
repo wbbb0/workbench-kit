@@ -6,9 +6,11 @@ import {
   onDeactivated,
   onUnmounted,
   ref,
+  watch,
 } from "vue";
 import { mount } from "@vue/test-utils";
 import WorkbenchAreaScope from "./WorkbenchAreaScope.vue";
+import { useWorkbenchAreaPresentation } from "./runtime/workbenchAreaContext";
 describe("WorkbenchAreaScope区域缓存", () => {
   it("默认保持卸载行为，opt-in按稳定view/area key缓存并有界淘汰", async () => {
     const events: string[] = [];
@@ -54,4 +56,45 @@ describe("WorkbenchAreaScope区域缓存", () => {
     expect(events).toContain("unmount");
     plain.unmount();
   });
+});
+
+it("退场路径和活动状态随缓存区域实例，其他视图不会唤醒它", async () => {
+  const first: string[] = [];
+  const second: string[] = [];
+  function panel(observed: string[]) {
+    return defineComponent({
+      setup() {
+        const area = useWorkbenchAreaPresentation()!;
+        watch([area.active, area.leavingPath], ([active, path]) => {
+          observed.push(path?.at(-1)?.key ?? (active ? "active" : "inactive"));
+        });
+        return () => h("div");
+      },
+    });
+  }
+  const old = panel(first),
+    next = panel(second);
+  const w = mount(WorkbenchAreaScope, {
+    props: {
+      areaId: "mainArea",
+      cache: true,
+      viewId: "first",
+      component: old,
+    },
+  });
+  try {
+    await w.setProps({ viewId: "second", component: next });
+    await w.setProps({
+      leavingPath: [
+        { key: "second/detail", title: "next", areaId: "mainArea" },
+      ],
+    });
+    await w.setProps({ visible: false, leavingPath: undefined });
+    expect(first).toEqual(["inactive"]);
+    expect(second).toEqual(["second/detail", "inactive"]);
+    await w.setProps({ visible: true, viewId: "first", component: old });
+    expect(first).toEqual(["inactive", "active"]);
+  } finally {
+    w.unmount();
+  }
 });

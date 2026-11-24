@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, provide, ref, watch } from "vue";
+import {
+  computed,
+  onMounted,
+  onUnmounted,
+  provide,
+  ref,
+  watch,
+  type Component,
+} from "vue";
 import { ArrowLeft } from "lucide-vue-next";
 import { mobilePageColumns } from "./runtime/pageColumns";
-import { usePageMotion } from "./runtime/usePageMotion";
+import { usePageSurfaceMotion } from "./runtime/usePageMotion";
 import WorkbenchAreaScope from "./WorkbenchAreaScope.vue";
 import {
   createStatusbarMenuNodes,
@@ -27,22 +35,15 @@ const emit = defineEmits<{
   navigate: [itemId: string];
 }>();
 
-const contentMotion = computed(() => props.view.layout.mobile.pageMotion === "content");
-provide(mobilePageColumns, contentMotion);
-
-const rootSurface = ref<HTMLElement | null>(null);
-const overlaySurface = ref<HTMLElement | null>(null);
-usePageMotion(
-  computed(() => ({
-    viewId: props.view.id,
-    keys: !contentMotion.value && props.runtime.pages.controlled.value
-      ? props.runtime.pages.path.value.map((page) => page.key)
-      : [],
-  })),
-  () =>
-    isMobileOverlayVisible.value ? overlaySurface.value : rootSurface.value,
+provide(
+  mobilePageColumns,
+  computed(() => true),
 );
-const mainArea = computed(() => props.view.areas.mainArea);
+
+const stage = ref<HTMLElement | null>(null);
+const rootSurface = ref<HTMLElement | null>(null);
+const detailSurface = ref<HTMLElement | null>(null);
+const width = ref(0);
 const pageLabel = computed(
   () => props.runtime.pages.current.value?.title ?? routeLabel.value,
 );
@@ -63,20 +64,45 @@ const mobileNavItems = computed(() => {
 });
 const mobileRootAreaId = computed(() => props.runtime.mobileRootAreaId.value);
 const mobileRootArea = computed(() => props.view.areas[mobileRootAreaId.value]);
-const activeMobileArea = computed(
-  () =>
-    props.view.areas[props.runtime.activeMobileAreaId.value] ?? mainArea.value,
-);
-const hasMobileRootArea = computed(
-  () => mobileRootAreaId.value !== "mainArea" && !!mobileRootArea.value,
-);
-const isActiveMobileAreaVisible = computed(
-  () =>
-    mobileRootAreaId.value === "mainArea" ||
-    props.runtime.activeMobileAreaId.value !== mobileRootAreaId.value,
-);
 const isMobileOverlayVisible = computed(
   () => props.runtime.activeMobileAreaId.value !== mobileRootAreaId.value,
+);
+const activeAreaPages = computed(() => {
+  const view = props.view;
+  const root = mobileRootAreaId.value;
+  const active = props.runtime.activeMobileAreaId.value;
+  const path = props.runtime.pages.path.value;
+  const area = (areaId: typeof root) => ({
+    key: JSON.stringify([view.id, path[0]?.key, areaId]),
+    areaId,
+    component: view.areas[areaId] as Component | undefined,
+    path,
+  });
+  return active === root ? [area(root)] : [area(root), area(active)];
+});
+const { transition, cancel } = usePageSurfaceMotion(
+  computed(() => ({
+    pages: activeAreaPages.value,
+    layoutKey: String(width.value),
+    enabled: true,
+  })),
+  () => [rootSurface.value, detailSurface.value],
+  (from, to) =>
+    [from, to].some(
+      (area) =>
+        area.areaId !== mobileRootAreaId.value &&
+        area.path.at(-1)?.presentation !== undefined,
+    ),
+);
+const detail = computed(() =>
+  isMobileOverlayVisible.value
+    ? activeAreaPages.value.at(-1)
+    : transition.value?.from,
+);
+const leavingPath = computed(() =>
+  transition.value?.direction === "back"
+    ? transition.value.from.path
+    : undefined,
 );
 const canPopMobileArea = computed(() => props.runtime.canPopMobileArea.value);
 const mobileHistoryDepth = ref(0);
@@ -174,20 +200,20 @@ function goBack() {
   }
 }
 
-function setRootSurface(element: unknown) {
-  rootSurface.value = element instanceof HTMLElement ? element : null;
-  if (!hasMobileRootArea.value) setMainRegionRef(element);
-}
-function setOverlaySurface(element: unknown) {
-  overlaySurface.value = element instanceof HTMLElement ? element : null;
-  setMainRegionRef(element);
-}
-function setMainRegionRef(element: unknown) {
-  props.runtime.mainRegionRef.value =
-    element instanceof HTMLElement ? element : null;
-}
+watch(stage, (element) => {
+  props.runtime.mainRegionRef.value = element;
+});
+let observer: ResizeObserver | undefined;
 
 onMounted(() => {
+  const element = stage.value;
+  if (element && typeof ResizeObserver !== "undefined") {
+    width.value = element.clientWidth;
+    observer = new ResizeObserver(([entry]) => {
+      if (entry?.contentRect.width) width.value = entry.contentRect.width;
+    });
+    observer.observe(element);
+  }
   watch(
     () => props.runtime.pages.controlled.value,
     (controlled) => {
@@ -199,106 +225,53 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  cancel();
+  observer?.disconnect();
   window.removeEventListener("popstate", handlePopState);
 });
 </script>
 
 <template>
   <div
-    class="fixed inset-0 flex h-full w-full overflow-hidden bg-surface-app text-text-primary"
+    class="fixed inset-0 flex h-full w-full flex-col overflow-hidden bg-surface-app text-text-primary"
   >
-    <div
-      :ref="setRootSurface"
-      :inert="isMobileOverlayVisible"
-      class="absolute inset-0 flex flex-col bg-surface-app"
+    <header
+      class="pt-safe flex h-[calc(44px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border-default bg-surface-sidebar px-3"
     >
-      <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <header
-          class="pt-safe flex h-[calc(44px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border-default bg-surface-sidebar px-3"
-        >
-          <button
-            v-if="!isMobileOverlayVisible && canPopMobileArea"
-            :aria-label="backLabel"
-            :disabled="runtime.pages.pending.value"
-            class="shrink-0 text-accent"
-            @click="goBack"
-          >
-            <ArrowLeft v-if="contentMotion" :size="20" aria-hidden="true" />
-            <span v-else>‹ 返回</span>
-          </button>
-          <span
-            class="min-w-0 flex-1 truncate font-semibold text-text-secondary"
-            >{{ isMobileOverlayVisible ? routeLabel : pageLabel }}</span
-          >
-          <nav v-if="!contentMotion || !canPopMobileArea" class="flex gap-1">
-            <button
-              v-for="item in mobileNavItems"
-              :key="item.id"
-              type="button"
-              class="flex h-10 w-10 items-center justify-center rounded border-0 bg-transparent text-text-muted"
-              :class="{ 'text-text-secondary': activeNavItemId === item.id }"
-              @click="emit('navigate', item.id)"
-            >
-              <component :is="item.icon" :size="20" :stroke-width="1.5" />
-              <span class="sr-only">{{ item.title }}</span>
-            </button>
-            <button
-              class="flex h-10 w-10 items-center justify-center rounded border-0 bg-transparent text-text-muted"
-              type="button"
-              data-menu-trigger="mobile-workbench"
-              @click="mobileWorkbenchTrigger.onClick"
-              @contextmenu="mobileWorkbenchTrigger.onContextMenu"
-              @pointerdown="mobileWorkbenchTrigger.onPointerDown"
-              @pointerup="mobileWorkbenchTrigger.onPointerUp"
-              @pointercancel="mobileWorkbenchTrigger.onPointerCancel"
-            >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.8"
-              >
-                <circle cx="5" cy="12" r="1.5" />
-                <circle cx="12" cy="12" r="1.5" />
-                <circle cx="19" cy="12" r="1.5" />
-              </svg>
-              <span class="sr-only">工作台菜单</span>
-            </button>
-          </nav>
-        </header>
-        <WorkbenchAreaScope
-          :area-id="mobileRootAreaId"
-          :component="mobileRootArea"
-          :view-id="view.id"
-          :cache="!!view.cache?.areas?.includes(mobileRootAreaId)"
-          :cache-max="view.cache?.max"
-        />
-      </div>
-    </div>
-    <div
-      v-if="hasMobileRootArea"
-      :ref="setOverlaySurface"
-      :inert="!isActiveMobileAreaVisible"
-      class="absolute inset-0 z-10 flex flex-col bg-surface-app"
-      :class="[
-        isActiveMobileAreaVisible
-          ? 'translate-x-0'
-          : 'pointer-events-none translate-x-full',
-        !runtime.pages.controlled.value &&
-          'motion-safe:transition-transform motion-safe:duration-220 motion-safe:ease-[ease]',
-      ]"
-    >
-      <header
-        class="pt-safe flex h-[calc(44px+env(safe-area-inset-top))] shrink-0 items-center gap-2 border-b border-border-default bg-surface-sidebar px-3"
+      <button
+        v-if="canPopMobileArea"
+        :aria-label="backLabel"
+        :disabled="runtime.pages.pending.value"
+        class="flex shrink-0 items-center gap-1 text-accent"
+        @click="goBack"
       >
+        <ArrowLeft :size="20" aria-hidden="true" />
+        <span>返回</span>
+      </button>
+      <span class="min-w-0 flex-1 truncate font-semibold text-text-secondary">{{
+        pageLabel
+      }}</span>
+      <nav v-if="!canPopMobileArea" class="flex gap-1">
         <button
-          v-if="canPopMobileArea"
-          :aria-label="backLabel"
-          :disabled="runtime.pages.pending.value"
-          class="flex cursor-pointer items-center gap-1 border-0 bg-transparent px-0 py-1 text-ui text-accent"
-          @click="goBack"
+          v-for="item in mobileNavItems"
+          :key="item.id"
+          type="button"
+          class="flex h-10 w-10 items-center justify-center rounded border-0 bg-transparent text-text-muted"
+          :class="{ 'text-text-secondary': activeNavItemId === item.id }"
+          @click="emit('navigate', item.id)"
+        >
+          <component :is="item.icon" :size="20" :stroke-width="1.5" />
+          <span class="sr-only">{{ item.title }}</span>
+        </button>
+        <button
+          class="flex h-10 w-10 items-center justify-center rounded border-0 bg-transparent text-text-muted"
+          type="button"
+          data-menu-trigger="mobile-workbench"
+          @click="mobileWorkbenchTrigger.onClick"
+          @contextmenu="mobileWorkbenchTrigger.onContextMenu"
+          @pointerdown="mobileWorkbenchTrigger.onPointerDown"
+          @pointerup="mobileWorkbenchTrigger.onPointerUp"
+          @pointercancel="mobileWorkbenchTrigger.onPointerCancel"
         >
           <svg
             width="20"
@@ -306,29 +279,53 @@ onUnmounted(() => {
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            stroke-width="2"
+            stroke-width="1.8"
           >
-            <polyline points="15 18 9 12 15 6" />
+            <circle cx="5" cy="12" r="1.5" />
+            <circle cx="12" cy="12" r="1.5" />
+            <circle cx="19" cy="12" r="1.5" />
           </svg>
-          <span>返回</span>
+          <span class="sr-only">工作台菜单</span>
         </button>
-        <span
-          class="min-w-0 flex-1 truncate text-ui font-medium text-text-secondary"
-          >{{ pageLabel }}</span
-        >
-      </header>
-      <div class="min-h-0 flex-1 overflow-hidden">
+      </nav>
+    </header>
+    <div ref="stage" class="relative isolate min-h-0 flex-1 overflow-clip">
+      <section
+        ref="rootSurface"
+        aria-label="一级页面"
+        class="absolute inset-0 flex flex-col overflow-hidden bg-surface-app"
+        :inert="isMobileOverlayVisible"
+      >
         <WorkbenchAreaScope
-          :area-id="runtime.activeMobileAreaId.value"
-          :component="activeMobileArea"
+          :area-id="mobileRootAreaId"
+          :component="mobileRootArea"
           :view-id="view.id"
-          :cache="
-            !!view.cache?.areas?.includes(runtime.activeMobileAreaId.value)
-          "
+          :cache="!!view.cache?.areas?.includes(mobileRootAreaId)"
           :cache-max="view.cache?.max"
-          :visible="isActiveMobileAreaVisible"
         />
-      </div>
+      </section>
+      <section
+        v-show="!!detail"
+        ref="detailSurface"
+        aria-label="详情页面"
+        class="absolute inset-0 z-10 flex flex-col overflow-hidden bg-surface-app"
+        @click.self="!isMobileOverlayVisible && $event.stopPropagation()"
+      >
+        <div
+          class="flex min-h-0 flex-1 flex-col overflow-hidden"
+          :inert="!isMobileOverlayVisible"
+        >
+          <WorkbenchAreaScope
+            :area-id="detail?.areaId ?? 'mainArea'"
+            :component="detail?.component"
+            :view-id="view.id"
+            :visible="!!detail"
+            :leaving-path="leavingPath"
+            :cache="!!detail && !!view.cache?.areas?.includes(detail.areaId)"
+            :cache-max="view.cache?.max"
+          />
+        </div>
+      </section>
     </div>
   </div>
 </template>

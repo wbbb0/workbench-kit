@@ -1,5 +1,5 @@
 import { flushPromises, mount } from "@vue/test-utils";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import SchemaSettingsPage from "./SchemaSettingsPage.vue";
 import type { SchemaMeta } from "../types";
 const text: SchemaMeta = { kind: "string", optional: false, hasDefault: false };
@@ -293,4 +293,31 @@ it("有序对象数组使用schema详情，支持添加删除排序与分组引�
     "org/adapted.v2",
   ]);
   w.unmount();
+});
+
+it("结构编辑失败或抛错时，类型选择仍和生效分支一致", async () => {
+  const schema: SchemaMeta = { ...text, kind: "object", fields: {
+    variant: { schema: { ...text, kind: "union", options: [
+      { ...text, kind: "string", title: "文本" },
+      { ...text, kind: "object", title: "对象", fields: {} },
+    ] } },
+  } };
+  const applyStructure = vi.fn()
+    .mockResolvedValueOnce(false)
+    .mockRejectedValueOnce(new Error("结构编辑失败"));
+  const w = mount(SchemaSettingsPage, { props: {
+    schema, values: { variant: "原值" }, overrides: {}, path: ["variant"], applyStructure,
+  } });
+  try {
+    const select = w.get<HTMLSelectElement>('select[aria-label="类型"]');
+    await select.setValue("1");
+    await flushPromises();
+    expect(select.element.value).toBe("0");
+    await select.setValue("1");
+    await flushPromises();
+    expect(select.element.value).toBe("0");
+    expect(w.get('[role="alert"]').text()).toBe("结构编辑失败");
+  } finally {
+    w.unmount();
+  }
 });

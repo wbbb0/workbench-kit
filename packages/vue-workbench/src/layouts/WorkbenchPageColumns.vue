@@ -2,21 +2,18 @@
 import {
   computed,
   inject,
-  nextTick,
   onActivated,
   onBeforeUnmount,
   onDeactivated,
   onMounted,
   ref,
-  shallowRef,
-  watch,
 } from "vue";
 import {
   mobilePageColumns,
   pageColumnCapacity,
   type WorkbenchColumnPage,
 } from "../runtime/pageColumns";
-import { pageMotionDirection } from "../runtime/usePageMotion";
+import { usePageSurfaceMotion } from "../runtime/usePageMotion";
 
 const props = defineProps<{
   pages: readonly P[];
@@ -47,8 +44,19 @@ const capacity = computed(() =>
 );
 const current = computed(() => props.pages.at(-1));
 
-const transition = shallowRef<{ from: P; direction: "forward" | "back" }>();
-const returningFrom = shallowRef<P>();
+const { transition, returningFrom, cancel } = usePageSurfaceMotion(
+  computed(() => ({
+    pages: props.pages,
+    layoutKey: JSON.stringify([width.value, capacity.value, props.motionEpoch]),
+    enabled: active.value && capacity.value === 1,
+  })),
+  () => {
+    const [under, over] = Array.from(
+      viewport.value?.children ?? [],
+    ) as HTMLElement[];
+    return [under ?? null, over ?? null];
+  },
+);
 const layers = computed(() => {
   const visible = props.pages.slice(-capacity.value);
   const motion = transition.value;
@@ -60,26 +68,13 @@ const layers = computed(() => {
 });
 
 let observer: ResizeObserver | undefined;
-let media: MediaQueryList | undefined;
-let animations: Animation[] = [];
-let generation = 0;
-function stop() {
-  generation++;
-  for (const animation of animations) animation.cancel();
-  animations = [];
-  transition.value = undefined;
-}
 function measure(value: number) {
   if (!active.value || value <= 0 || value === width.value) return;
-  stop();
   width.value = value;
 }
 function deactivate() {
   active.value = false;
-  stop();
-}
-function motionPreferenceChanged() {
-  if (media?.matches) stop();
+  cancel();
 }
 onMounted(() => {
   const element = viewport.value!;
@@ -90,8 +85,6 @@ onMounted(() => {
     });
     observer.observe(element);
   }
-  media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-  media?.addEventListener?.("change", motionPreferenceChanged);
 });
 onActivated(() => {
   active.value = true;
@@ -101,70 +94,7 @@ onDeactivated(deactivate);
 onBeforeUnmount(() => {
   deactivate();
   observer?.disconnect();
-  media?.removeEventListener?.("change", motionPreferenceChanged);
 });
-
-watch(
-  [() => props.pages, capacity, () => props.motionEpoch],
-  async ([pages, cols, epoch], [previous, oldCols, oldEpoch]) => {
-    const from = previous.at(-1);
-    const to = pages.at(-1);
-    const sameLayout = cols === oldCols && epoch === oldEpoch;
-    if (sameLayout && from?.key === to?.key) return;
-    stop();
-    const turn = generation;
-    const locate = (chain: readonly P[]) => ({
-      viewId: "",
-      keys: chain.map(({ key }) => key),
-    });
-    const direction =
-      sameLayout &&
-      from &&
-      to &&
-      pageMotionDirection(locate(previous), locate(pages));
-    returningFrom.value =
-      direction === "back" && document.activeElement?.matches(":focus-visible")
-        ? previous[pages.length]
-        : undefined;
-    const element = viewport.value;
-    if (
-      !active.value ||
-      cols !== 1 ||
-      !direction ||
-      !from ||
-      !element?.animate ||
-      media?.matches
-    )
-      return;
-
-    transition.value = { from, direction };
-    await nextTick();
-    if (turn !== generation) return;
-    const [under, over] = Array.from(element.children) as HTMLElement[];
-    if (!under || !over) {
-      stop();
-      return;
-    }
-    const run = (layer: HTMLElement, start: number, end: number) =>
-      layer.animate(
-        [
-          { transform: `translateX(${start}%)` },
-          { transform: `translateX(${end}%)` },
-        ],
-        { duration: 220, easing: "cubic-bezier(.22,.68,.24,1)", fill: "both" },
-      );
-    animations =
-      direction === "forward"
-        ? [run(under, 0, -18), run(over, 100, 0)]
-        : [run(under, -18, 0), run(over, 0, 100)];
-    try {
-      await Promise.all(animations.map((animation) => animation.finished));
-    } catch {
-      // cancel() rejects finished; only this generation can clean up its surfaces.
-    }
-    if (turn === generation) stop();
-  },
-);
 </script>
 
 <template>
@@ -192,10 +122,9 @@ watch(
     >
       <header
         v-if="capacity > 1 && layers.length > 1 && !transition"
-        class="panel-header shrink-0 truncate px-3 text-sm font-medium"
-        style="height: 36px"
+        class="panel-header flex h-9 shrink-0 items-center border-b px-3 text-sm font-medium"
       >
-        {{ page.title }}
+        <span class="min-w-0 truncate">{{ page.title }}</span>
       </header>
       <div
         class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"

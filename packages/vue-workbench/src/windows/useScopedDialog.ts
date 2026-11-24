@@ -1,5 +1,6 @@
-import { nextTick, onBeforeUnmount, onDeactivated, useId } from "vue";
+import { nextTick, onBeforeUnmount, onDeactivated, useId, watch } from "vue";
 import type { WorkbenchDialogDefinition } from "./types.js";
+import { useWorkbenchAreaPresentation } from "../runtime/workbenchAreaContext.js";
 import { useWorkbenchWindows } from "./useWorkbenchWindows.js";
 
 /** 页面只拥有窗口生命周期；渲染、操作和尺寸全部交给 kit。 */
@@ -7,6 +8,7 @@ export function useScopedDialog(
   defaults: Partial<WorkbenchDialogDefinition> = {},
 ) {
   const windows = useWorkbenchWindows();
+  const area = useWorkbenchAreaPresentation();
   const ownerId = useId();
   let sequence = 0;
   let current: { id: string; opener?: HTMLElement } | undefined;
@@ -19,6 +21,7 @@ export function useScopedDialog(
     windows.close(entry.id, { reason: "dismiss", values: {} });
   }
   async function open(definition: WorkbenchDialogDefinition) {
+    if (area && !area.active.value) return;
     close();
     const version = revision;
     const entry = {
@@ -41,6 +44,7 @@ export function useScopedDialog(
     if (entry.opener?.isConnected) entry.opener.focus();
     return result;
   }
+  if (area) watch(area.active, (active) => { if (!active) close(); });
   onDeactivated(() => close());
   onBeforeUnmount(() => close());
   return {

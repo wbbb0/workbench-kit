@@ -5,6 +5,8 @@ export interface WorkbenchPageLocation {
   key: string;
   title: string;
   areaId: WorkbenchAreaId;
+  /** 宿主可保留详情渲染参数以启用移动区域转场。kit 原样保留，页面切换期间参数应稳定。 */
+  presentation?: unknown;
 }
 export interface WorkbenchPageNavigation {
   viewId: string;

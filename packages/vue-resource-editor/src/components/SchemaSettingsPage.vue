@@ -6,9 +6,7 @@ import {
   watch,
   useId,
   onActivated,
-  onDeactivated,
   onMounted,
-  onBeforeUnmount,
 } from "vue";
 import {
   ChevronRight,
@@ -126,7 +124,6 @@ function focusField() {
   target?.focus({ preventScroll: true });
 }
 onMounted(restorePosition);
-onBeforeUnmount(() => { if (!props.applyStructure) savePosition(); });
 watch(
   () => [props.focusPath, props.returnPath],
   () => nextTick(focusField),
@@ -142,10 +139,10 @@ watch(
     focusField();
   },
 );
-onDeactivated(() => { if (!props.applyStructure) savePosition(); });
 onActivated(restorePosition);
 const names = ui.names;
 const error = ref("");
+const structureError = ref("");
 const original = computed(() =>
   settingAt(props.schema, props.values, props.path),
 );
@@ -273,10 +270,18 @@ function add() {
   names[settingKey(props.path)] = "";
   go([...props.path, key]);
 }
+async function applyStructure(edit: SettingsStructureEdit) {
+  structureError.value = "";
+  try {
+    await props.applyStructure?.(edit);
+  } catch (cause) {
+    structureError.value = cause instanceof Error ? cause.message : String(cause);
+  }
+}
 async function addArrayItem() {
   const value = initialSettingValue(current.value!.item!);
   if (props.applyStructure) {
-    await props.applyStructure({ type: "array", path: props.path, operation: "append", value });
+    await applyStructure({ type: "array", path: props.path, operation: "append", value });
     return;
   }
   const items = [
@@ -288,12 +293,12 @@ async function addArrayItem() {
 }
 function removeEntry(path: string[]) {
   if (current.value?.kind !== "array") {
-    if (props.applyStructure) void props.applyStructure({ type: "reset", path });
+    if (props.applyStructure) void applyStructure({ type: "reset", path });
     else emit("reset", path);
     return;
   }
   if (props.applyStructure) {
-    void props.applyStructure({ type: "array", path: props.path, operation: "remove", index: Number(path.at(-1)) });
+    void applyStructure({ type: "array", path: props.path, operation: "remove", index: Number(path.at(-1)) });
     return;
   }
   const items = [
@@ -310,20 +315,26 @@ function moveEntry(path: string[], offset: number) {
     to = from + offset;
   if (to < 0 || to >= items.length) return;
   if (props.applyStructure) {
-    void props.applyStructure({ type: "array", path: props.path, operation: "move", from, to });
+    void applyStructure({ type: "array", path: props.path, operation: "move", from, to });
     return;
   }
   [items[from], items[to]] = [items[to], items[from]];
   emit("edit", props.path, items);
 }
-function changeVariant(event: Event) {
-  const option =
-    original.value!.options![
-      Number((event.target as HTMLSelectElement).value)
-    ]!;
+async function changeVariant(event: Event) {
+  const select = event.target as HTMLSelectElement;
+  const option = original.value?.options?.[Number(select.value)];
+  if (!option) return;
   const value = initialSettingValue(option);
-  if (props.applyStructure) void props.applyStructure({ type: "set", path: props.path, value });
-  else emit("edit", props.path, value);
+  if (!props.applyStructure) {
+    emit("edit", props.path, value);
+    return;
+  }
+  const currentIndex = () => original.value?.options?.indexOf(current.value!) ?? -1;
+  select.value = String(currentIndex());
+  await applyStructure({ type: "set", path: props.path, value });
+  await nextTick();
+  select.value = String(currentIndex());
 }
 </script>
 <template>
@@ -353,6 +364,9 @@ function changeVariant(event: Event) {
       />
     </header>
     <div ref="content" @scroll="savePosition" class="min-h-0 flex-1 overflow-auto">
+      <p v-if="structureError" role="alert" class="p-3 text-sm text-danger">
+        {{ structureError }}
+      </p>
       <template v-if="searchEnabled && query.trim()">
         <button
           v-for="result in results"

@@ -1,7 +1,7 @@
 import { computed, defineComponent, h, ref } from "vue";
 import { flushPromises, mount } from "@vue/test-utils";
 import { afterEach, expect, it, vi } from "vitest";
-import { pageMotionDirection, usePageMotion } from "./usePageMotion";
+import { pageMotionDirection, usePageSurfaceMotion } from "./usePageMotion";
 const at = (...keys: string[]) => ({ viewId: "test", keys });
 afterEach(() => vi.restoreAllMocks());
 it("所有深度使用同一祖先关系，字段、同级和跨视图变化不暗示层级", () => {
@@ -18,58 +18,75 @@ it("所有深度使用同一祖先关系，字段、同级和跨视图变化不�
     pageMotionDirection(at("root"), { viewId: "other", keys: ["root", "a"] }),
   ).toBeUndefined();
 });
-it("方向动画不重建区域，连续返回取消旧动画，减少动态效果时跳过", async () => {
-  const location = ref(at("root"));
+it("前进与返回共用两面，打断后只保留最新离开页", async () => {
+  const stack = ref([{ key: "root" }]);
+  const root = document.createElement("div");
+  const detail = document.createElement("div");
   const cancel = vi.fn();
   const animate = vi.fn(
-    (
-      _frames: Keyframe[] | PropertyIndexedKeyframes | null,
-      _options?: number | KeyframeAnimationOptions,
-    ) => ({ cancel }) as unknown as Animation,
+    () =>
+      ({
+        cancel,
+        finished: new Promise<void>(() => {}),
+      }) as unknown as Animation,
   );
-  const surface = document.createElement("div");
-  surface.animate = animate;
-  let reduced = false,
-    setups = 0;
-  vi.spyOn(window, "matchMedia").mockImplementation(
-    () => ({ matches: reduced }) as MediaQueryList,
+  const previous = Object.getOwnPropertyDescriptor(
+    Element.prototype,
+    "animate",
   );
-  const child = defineComponent({
-    setup() {
-      setups++;
-      return () => h("input");
-    },
+  Object.defineProperty(Element.prototype, "animate", {
+    configurable: true,
+    value: animate,
   });
+  let motion!: ReturnType<typeof usePageSurfaceMotion<{ key: string }>>;
+  let reduced = false;
+  vi.spyOn(window, "matchMedia").mockImplementation(
+    () =>
+      ({
+        get matches() {
+          return reduced;
+        },
+      }) as MediaQueryList,
+  );
   const w = mount(
     defineComponent({
       setup() {
-        usePageMotion(
-          computed(() => location.value),
-          () => surface,
+        motion = usePageSurfaceMotion(
+          computed(() => ({
+            pages: stack.value,
+            layoutKey: "mobile",
+            enabled: true,
+          })),
+          () => [root, detail],
         );
-        return () => h(child);
+        return () => h("div");
       },
     }),
   );
   try {
-    location.value = at("root", "a");
-    await flushPromises();
-    expect(animate.mock.calls[0]?.[1]).toMatchObject({
-      duration: 220,
-      id: "workbench-page-forward",
-    });
-    location.value = at("root");
-    await flushPromises();
-    expect(cancel).toHaveBeenCalledTimes(1);
-    expect(animate.mock.calls[1]?.[1]).toMatchObject({
-      id: "workbench-page-back",
-    });
-    reduced = true;
-    location.value = at("root", "a");
+    stack.value = [{ key: "root" }, { key: "a" }];
     await flushPromises();
     expect(animate).toHaveBeenCalledTimes(2);
-    expect(setups).toBe(1);
+    expect(motion.transition.value).toMatchObject({
+      from: { key: "root" },
+      direction: "forward",
+    });
+    stack.value = [{ key: "root" }];
+    await flushPromises();
+    expect(cancel).toHaveBeenCalledTimes(2);
+    expect(motion.transition.value).toMatchObject({
+      from: { key: "a" },
+      direction: "back",
+    });
+    reduced = true;
+    stack.value = [{ key: "root" }, { key: "b" }];
+    await flushPromises();
+    expect(cancel).toHaveBeenCalledTimes(4);
+    expect(animate).toHaveBeenCalledTimes(4);
+    expect(motion.transition.value).toBeUndefined();
   } finally {
     w.unmount();
+    if (previous) Object.defineProperty(Element.prototype, "animate", previous);
+    else Reflect.deleteProperty(Element.prototype, "animate");
   }
 });

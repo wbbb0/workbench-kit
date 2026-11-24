@@ -22,3 +22,5 @@ export * from "./windows/windowManager.js";
 export * from "./windows/windowSizing.js";
 
 export { useScopedDialog } from "./windows/useScopedDialog.js";
+
+export { useWorkbenchAreaPresentation, useWorkbenchLeavingPath } from "./runtime/workbenchAreaContext.js";
