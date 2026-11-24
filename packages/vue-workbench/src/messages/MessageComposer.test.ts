@@ -89,3 +89,16 @@ it("横向输入保留附件入口，空输入和忙碌提交被阻止", async (
  await w.setProps({ modelValue: '要求', busy: true });await w.get('form').trigger('submit');expect(w.emitted('submit')).toBeUndefined();
  await w.setProps({ busy: false });await w.get('form').trigger('submit');expect(w.emitted('submit')).toHaveLength(1);w.unmount();
 });
+
+it("独立辅助按钮可与具名提交并列", async () => {
+  const host = mount(MessageComposer, {
+    props: { modelValue: "有内容", layout: "inline", submitLabel: "在 Web 继续", showSubmitLabel: true },
+    slots: { secondaryActions: '<button type="button">发送到 QQ</button>' },
+  });
+  expect(host.get('button[type="submit"]').text()).toBe("在 Web 继续");
+  await host.get('button[type="button"]').trigger("click");
+  expect(host.emitted("submit")).toBeUndefined();
+  await host.get("form").trigger("submit");
+  expect(host.emitted("submit")).toHaveLength(1);
+  host.unmount();
+});

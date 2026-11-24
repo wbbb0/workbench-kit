@@ -189,3 +189,19 @@ it("按正文顺序渲染资源引用，点击引用只发出资源事件", asyn
   expect(host.emitted("detail")).toBeUndefined();
   host.unmount();
 });
+
+it("应用可自定义消息正文，作者与投递状态由时间线继续显示", () => {
+  const host = mount(MessageTimeline, {
+    props: { items: [{
+      id: "qq", version: 1, kind: "message", author: "平台成员",
+      parts: [{ type: "text", text: "默认正文" }],
+      state: { label: "待投递", tone: "warning" },
+    }] },
+    slots: { content: ({ item }: { item: { id: string } }) => h("div", { "data-content": item.id }, "扩展正文") },
+  });
+  expect(host.get('[data-content="qq"]').text()).toBe("扩展正文");
+  expect(host.text()).toContain("平台成员");
+  expect(host.text()).toContain("待投递");
+  expect(host.text()).not.toContain("默认正文");
+  host.unmount();
+});

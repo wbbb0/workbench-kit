@@ -234,16 +234,23 @@ defineExpose({ capture, restore });
                   {{ item.author || item.kind }}
                 </button>
               </header>
-              <MessageContent
-                :compact="compact"
-                :parts="item.parts"
-                @reference="emit('reference', $event)"
-                :class="{
-                  'text-danger': item.tone === 'danger',
-                  'text-warning': item.tone === 'warning',
-                  'text-success': item.tone === 'success',
-                }"
-              />
+              <slot name="content" :item="item" :compact="compact">
+                <MessageContent
+                  :compact="compact"
+                  :parts="item.parts"
+                  @reference="emit('reference', $event)"
+                  :class="{
+                    'text-danger': item.tone === 'danger',
+                    'text-warning': item.tone === 'warning',
+                    'text-success': item.tone === 'success',
+                  }"
+                />
+              </slot>
+              <p
+                v-if="item.state && !foldable(item)"
+                class="mt-1 text-xs"
+                :class="item.state.tone === 'danger' ? 'text-danger' : item.state.tone === 'warning' ? 'text-warning' : 'text-text-muted'"
+              >{{ item.state.label }}</p>
               <footer
                 v-if="item.metrics?.length"
                 class="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] leading-4 text-text-muted"

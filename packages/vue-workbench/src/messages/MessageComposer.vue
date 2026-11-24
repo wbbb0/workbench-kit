@@ -17,6 +17,7 @@ const props = defineProps<{
   inputLabel?: string;
   placeholder?: string;
   submitLabel?: string;
+  showSubmitLabel?: boolean;
   selectionStart?: number;
   selectionEnd?: number;
 }>();
@@ -106,10 +107,12 @@ onActivated(() => {
         @keyup="selection"
         @click="selection"
       />
+      <slot v-if="layout === 'inline'" name="secondaryActions" />
       <WorkbenchButton
         v-if="layout === 'inline'"
         :icon="Send"
         :title="busy ? '正在提交' : submitLabel || '发送'"
+        :label="showSubmitLabel ? submitLabel : undefined"
         size="sm"
         variant="primary"
         type="submit"
