@@ -174,11 +174,11 @@ defineExpose({ capture, restore });
       <Virtualizer
         ref="list"
         :data="items"
-        :item-props="({ item }: { item: MessageItem }) => ({ key: item.id })"
         :scroll-ref="viewport"
         @scroll="scroll"
         ><template #default="{ item }"
           ><article
+            :key="item.id"
             :data-row-id="item.id"
             @click="openItem($event, item)"
             class="mx-auto w-full max-w-4xl border-b border-border-default"
@@ -237,6 +237,7 @@ defineExpose({ capture, restore });
               <MessageContent
                 :compact="compact"
                 :parts="item.parts"
+                @reference="emit('reference', $event)"
                 :class="{
                   'text-danger': item.tone === 'danger',
                   'text-warning': item.tone === 'warning',

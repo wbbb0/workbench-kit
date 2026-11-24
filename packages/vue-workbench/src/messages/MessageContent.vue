@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, reactive } from "vue";
+import { File, Folder } from "lucide-vue-next";
 import MarkdownIt from "markdown-it";
 import Token from "markdown-it/lib/token.mjs";
 import hljs from "highlight.js/lib/common";
 import type { MessagePart } from "./types";
 const props = defineProps<{ parts: MessagePart[]; compact?: boolean }>();
+const emit = defineEmits<{ reference: [id: string] }>();
+const failedImages = reactive(new Set<string>());
 const md: MarkdownIt = new MarkdownIt({
   html: false,
   linkify: true,
@@ -79,16 +82,35 @@ function copy(event: MouseEvent) {
     <template v-for="(block, i) in blocks" :key="i"
       ><template v-if="block.type === 'image'"
         ><img
-          v-if="block.url"
+          v-if="block.url && !failedImages.has(block.url)"
           :src="block.url"
           :alt="block.label"
           class="max-h-96 max-w-full"
           loading="lazy"
+          @error="failedImages.add(block.url)"
         />
         <p v-else class="text-text-muted">
           附件不可用：{{ block.label }}
         </p></template
       >
+      <button
+        v-else-if="block.type === 'reference'"
+        type="button"
+        class="my-1 flex max-w-full items-center gap-2 rounded border border-border-default bg-surface-panel px-2 py-1 text-left text-sm text-accent"
+        @click="emit('reference', block.id)"
+      >
+        <Folder
+          v-if="block.icon === 'directory'"
+          aria-hidden="true"
+          class="size-4 shrink-0"
+        />
+        <File
+          v-else-if="block.icon === 'file'"
+          aria-hidden="true"
+          class="size-4 shrink-0"
+        />
+        <span class="break-all">{{ block.label }}</span>
+      </button>
       <div v-else v-html="block.html"
     /></template>
   </div>

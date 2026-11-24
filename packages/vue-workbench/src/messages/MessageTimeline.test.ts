@@ -170,3 +170,22 @@ it("只观察视口和总内容，折叠后自由阅读不主动校正位置", a
   expect(observe).toHaveBeenCalledTimes(2);
   host.unmount();
 });
+
+it("按正文顺序渲染资源引用，点击引用只发出资源事件", async () => {
+  const host = mount(MessageTimeline, { props: { items: [{
+    id: "attachment-message",
+    version: 1,
+    kind: "message",
+    parts: [
+      { type: "text", text: "前文" },
+      { type: "reference", id: "folder", label: "资料", icon: "directory" },
+      { type: "text", text: "后文" },
+    ],
+  }] } });
+  expect(host.get(".wb-message-content").text()).toMatch(/前文[\s\S]*资料[\s\S]*后文/);
+  const reference = host.findAll("button").find(button => button.text() === "资料")!;
+  await reference.trigger("click");
+  expect(host.emitted("reference")).toEqual([["folder"]]);
+  expect(host.emitted("detail")).toBeUndefined();
+  host.unmount();
+});

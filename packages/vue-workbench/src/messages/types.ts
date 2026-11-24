@@ -2,7 +2,8 @@ import type { Component } from "vue";
 export type MessagePart =
   | { type: "text"; text: string }
   | { type: "code"; text: string; language?: string }
-  | { type: "image"; url?: string; label: string };
+  | { type: "image"; url?: string; label: string }
+  | { type: "reference"; id: string; label: string; icon?: "file" | "directory" };
 export interface MessageItem {
   id: string;
   version: number;

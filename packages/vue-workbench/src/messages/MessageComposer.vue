@@ -12,6 +12,8 @@ const props = defineProps<{
   flush?: boolean;
   layout?: "stacked" | "inline";
   attachmentButton?: boolean;
+  hasAttachments?: boolean;
+  attachmentDisabled?: boolean;
   inputLabel?: string;
   placeholder?: string;
   submitLabel?: string;
@@ -26,7 +28,7 @@ const emit = defineEmits<{
 }>();
 const input = ref<HTMLTextAreaElement>();
 function submit() {
-  if (!props.busy && props.modelValue.trim()) emit("submit");
+  if (!props.busy && (props.modelValue.trim() || props.hasAttachments)) emit("submit");
 }
 function key(event: KeyboardEvent) {
   if (
@@ -36,7 +38,7 @@ function key(event: KeyboardEvent) {
     event.keyCode !== 229
   ) {
     event.preventDefault();
-    if (!props.busy && props.modelValue.trim()) emit("submit");
+    submit();
   }
 }
 function selection() {
@@ -83,6 +85,7 @@ onActivated(() => {
         size="sm"
         variant="secondary"
         data-menu-trigger="true"
+        :disabled="attachmentDisabled"
         @click="emit('attachment', $event)"
       />
       <textarea
@@ -110,7 +113,7 @@ onActivated(() => {
         size="sm"
         variant="primary"
         type="submit"
-        :disabled="busy || !modelValue.trim()"
+        :disabled="busy || (!modelValue.trim() && !hasAttachments)"
       />
       <div v-else class="flex items-center justify-between gap-3">
         <span v-if="status" class="text-xs text-text-muted" role="status">{{
@@ -119,7 +122,7 @@ onActivated(() => {
         ><button
           class="ml-auto bg-accent text-xs font-semibold text-white disabled:opacity-40"
           :class="compact ? 'px-3 py-1' : 'px-4 py-2'"
-          :disabled="busy || !modelValue.trim()"
+          :disabled="busy || (!modelValue.trim() && !hasAttachments)"
           type="submit"
         >
           {{ busy ? "正在提交" : "发送" }}
