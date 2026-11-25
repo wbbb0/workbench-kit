@@ -11,6 +11,8 @@ import {
 import { Virtualizer, type VirtualizerHandle } from "virtua/vue";
 import { useMessageViewport } from "./useMessageViewport";
 import WorkbenchButton from "../primitives/WorkbenchButton.vue";
+import { Info } from "lucide-vue-next";
+import WorkbenchIconButton from "../primitives/WorkbenchIconButton.vue";
 import MessageRecordHeader from "./MessageRecordHeader.vue";
 import MessageContent from "./MessageContent.vue";
 import type { MessageItem, ReadingAnchor } from "./types";
@@ -24,6 +26,8 @@ const props = withDefaults(
     loading?: boolean;
     active?: boolean;
     compact?: boolean;
+    /** button 模式仅由标题的详情按钮打开记录。 */
+    detailTrigger?: "row" | "button";
     expandedRecords?: Map<string, boolean>;
   }>(),
   { active: true },
@@ -180,16 +184,16 @@ defineExpose({ capture, restore });
           ><article
             :key="item.id"
             :data-row-id="item.id"
-            @click="openItem($event, item)"
+            v-on="detailTrigger === 'button' ? {} : { click: (event: MouseEvent) => openItem(event, item) }"
             class="mx-auto w-full max-w-4xl border-b border-border-default"
             :class="[
               foldable(item) ? 'p-0' : compact ? 'px-3 py-3' : 'px-5 py-5',
               item.identity?.tone === 'accent' ? 'bg-surface-panel/40' : '',
-              item.identity && !foldable(item) ? 'flex items-start gap-3' : '',
+              detailTrigger !== 'button' && item.identity && !foldable(item) ? 'flex items-start gap-3' : '',
             ]"
           >
             <button
-              v-if="item.identity && !foldable(item)"
+              v-if="detailTrigger !== 'button' && item.identity && !foldable(item)"
               class="flex size-6 shrink-0 items-center justify-center rounded"
               :class="
                 item.identity.tone === 'accent'
@@ -210,6 +214,8 @@ defineExpose({ capture, restore });
               v-if="foldable(item)"
               :label="item.heading || item.activity!.label"
               :detail-label="item.detailLabel"
+              :detail-trigger="detailTrigger"
+              :show-detail="detailTrigger !== 'button' || item.detail !== false"
               :icon="item.identity?.icon"
               :state="item.state?.label"
               :danger="item.tone === 'danger'"
@@ -223,7 +229,25 @@ defineExpose({ capture, restore });
               :class="foldable(item) ? 'px-3 py-2' : ''"
             >
               <header
-                v-if="!item.identity && !foldable(item)"
+                v-if="detailTrigger === 'button' && !foldable(item)"
+                class="mb-2 flex min-w-0 items-center gap-2 text-xs text-text-muted"
+              >
+                <span v-if="item.identity" class="grid size-6 shrink-0 place-items-center rounded"
+                  :class="item.identity.tone === 'accent' ? 'bg-accent text-white' : 'bg-surface-muted'"
+                  aria-hidden="true">
+                  <component :is="item.identity.icon" :size="15" />
+                </span>
+                <span class="min-w-0 truncate font-medium text-text-secondary" :title="item.author || item.kind">
+                  {{ item.author || item.kind }}
+                </span>
+                <time v-if="item.timestamp !== undefined" class="shrink-0" :title="new Date(item.timestamp).toLocaleString()">
+                  {{ new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+                </time>
+                <WorkbenchIconButton v-if="item.detail !== false" :icon="Info" variant="secondary" size="sm"
+                  class="ml-auto shrink-0" :title="item.detailLabel ?? '查看记录详情'" @click="emit('detail', item.id)" />
+              </header>
+              <header
+                v-else-if="!item.identity && !foldable(item)"
                 class="mb-2 flex items-center gap-2 text-xs text-text-muted"
               >
                 <button

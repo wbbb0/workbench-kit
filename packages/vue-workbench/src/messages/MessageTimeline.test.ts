@@ -205,3 +205,26 @@ it("应用可自定义消息正文，作者与投递状态由时间线继续显�
   expect(host.text()).not.toContain("默认正文");
   host.unmount();
 });
+
+it("标题按钮模式只从信息按钮打开详情，折叠标题与正文保持独立", async () => {
+  const host = mount(MessageTimeline, { props: {
+    detailTrigger: "button",
+    items: [
+      { id: "m", version: 1, kind: "message", author: "作者", parts: [{ type: "text", text: "可选择的正文" }] },
+      { id: "c", version: 1, kind: "call", activity: { label: "工具" }, parts: [{ type: "text", text: "摘要" }] },
+      { id: "p", version: 0, kind: "preview", detail: false, parts: [] },
+    ],
+  } });
+  const [message, call, preview] = host.findAll("article");
+  await message!.get("header span").trigger("click");
+  await message!.get(".wb-message-content p").trigger("click");
+  await call!.get("[aria-expanded]").trigger("click");
+  await call!.get(".wb-message-content p").trigger("click");
+  expect(host.emitted("detail")).toBeUndefined();
+  expect(preview!.find("button").exists()).toBe(false);
+  await message!.get("header button").trigger("click");
+  await call!.get('[aria-label="查看详情：工具"]').trigger("click");
+  expect(host.emitted("detail")).toEqual([["m"], ["c"]]);
+  expect(call!.get("[aria-expanded]").attributes("aria-expanded")).toBe("true");
+  host.unmount();
+});

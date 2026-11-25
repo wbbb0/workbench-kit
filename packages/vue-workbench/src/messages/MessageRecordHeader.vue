@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import type { Component } from "vue";
-import { ChevronRight, ExternalLink } from "lucide-vue-next";
+import { ChevronRight, ExternalLink, Info } from "lucide-vue-next";
+import WorkbenchIconButton from "../primitives/WorkbenchIconButton.vue";
 defineProps<{
   label: string;
   expanded: boolean;
+  detailTrigger?: "row" | "button";
+  showDetail?: boolean;
   detailLabel?: string;
   icon?: Component;
   state?: string;
@@ -42,10 +45,20 @@ const emit = defineEmits<{ toggle: []; detail: [] }>();
     <span v-if="state" class="shrink-0" :class="danger ? 'text-danger' : ''">{{
       state
     }}</span>
+    <WorkbenchIconButton
+      v-if="detailTrigger === 'button' && showDetail !== false"
+      :icon="Info"
+      variant="secondary"
+      size="sm"
+      class="shrink-0"
+      :title="detailLabel ?? '查看详情：' + label"
+      @click="emit('detail')"
+    />
     <button
+      v-else-if="detailTrigger !== 'button'"
       type="button"
       class="flex size-6 shrink-0 items-center justify-center"
-      :aria-label="detailLabel ?? ('查看详情：' + label)"
+      :aria-label="detailLabel ?? '查看详情：' + label"
       title="查看完整详情"
       @click="emit('detail')"
     >
