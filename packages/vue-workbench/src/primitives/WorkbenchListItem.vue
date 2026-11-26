@@ -77,7 +77,7 @@ function select() {
     <div class="min-w-0 flex-1">
       <slot>
         <div
-          class="text-ui text-text-secondary"
+          class="text-ui text-text-primary"
           :class="multiline ? 'whitespace-normal wrap-break-word' : 'truncate'"
         >{{ title }}</div>
         <div

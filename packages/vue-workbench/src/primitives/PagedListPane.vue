@@ -119,7 +119,7 @@ onMounted(() => {
   <div class="flex h-full min-h-0 flex-col overflow-hidden">
     <div class="flex flex-wrap items-center justify-between gap-2 border-b border-border-default bg-surface-panel px-4 py-2">
       <div class="min-w-0">
-        <div class="truncate text-small font-medium text-text-secondary">{{ title }}</div>
+        <div class="truncate text-small font-medium text-text-primary">{{ title }}</div>
         <div class="font-mono text-small text-text-subtle">
           {{ loadedFrom }}-{{ loadedTo }}{{ total !== undefined ? ` / ${total}` : "" }}
         </div>

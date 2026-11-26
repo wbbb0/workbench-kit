@@ -147,7 +147,7 @@ onBeforeUnmount(() => {
     <div
       v-if="activeModalWindow"
       data-test="window-backdrop"
-      class="pointer-events-auto fixed inset-0"
+      class="pointer-events-auto fixed inset-0 bg-surface-scrim"
       :style="backdropStyle"
       @click="handleBackdropClick"
     />

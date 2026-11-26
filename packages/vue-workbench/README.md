@@ -28,83 +28,73 @@ npm install vue lucide-vue-next
 
 `WorkbenchNavItem.placement` 在两种布局中含义一致：桌面将 `primary` 放主区域、`bottom` 放底部；移动标题栏按 `primary → bottom` 排列。同组内保留传入顺序，不修改原数组。设置等辅助入口只需标为 `bottom`，消费项目无需为手机另外排序。工作台菜单是独立的外壳入口，不属于业务导航项。
 
-## 样式接入
+## 样式与主题接入
 
-业务项目可以直接选择内置主题模板，再引入 Tailwind 和 workbench 基础样式：
+### 1. 零配置静态导入主题
+
+业务项目只需先引入一套内置主题色板，再引入 Tailwind 与 workbench 样式即可同时获得完整的亮/暗两套配色（支持纯 CSS `@media (prefers-color-scheme: dark)` 自动切换及 `color-scheme`）：
 
 ```css
-@import "@workbench-kit/vue-workbench/theme/midnight.css";
-@import "./theme-overrides.css";
+@import "@workbench-kit/vue-workbench/theme/neutral.css";
 @import "tailwindcss";
 @import "tailwindcss-safe-area";
 @import "@workbench-kit/vue-workbench/style.css";
 ```
 
-`theme-overrides.css` 是项目侧可选覆盖文件。简单项目可以不写覆盖；需要微调时，只覆盖少量变量即可：
+内置两套主题色板：
+- `@workbench-kit/vue-workbench/theme/neutral.css`：现代中性石墨灰（暗）/ 纯白浅灰（亮），适合作为通用默认色板或搭配任意品牌主色；
+- `@workbench-kit/vue-workbench/theme/midnight.css`：深海蓝灰（暗）/ 清爽冷灰（亮）配色。
+
+> 若需要支持运行时切换色板，可同时引入两个主题文件并调用 `theme.setPalette("neutral" | "midnight")`（对应 `html[data-palette="..."]`）。
+
+### 2. 只改一个主色
+
+`style.css` 已内置完整的 `@layer workbench-base` 派生规则，自动从 `--accent` 推导出 `--accent-hover`、`--accent-active`、`--border-focus`、`--text-accent`、`--surface-accent`、`--surface-selected`、`--surface-selected-muted` 与表单控件 `accent-color`。普通应用只需覆写 `--accent` 一行即可全局联动：
 
 ```css
-:root,
-html[data-theme="dark"] {
-  --accent: #2dd4bf;
-  --accent-hover: #5eead4;
+:root {
+  --accent: #7c3aed;
 }
 ```
 
-如果项目完全自定义主题，则需要提供这些 token：
+若需要亮暗模式分别微调主色，可改写 `--accent-light` 与 `--accent-dark`：
 
 ```css
-:root,
-html[data-theme="dark"] {
-  --surface-app: #0b1220;
-  --surface-sidebar: #101827;
-  --surface-panel: #121c2d;
-  --surface-input: #182335;
-  --surface-muted: #1a2537;
-  --surface-hover: #172338;
-  --surface-active: #21314a;
-  --surface-selected: #16365f;
-  --surface-selected-muted: #15253d;
-
-  --border-subtle: color-mix(in srgb, #31415c 64%, transparent);
-  --border-default: #2b3a54;
-  --border-strong: #41526f;
-  --border-focus: #4ea3ff;
-  --border-input: #31415c;
-
-  --text-primary: #d6deea;
-  --text-secondary: #f2f6fd;
-  --text-muted: #93a3bd;
-  --text-subtle: #677891;
-  --text-accent: #83c4ff;
-  --text-on-accent: #ffffff;
-
-  --accent: #3f9cff;
-  --accent-hover: #5caeff;
-  --success: #47c59d;
-  --warning: #e5ba62;
-  --danger: #f26d7d;
-  --info: #72c6ff;
-
-  --surface-success: color-mix(in srgb, var(--success) 18%, var(--surface-panel));
-  --surface-warning: color-mix(in srgb, var(--warning) 16%, var(--surface-panel));
-  --surface-danger: color-mix(in srgb, var(--danger) 14%, var(--surface-panel));
-  --surface-info: color-mix(in srgb, var(--info) 14%, var(--surface-panel));
-
-  --scrollbar-bg: transparent;
-  --scrollbar-thumb: #33445f;
-  --scrollbar-thumb-hover: #415674;
-
-  --activity-bar-width: 48px;
-  --font-size-ui: 13px;
-  --font-size-small: 11px;
-  --font-size-mono: 12px;
-  --line-height-ui: 1.4;
-  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-mono: "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+:root {
+  --accent-light: #6d28d9;
+  --accent-dark: #a78bfa;
 }
 ```
 
-`style.css` 会把这些 token 映射成 Tailwind v4 theme token，例如 `bg-surface-panel`、`border-border-default`、`text-text-muted`、`text-ui`、`font-ui`。
+### 3. 启用自动亮暗模式与手动切换
+
+默认纯 CSS 已经会根据浏览器 `prefers-color-scheme` 自动亮暗切换且无首屏闪黑；若需在 JS 中支持系统跟随、手动切换或响应式读取当前主题（如同步第三方组件配色），在入口调用 `initWorkbenchTheme`：
+
+```ts
+import { initWorkbenchTheme, useWorkbenchTheme } from "@workbench-kit/vue-workbench";
+
+const theme = initWorkbenchTheme({
+  mode: "system",
+  storageKey: "app-theme-mode",
+});
+import.meta.hot?.dispose(theme.stop);
+```
+
+在组件内通过 `useWorkbenchTheme()` 访问 `mode`、`resolvedTheme`（`"light" | "dark"`）、`palette`、`setMode()`、`setPalette()`、`toggle()`。
+
+### 4. 完整语义 Token 契约
+
+完全自定义主题时，只需提供以下亮/暗两套颜色变量（布局字号与尺寸 `--activity-bar-width`、`--font-*`、`--line-height-ui` 及派生色均已由 `style.css` 默认提供；终端/代码高亮配色不在 kit 主题契约内）：
+
+| 类别 | Token | 说明 |
+| --- | --- | --- |
+| **背景层级** | `--surface-app`, `--surface-sidebar`, `--surface-panel`, `--surface-elevated`, `--surface-input`, `--surface-muted`, `--surface-hover`, `--surface-active`, `--surface-scrim` | 页面底层、侧栏、面板、浮层弹窗/菜单、输入框、次级块、交互态、模态遮罩 |
+| **边框层级** | `--border-subtle`, `--border-default`, `--border-strong`, `--border-input` | 弱分割、默认分割、强调边界、输入框边框 |
+| **文本层级** | `--text-primary`, `--text-secondary`, `--text-muted`, `--text-subtle`, `--text-on-accent` | 主标题/强文本、常规次级文本、辅助信息、弱提示文本、主色按钮前景 |
+| **主色与状态** | `--accent`（或 `--accent-light` / `--accent-dark`）、`--success`, `--warning`, `--danger`, `--info` | 主色及四语义基色；衍生底色 `--surface-{accent,success,warning,danger,info}`、状态描边 `--border-{success,warning,danger,info}`、`--border-focus`、`--text-accent` 均自动派生 |
+| **滚动条与阴影** | `--scrollbar-bg`, `--scrollbar-thumb`, `--scrollbar-thumb-hover`, `--shadow-popover`, `--shadow-window` | 滚动条及菜单/窗口浮层阴影 |
+
+`style.css` 会通过 `@theme inline` 将上述 token 映射为 Tailwind v4 utility（`bg-surface-*`、`border-border-*`、`text-text-*`、`text-accent`），并提供组件按钮类（`btn-{primary,secondary,ghost,success,warning,danger,info}`）。
 
 ## Tailwind source
 

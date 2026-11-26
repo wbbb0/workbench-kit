@@ -197,7 +197,7 @@ defineExpose({ capture, restore });
               class="flex size-6 shrink-0 items-center justify-center rounded"
               :class="
                 item.identity.tone === 'accent'
-                  ? 'bg-accent text-white'
+                  ? 'bg-accent text-text-on-accent'
                   : 'bg-surface-muted text-text-muted'
               "
               :title="item.author || item.kind"
@@ -233,11 +233,11 @@ defineExpose({ capture, restore });
                 class="mb-2 flex min-w-0 items-center gap-2 text-xs text-text-muted"
               >
                 <span v-if="item.identity" class="grid size-6 shrink-0 place-items-center rounded"
-                  :class="item.identity.tone === 'accent' ? 'bg-accent text-white' : 'bg-surface-muted'"
+                  :class="item.identity.tone === 'accent' ? 'bg-accent text-text-on-accent' : 'bg-surface-muted'"
                   aria-hidden="true">
                   <component :is="item.identity.icon" :size="15" />
                 </span>
-                <span class="min-w-0 truncate font-medium text-text-secondary" :title="item.author || item.kind">
+                <span class="min-w-0 truncate font-medium text-text-primary" :title="item.author || item.kind">
                   {{ item.author || item.kind }}
                 </span>
                 <time v-if="item.timestamp !== undefined" class="shrink-0" :title="new Date(item.timestamp).toLocaleString()">
@@ -251,7 +251,7 @@ defineExpose({ capture, restore });
                 class="mb-2 flex items-center gap-2 text-xs text-text-muted"
               >
                 <button
-                  class="font-medium text-text-secondary"
+                  class="font-medium text-text-primary"
                   :aria-label="item.detailLabel ?? '查看记录详情'"
                   @click="emit('detail', item.id)"
                 >

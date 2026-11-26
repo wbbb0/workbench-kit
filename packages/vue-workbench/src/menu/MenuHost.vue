@@ -264,7 +264,7 @@ onBeforeUnmount(() => {
       v-for="menu in openMenus"
       :key="menu.id"
       :ref="(element: unknown) => setSurfaceElement(menu.id, element)"
-      class="pointer-events-auto absolute rounded-md border border-border-default bg-surface-panel shadow-xl"
+      class="pointer-events-auto absolute rounded-md border border-border-default bg-surface-elevated shadow-(--shadow-popover)"
       data-menu-surface="true"
       :style="menuOffsets[menu.id]"
     >

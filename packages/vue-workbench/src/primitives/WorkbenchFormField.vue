@@ -15,8 +15,8 @@ withDefaults(defineProps<{
 </script>
 
 <template>
-  <label class="flex min-w-0 flex-col gap-1.5 text-small text-text-secondary" :for="forId || undefined">
-    <span v-if="label || $slots.label" class="flex items-baseline gap-1 font-medium text-text-secondary">
+  <label class="flex min-w-0 flex-col gap-1.5 text-small text-text-primary" :for="forId || undefined">
+    <span v-if="label || $slots.label" class="flex items-baseline gap-1 font-medium text-text-primary">
       <slot name="label">{{ label }}</slot>
       <span v-if="required" class="text-danger" aria-hidden="true">*</span>
     </span>

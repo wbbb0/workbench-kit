@@ -55,7 +55,7 @@ const collapsibleIcon = computed(() => {
       </div>
       <button
         v-if="collapsible"
-        class="min-w-0 flex flex-1 cursor-pointer items-center bg-transparent text-left hover:text-text-secondary"
+        class="min-w-0 flex flex-1 cursor-pointer items-center bg-transparent text-left hover:text-text-primary"
         :style="!$slots.leading && props.indentPx > 0 ? { paddingLeft: `${props.indentPx}px` } : undefined"
         @click="emit('toggle')"
       >
@@ -68,7 +68,7 @@ const collapsibleIcon = computed(() => {
       </button>
       <button
         v-else
-        class="min-w-0 flex flex-1 cursor-pointer items-center bg-transparent text-left hover:text-text-secondary"
+        class="min-w-0 flex flex-1 cursor-pointer items-center bg-transparent text-left hover:text-text-primary"
         :style="!$slots.leading && props.indentPx > 0 ? { paddingLeft: `${props.indentPx}px` } : undefined"
         @click="select"
       >

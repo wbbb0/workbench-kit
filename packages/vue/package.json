@@ -8,6 +8,7 @@
     "./composables": "./src/composables.ts",
     "./runtime": "./src/runtime.ts",
     "./theme/midnight.css": "./src/themes/midnight.css",
+    "./theme/neutral.css": "./src/themes/neutral.css",
     "./style.css": "./src/style.css"
   },
   "peerDependencies": {

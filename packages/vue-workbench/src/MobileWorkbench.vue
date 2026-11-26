@@ -247,7 +247,7 @@ onUnmounted(() => {
         <ArrowLeft :size="20" aria-hidden="true" />
         <span>返回</span>
       </button>
-      <span class="min-w-0 flex-1 truncate font-semibold text-text-secondary">{{
+      <span class="min-w-0 flex-1 truncate font-semibold text-text-primary">{{
         pageLabel
       }}</span>
       <nav v-if="!canPopMobileArea" class="flex gap-1">
@@ -256,7 +256,7 @@ onUnmounted(() => {
           :key="item.id"
           type="button"
           class="flex h-10 w-10 items-center justify-center rounded border-0 bg-transparent text-text-muted"
-          :class="{ 'text-text-secondary': activeNavItemId === item.id }"
+          :class="{ 'text-text-primary': activeNavItemId === item.id }"
           @click="emit('navigate', item.id)"
         >
           <component :is="item.icon" :size="20" :stroke-width="1.5" />

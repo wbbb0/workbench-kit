@@ -736,7 +736,7 @@ function onUnionSelect(event: Event) {
         </template>
         <span v-else-if="label" class="min-w-0 flex items-center gap-1 truncate text-small leading-[1.3]" :title="description || label">
           <span :class="[
-            currentPathDirty ? 'text-text-accent' : 'text-text-secondary',
+            currentPathDirty ? 'text-text-accent' : 'text-text-primary',
             showLocalValue ? 'font-bold' : 'font-medium'
           ]">
             {{ label }}
@@ -791,7 +791,7 @@ function onUnionSelect(event: Event) {
         </template>
         <span v-else-if="label" class="min-w-0 flex items-center gap-1 truncate text-small leading-[1.3]" :title="description || label">
           <span :class="[
-            currentPathDirty ? 'text-text-accent' : 'text-text-secondary',
+            currentPathDirty ? 'text-text-accent' : 'text-text-primary',
             showLocalValue ? 'font-bold' : 'font-medium'
           ]">
             {{ label }}

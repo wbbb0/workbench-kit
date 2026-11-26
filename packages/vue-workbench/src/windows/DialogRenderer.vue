@@ -315,11 +315,7 @@ function handleClose() {
         :key="action.id"
         :class="[
           'max-w-full whitespace-normal text-left',
-          action.variant === 'danger'
-            ? 'btn btn-danger'
-            : action.variant === 'secondary'
-              ? 'btn btn-secondary'
-              : 'btn btn-primary',
+          `btn btn-${action.variant ?? 'primary'}`,
         ]"
         :data-action-id="action.id"
         :disabled="isBusy || actionDisabled(action)"

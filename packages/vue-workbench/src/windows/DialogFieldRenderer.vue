@@ -131,7 +131,7 @@ function resolveComponentReference(component: unknown) {
     v-else-if="field.kind === 'group'"
     class="flex flex-col gap-3 rounded border border-border-default bg-surface-sidebar px-3 py-3"
   >
-    <legend class="px-1 text-small font-medium text-text-secondary">
+    <legend class="px-1 text-small font-medium text-text-primary">
       {{ field.label }}
     </legend>
 

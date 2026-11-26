@@ -24,7 +24,7 @@ withDefaults(defineProps<{
         {{ homeLabel }}
       </a>
       <div class="min-w-0 flex flex-1 items-baseline gap-2">
-        <h1 class="truncate text-ui font-medium text-text-secondary">{{ title }}</h1>
+        <h1 class="truncate text-ui font-medium text-text-primary">{{ title }}</h1>
         <span v-if="subtitle" class="hidden truncate text-small text-text-subtle sm:inline">{{ subtitle }}</span>
       </div>
       <div v-if="$slots.actions" class="flex shrink-0 items-center gap-1">

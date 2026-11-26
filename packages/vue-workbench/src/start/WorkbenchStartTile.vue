@@ -23,7 +23,7 @@ withDefaults(defineProps<{
         </div>
         <span v-if="meta" class="rounded border border-border-subtle px-1.5 py-0.5 text-small text-text-subtle">{{ meta }}</span>
       </div>
-      <h3 class="text-ui font-medium text-text-secondary">{{ title }}</h3>
+      <h3 class="text-ui font-medium text-text-primary">{{ title }}</h3>
       <p v-if="description" class="mt-1 line-clamp-2 text-small leading-5 text-text-muted">{{ description }}</p>
     </div>
     <div v-if="$slots.footer" class="mt-4 border-t border-border-subtle pt-3 text-small text-text-subtle">

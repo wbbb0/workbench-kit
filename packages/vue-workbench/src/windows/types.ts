@@ -1,4 +1,5 @@
 import type { Component } from "vue";
+import type { WorkbenchButtonVariant } from "../primitives/buttonTypes.js";
 
 /** 预设窗口宽度。full 在移动端/桌面端会按容器上限处理。 */
 export type WorkbenchWindowSize = "auto" | "sm" | "md" | "lg" | "xl" | "full";
@@ -162,7 +163,7 @@ export type WorkbenchDialogAction<
   label:
     | string
     | ((context: { values: Readonly<TValues>; windowId: string }) => string);
-  variant?: "primary" | "secondary" | "danger";
+  variant?: WorkbenchButtonVariant;
   /** 可根据实时 values 禁用动作；执行期间仍由窗口统一禁用全部 footer 动作。 */
   disabled?:
     | boolean

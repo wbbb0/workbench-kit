@@ -77,8 +77,8 @@ function openAncestors(event: MouseEvent) {
 <template>
   <nav v-if="items.length" ref="root" class="flex min-w-0 items-center gap-1 text-small text-text-muted" :class="autoCollapse ? 'relative overflow-hidden' : undefined" aria-label="Breadcrumb">
     <template v-for="(item, index) in items.slice(0, 1)" :key="`${item.label}-${index}`">
-      <button v-if="item.onSelect" type="button" class="hover:text-text-secondary" :class="autoCollapse ? 'min-w-0 truncate' : 'shrink-0'" :title="autoCollapse ? item.label : undefined" @click="item.onSelect()">{{ item.label }}</button>
-      <a v-else-if="item.href" :href="item.href" class="hover:text-text-secondary" :class="autoCollapse ? 'min-w-0 truncate' : 'shrink-0'" :title="autoCollapse ? item.label : undefined">{{ item.label }}</a>
+      <button v-if="item.onSelect" type="button" class="hover:text-text-primary" :class="autoCollapse ? 'min-w-0 truncate' : 'shrink-0'" :title="autoCollapse ? item.label : undefined" @click="item.onSelect()">{{ item.label }}</button>
+      <a v-else-if="item.href" :href="item.href" class="hover:text-text-primary" :class="autoCollapse ? 'min-w-0 truncate' : 'shrink-0'" :title="autoCollapse ? item.label : undefined">{{ item.label }}</a>
       <span v-else class="text-text-subtle" :class="autoCollapse ? 'min-w-0 truncate' : 'shrink-0'" :title="autoCollapse ? item.label : undefined">{{ item.label }}</span>
       <span v-if="!omitTrailingSeparator || items.length > 1" class="shrink-0 text-text-subtle" aria-hidden="true">/</span>
     </template>
@@ -87,8 +87,8 @@ function openAncestors(event: MouseEvent) {
       <span class="shrink-0 text-text-subtle" aria-hidden="true">/</span>
     </template>
     <template v-for="(item, index) in trailing" :key="`${item.label}-${index}`">
-      <button v-if="item.onSelect" type="button" class="min-w-0 truncate hover:text-text-secondary" :title="item.label" @click="item.onSelect()">{{ item.label }}</button>
-      <a v-else-if="item.href" :href="item.href" class="min-w-0 truncate hover:text-text-secondary" :title="item.label">{{ item.label }}</a>
+      <button v-if="item.onSelect" type="button" class="min-w-0 truncate hover:text-text-primary" :title="item.label" @click="item.onSelect()">{{ item.label }}</button>
+      <a v-else-if="item.href" :href="item.href" class="min-w-0 truncate hover:text-text-primary" :title="item.label">{{ item.label }}</a>
       <span v-else class="min-w-0 truncate text-text-subtle" :title="item.label">{{ item.label }}</span>
       <span v-if="!omitTrailingSeparator || index < trailing.length - 1" class="shrink-0 text-text-subtle" aria-hidden="true">/</span>
     </template>

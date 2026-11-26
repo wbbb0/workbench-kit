@@ -80,7 +80,7 @@ function onTabKeydown(event: KeyboardEvent) {
         'flex shrink-0 items-center gap-1 border-0 border-b-2 border-transparent bg-transparent text-small whitespace-nowrap text-text-muted transition-colors hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50',
         rowHeight ? 'h-auto self-stretch' : size === 'sm' ? 'h-9' : 'h-10',
         equalWidth ? 'min-w-0 flex-1 justify-center px-0' : size === 'sm' ? 'px-2.5' : 'px-3',
-        selectedItemId === item.id ? 'border-b-accent text-text-secondary' : ''
+        selectedItemId === item.id ? 'border-b-accent text-text-primary' : ''
       ]"
       @click="$emit('update:modelValue', item.id)"
       @keydown="onTabKeydown"

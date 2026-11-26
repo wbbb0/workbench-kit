@@ -158,7 +158,7 @@ function formatInvalidValue(value: unknown): string {
       <span v-if="selectedOption?.description" class="text-xs text-text-muted">
         {{ selectedOption.description }}
       </span>
-      <span v-if="hasInvalidValue" class="text-xs text-orange-400">
+      <span v-if="hasInvalidValue" class="text-xs text-warning">
         当前值不在选项清单中：<code class="font-mono">{{ formatInvalidValue(displayedValue) }}</code>
       </span>
     </template>

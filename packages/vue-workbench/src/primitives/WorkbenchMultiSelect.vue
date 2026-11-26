@@ -142,7 +142,7 @@ onBeforeUnmount(() => {
         <label
           v-for="option in filteredOptions"
           :key="option.value"
-          class="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-small text-text-secondary hover:bg-surface-hover"
+          class="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-small text-text-primary hover:bg-surface-hover"
           :class="{ 'cursor-not-allowed opacity-55': option.disabled }"
         >
           <input
@@ -153,7 +153,7 @@ onBeforeUnmount(() => {
             @change="setSelected(option.value, ($event.target as HTMLInputElement).checked)"
           />
           <span class="min-w-0 flex-1">
-            <span class="block truncate text-text-secondary">{{ option.label }}</span>
+            <span class="block truncate text-text-primary">{{ option.label }}</span>
             <span v-if="option.description" class="block truncate text-text-subtle">{{ option.description }}</span>
           </span>
         </label>

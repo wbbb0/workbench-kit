@@ -77,7 +77,7 @@ const contentShellClass = computed(() => {
               >
                 {{ homeLabel }}
               </a>
-              <h1 class="truncate text-ui font-semibold text-text-secondary">
+              <h1 class="truncate text-ui font-semibold text-text-primary">
                 {{ title }}
               </h1>
             </div>

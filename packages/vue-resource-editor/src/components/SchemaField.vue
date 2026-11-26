@@ -319,7 +319,7 @@ const readOnlyMultiline = computed(() => {
         currentStringValue() &&
         !dynamicOptions.includes(currentStringValue())
       "
-      class="ml-1 text-xs text-orange-400"
+      class="ml-1 text-xs text-warning"
       >不在清单中</span
     >
   </template>

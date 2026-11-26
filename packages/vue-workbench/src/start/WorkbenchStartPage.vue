@@ -20,7 +20,7 @@ const hasAside = computed(() => Boolean(slots.aside));
       <header class="flex flex-wrap items-center justify-between gap-4 border-b border-border-default pb-4">
         <div class="min-w-0">
           <div v-if="eyebrow" class="mb-1 text-small tracking-[0.08em] text-text-subtle uppercase">{{ eyebrow }}</div>
-          <h1 class="truncate text-xl font-semibold text-text-secondary sm:text-2xl">{{ title }}</h1>
+          <h1 class="truncate text-xl font-semibold text-text-primary sm:text-2xl">{{ title }}</h1>
           <p v-if="subtitle" class="mt-1 max-w-3xl text-ui text-text-muted">{{ subtitle }}</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">

@@ -21,7 +21,7 @@ function formatBytes(bytes: number) {
     <li v-for="task in tasks" :key="task.id" class="min-w-0 space-y-2 px-3 py-3">
       <div class="flex min-w-0 items-start gap-2">
         <div class="min-w-0 flex-1">
-          <div class="truncate text-ui text-text-secondary" :title="task.label">{{ task.label }}</div>
+          <div class="truncate text-ui text-text-primary" :title="task.label">{{ task.label }}</div>
           <div class="mt-1 text-small text-text-muted" role="status">{{ statusLabels[task.status] }}<span v-if="task.total && task.total > 0"> · {{ progress(task) }} / {{ task.total }}</span><span v-if="task.bytes !== undefined"> · {{ formatBytes(task.bytes) }}</span></div>
         </div>
         <WorkbenchButton v-if="task.cancellable && (task.status === 'running' || task.status === 'queued')" label="取消" variant="ghost" @click="emit('cancel', task.id)" />

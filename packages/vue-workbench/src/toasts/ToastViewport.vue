@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { AlertCircle, CheckCircle2, Info } from "lucide-vue-next";
+import { AlertCircle, AlertTriangle, CheckCircle2, Info } from "lucide-vue-next";
 import { WORKBENCH_RUNTIME_LAYERS } from "../runtime/layers.js";
+import type { ToastItem } from "./toastService.js";
 import { useWorkbenchToasts } from "./useWorkbenchToasts";
 
 const toast = useWorkbenchToasts();
@@ -11,20 +12,24 @@ const hostStyle = {
   zIndex: WORKBENCH_RUNTIME_LAYERS.toastHost
 };
 
-function iconFor(type: "success" | "error" | "info") {
+function iconFor(type: ToastItem["type"]) {
   if (type === "success") return CheckCircle2;
+  if (type === "warning") return AlertTriangle;
   if (type === "error") return AlertCircle;
   return Info;
 }
 
-function toneClassFor(type: "success" | "error" | "info") {
+function toneClassFor(type: ToastItem["type"]) {
   if (type === "success") {
-    return "border-success/35 bg-surface-success text-success";
+    return "border-border-success bg-surface-success text-success";
+  }
+  if (type === "warning") {
+    return "border-border-warning bg-surface-warning text-warning";
   }
   if (type === "error") {
-    return "border-danger/35 bg-surface-danger text-danger";
+    return "border-border-danger bg-surface-danger text-danger";
   }
-  return "border-border-default bg-surface-panel text-text-secondary";
+  return "border-border-info bg-surface-info text-info";
 }
 </script>
 

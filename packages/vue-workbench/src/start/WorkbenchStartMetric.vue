@@ -25,7 +25,7 @@ withDefaults(defineProps<{
         }"
       />
     </div>
-    <div class="mt-2 truncate text-lg font-semibold text-text-secondary">{{ value }}</div>
+    <div class="mt-2 truncate text-lg font-semibold text-text-primary">{{ value }}</div>
     <div v-if="detail" class="mt-1 truncate text-small text-text-subtle">{{ detail }}</div>
   </div>
 </template>

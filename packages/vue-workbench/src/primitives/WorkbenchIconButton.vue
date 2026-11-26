@@ -47,7 +47,7 @@ defineEmits<{
     :class="[
       'workbench-icon-button',
       props.size === 'sm' ? 'h-7 w-7' : '',
-      props.active ? 'bg-surface-selected-muted text-text-secondary' : '',
+      props.active ? 'bg-surface-selected-muted text-text-primary' : '',
     ]"
     @click="$emit('click', $event)"
   >
@@ -68,7 +68,7 @@ defineEmits<{
     :class="[
       'workbench-icon-button',
       props.size === 'sm' ? 'h-7 w-7' : '',
-      props.active ? 'bg-surface-selected-muted text-text-secondary' : '',
+      props.active ? 'bg-surface-selected-muted text-text-primary' : '',
     ]"
     @click="$emit('click', $event)"
   />

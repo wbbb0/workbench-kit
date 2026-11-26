@@ -1,6 +1,13 @@
 import type { Component } from "vue";
 
-export type WorkbenchButtonVariant = "primary" | "secondary" | "danger" | "ghost";
+export type WorkbenchButtonVariant =
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "danger"
+  | "warning"
+  | "success"
+  | "info";
 
 export type WorkbenchButtonColors = {
   text?: string;

@@ -123,7 +123,7 @@ onActivated(() => {
           status
         }}</span
         ><button
-          class="ml-auto bg-accent text-xs font-semibold text-white disabled:opacity-40"
+          class="ml-auto bg-accent text-xs font-semibold text-text-on-accent disabled:opacity-40"
           :class="compact ? 'px-3 py-1' : 'px-4 py-2'"
           :disabled="busy || (!modelValue.trim() && !hasAttachments)"
           type="submit"

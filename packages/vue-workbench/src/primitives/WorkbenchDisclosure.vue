@@ -35,7 +35,7 @@ defineEmits<{
         'flex w-full cursor-pointer items-center justify-between gap-3 px-2.5 py-1.75 text-left text-small text-text-muted hover:text-text-primary',
         expanded && variant === 'card' ? 'border-0 border-b border-border-default bg-transparent' : '',
         !expanded && variant === 'card' ? 'rounded-lg border border-border-default bg-surface-input' : '',
-        variant === 'plain' ? 'rounded-sm bg-transparent px-1 py-1 hover:bg-transparent hover:text-text-secondary' : ''
+        variant === 'plain' ? 'rounded-sm bg-transparent px-1 py-1 hover:bg-transparent hover:text-text-primary' : ''
       ]"
       type="button"
       @click="$emit('toggle')"

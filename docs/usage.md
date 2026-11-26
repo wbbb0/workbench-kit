@@ -40,37 +40,61 @@ The consuming app must also install the peer dependencies:
 }
 ```
 
-## Styles
+## Styles And Themes
 
-Import one theme template first, then the aggregate workbench styles once from the app stylesheet:
+Import one built-in theme palette first, then Tailwind CSS and the aggregate workbench stylesheet:
 
 ```css
-@import "@workbench-kit/vue/theme/midnight.css";
+@import "@workbench-kit/vue/theme/neutral.css";
 @import "tailwindcss";
 @import "@workbench-kit/vue/style.css";
 ```
 
-`midnight.css` is the default dark/light template extracted from the original llm-onebot WebUI.
+Available built-in palettes (both include light/dark modes with automatic `@media (prefers-color-scheme: dark)` fallback and `color-scheme` support):
 
-Apps can override any token by importing a local file after the template:
+- `@workbench-kit/vue/theme/neutral.css` — modern neutral graphite/white surfaces suited for general apps and custom brand accents.
+- `@workbench-kit/vue/theme/midnight.css` — slate-navy dark surfaces and cool gray light surfaces extracted from the original llm-onebot WebUI.
 
-```css
-@import "@workbench-kit/vue/theme/midnight.css";
-@import "./theme-overrides.css";
-@import "@workbench-kit/vue/style.css";
-```
+### Customizing The Accent Color
 
-Example override:
+`@workbench-kit/vue/style.css` automatically derives `--accent-hover`, `--accent-active`, `--border-focus`, `--text-accent`, `--surface-accent`, `--surface-selected`, `--surface-selected-muted`, and native control `accent-color` from `--accent`. Most applications only need to set a single color in their stylesheet:
 
 ```css
-:root,
-html[data-theme="dark"] {
-  --accent: #2dd4bf;
-  --accent-hover: #5eead4;
+:root {
+  --accent: #7c3aed;
 }
 ```
 
-`@workbench-kit/vue/style.css` includes the Tailwind `@source` directives for all workbench-kit Vue packages. If a custom build pipeline does not process imported `@source` directives, use this single fallback source path from the app stylesheet:
+If light and dark modes need different accent shades, override `--accent-light` and `--accent-dark` instead (palettes fall back to `--accent: var(--accent-light, ...)` / `var(--accent-dark, ...)`):
+
+```css
+:root {
+  --accent-light: #6d28d9;
+  --accent-dark: #a78bfa;
+}
+```
+
+### Automatic Light/Dark Mode And Optional Runtime Switching
+
+Without any JavaScript, importing a theme palette + `@workbench-kit/vue/style.css` respects the browser `prefers-color-scheme` preference cleanly with no light-mode flash.
+
+To enable system tracking plus runtime light/dark or palette switching in JavaScript, call `initWorkbenchTheme()` at app startup (and optionally read or control it via `useWorkbenchTheme()`):
+
+```ts
+import { initWorkbenchTheme } from "@workbench-kit/vue";
+
+const theme = initWorkbenchTheme({
+  mode: "system",
+  storageKey: "app-theme-mode",
+});
+import.meta.hot?.dispose(theme.stop);
+```
+
+If an app wants static palette selection at build time, import only the desired theme CSS file. If runtime palette switching is needed, import both theme files and call `theme.setPalette("neutral" | "midnight")` (matching `html[data-palette="..."]`).
+
+### Tailwind Source And Semantic Contract
+
+`@workbench-kit/vue/style.css` includes Tailwind `@source` directives for all workbench-kit Vue packages and defines `@theme inline` utility mappings (`bg-surface-*`, `border-border-*`, `text-text-*`, `text-accent`) plus component classes such as `.btn-{primary,secondary,ghost,success,warning,danger,info}`. Note that terminal (xterm) and code syntax highlighting colors stay in the consuming app rather than the workbench theme contract. If a custom build pipeline does not process imported `@source` directives, declare the fallback source path manually:
 
 ```css
 @source "../../../vendor/workbench-kit/packages";
@@ -348,9 +372,9 @@ Optional behavior such as auto-confirm countdown should be added through optiona
 
 ## Theme Templates And Contract
 
-The consuming app owns its final theme values, but it does not need to define every token from scratch. Import a template when the default look is good enough, and override only the variables that differ.
+The consuming app owns its final theme values, but it does not need to define every token from scratch. Import a palette when the built-in look fits, and optionally override `--accent` (or `--accent-light` / `--accent-dark`).
 
-`@workbench-kit/vue/style.css` expects the resolved CSS variables to include surface, border, text, accent, state, scrollbar, font, and workbench sizing tokens. Templates provide those variables. A custom app theme can either replace the template entirely or inherit from it with overrides.
+`@workbench-kit/vue/style.css` provides default layout/typography sizing tokens (`--activity-bar-width`, `--font-*`, `--line-height-ui`) as well as derived accent/status tokens (`color-mix(...)`). Palette files or custom themes only need to define the semantic surface, border, text, accent, status base (`--success`, `--warning`, `--danger`, `--info`), scrollbar, and shadow colors.
 
 ## 按类型切换对象表单
 

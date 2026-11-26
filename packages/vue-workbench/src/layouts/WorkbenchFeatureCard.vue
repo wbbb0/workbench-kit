@@ -33,7 +33,7 @@ const hasHeader = computed(() => Boolean(
       <div class="flex min-w-0 items-start gap-3">
         <div
           v-if="icon || $slots.icon"
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-text-secondary"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-muted text-text-primary"
         >
           <slot name="icon">
             <component :is="icon" class="size-5" aria-hidden="true" />

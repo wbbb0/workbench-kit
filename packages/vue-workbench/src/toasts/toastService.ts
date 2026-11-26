@@ -3,7 +3,7 @@ import { ref } from "vue";
 /** Toast 队列中的一条消息。 */
 export interface ToastItem {
   id: number;
-  type: "success" | "error" | "info";
+  type: "success" | "warning" | "error" | "info";
   message: string;
 }
 

@@ -109,12 +109,12 @@ function handleWheel(event: WheelEvent): void {
     <div
       v-for="item in items"
       :key="item.id"
-      class="workbench-dynamic-tab group grid max-w-56 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 text-left text-text-muted transition-colors hover:bg-surface-hover hover:text-text-secondary disabled:cursor-not-allowed disabled:opacity-50"
+      class="workbench-dynamic-tab group grid max-w-56 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 text-left text-text-muted transition-colors hover:bg-surface-hover hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
       :class="[
         { 'is-active': modelValue === item.id },
         appearance === 'editor'
           ? 'workbench-editor-tab'
-          : ['rounded-md border border-border-subtle bg-surface-muted', modelValue === item.id ? 'rounded-t-md rounded-b-none border-border-default border-b-0 bg-surface-default text-text-secondary pb-px' : '']
+          : ['rounded-md border border-border-subtle bg-surface-muted', modelValue === item.id ? 'rounded-t-md rounded-b-none border-border-default border-b-0 bg-surface-panel text-text-primary pb-px' : '']
       ]"
       :title="item.title || item.label"
       :draggable="draggable && !item.disabled"
@@ -130,7 +130,7 @@ function handleWheel(event: WheelEvent): void {
       </button>
       <button
         v-if="item.closable"
-        class="workbench-dynamic-tab-close flex items-center justify-center rounded text-text-subtle opacity-70 hover:bg-surface-input hover:text-text-secondary group-hover:opacity-100"
+        class="workbench-dynamic-tab-close flex items-center justify-center rounded text-text-subtle opacity-70 hover:bg-surface-input hover:text-text-primary group-hover:opacity-100"
         type="button"
         :title="`Close ${item.label}`"
         :aria-label="`Close ${item.label}`"
@@ -142,7 +142,7 @@ function handleWheel(event: WheelEvent): void {
     </div>
     <button
       v-if="addable"
-      class="workbench-dynamic-tabs-add sticky right-0 z-10 self-center flex shrink-0 items-center justify-center bg-surface-muted text-text-muted hover:bg-surface-hover hover:text-text-secondary"
+      class="workbench-dynamic-tabs-add sticky right-0 z-10 self-center flex shrink-0 items-center justify-center bg-surface-muted text-text-muted hover:bg-surface-hover hover:text-text-primary"
       :class="appearance === 'editor' ? 'rounded-none' : 'rounded-md border border-border-subtle'"
       type="button"
       :title="addLabel"
@@ -152,7 +152,7 @@ function handleWheel(event: WheelEvent): void {
     </button>
   </div>
   <div v-if="compact" class="workbench-dynamic-tabs-compact min-w-0 items-center" :class="appearance === 'editor' ? 'gap-0' : 'gap-1'">
-    <button type="button" class="workbench-dynamic-tabs-current flex min-w-0 flex-1 items-center gap-2 text-text-secondary" :class="appearance === 'editor' ? 'workbench-editor-tab is-active' : 'rounded border border-border-subtle bg-surface-muted'" :aria-label="tabsLabel" aria-haspopup="menu" data-menu-trigger="true" @click="openTabs">
+    <button type="button" class="workbench-dynamic-tabs-current flex min-w-0 flex-1 items-center gap-2 text-text-primary" :class="appearance === 'editor' ? 'workbench-editor-tab is-active' : 'rounded border border-border-subtle bg-surface-muted'" :aria-label="tabsLabel" aria-haspopup="menu" data-menu-trigger="true" @click="openTabs">
       <span class="min-w-0 flex-1 truncate">{{ activeItem?.label || tabsLabel }}</span>
       <span class="text-text-subtle">{{ items.length }}</span><ChevronDown class="workbench-tab-icon shrink-0" aria-hidden="true" />
     </button>
@@ -219,7 +219,7 @@ function handleWheel(event: WheelEvent): void {
 .workbench-editor-tab.is-active {
   border-top-color: var(--accent);
   background: var(--surface-panel);
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 .workbench-editor-tab:not(.is-active):hover {
   background: var(--surface-hover);

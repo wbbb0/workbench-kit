@@ -81,7 +81,7 @@ function submitPasskey() {
         <div class="text-small uppercase text-text-subtle">
           {{ brandLabel }}
         </div>
-        <h1 class="mt-2 text-lg font-semibold text-text-secondary">{{ title }}</h1>
+        <h1 class="mt-2 text-lg font-semibold text-text-primary">{{ title }}</h1>
         <p v-if="subtitle" class="mt-1 text-small text-text-muted">
           {{ subtitle }}
         </p>

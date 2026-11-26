@@ -139,14 +139,14 @@ onBeforeUnmount(() => {
 <template>
   <div
     v-if="modelValue"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-surface-scrim px-4 py-6"
     @click.self="closeOnBackdrop ? cancel() : undefined"
   >
     <section
       ref="dialogRef"
       :aria-label="ariaLabel || title || 'Dialog'"
       aria-modal="true"
-      class="flex max-h-[calc(100dvh-3rem)] w-full flex-col overflow-hidden rounded-lg border border-border-default bg-surface-panel text-text-primary shadow-2xl outline-none"
+      class="flex max-h-[calc(100dvh-3rem)] w-full flex-col overflow-hidden rounded-lg border border-border-default bg-surface-elevated text-text-primary shadow-(--shadow-window) outline-none"
       :class="sizeClass"
       role="dialog"
       tabindex="-1"
@@ -154,7 +154,7 @@ onBeforeUnmount(() => {
       <header class="flex min-h-11 shrink-0 items-center justify-between gap-3 border-b border-border-default bg-surface-sidebar px-4">
         <div class="min-w-0">
           <slot name="header">
-            <h2 v-if="title" class="truncate text-ui font-medium text-text-secondary">{{ title }}</h2>
+            <h2 v-if="title" class="truncate text-ui font-medium text-text-primary">{{ title }}</h2>
           </slot>
         </div>
         <button class="btn btn-ghost" type="button" @click="cancel">

@@ -17,7 +17,7 @@ withDefaults(defineProps<{
       class="flex h-8 shrink-0 items-center gap-2 border-b border-border-default bg-surface-sidebar px-3"
     >
       <div class="min-w-0 flex flex-1 items-baseline gap-2">
-        <h2 v-if="title" class="truncate text-small font-semibold text-text-secondary">{{ title }}</h2>
+        <h2 v-if="title" class="truncate text-small font-semibold text-text-primary">{{ title }}</h2>
         <span v-if="subtitle" class="hidden truncate text-small text-text-subtle sm:inline">{{ subtitle }}</span>
       </div>
       <div v-if="$slots.actions" class="flex shrink-0 items-center gap-1">

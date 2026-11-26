@@ -64,7 +64,7 @@ const viewportMargin = 16;
 
 const surfaceClasses = computed(() =>
   [
-    "pointer-events-auto fixed left-1/2 top-1/2 flex min-h-0 min-w-0 flex-col overflow-hidden border border-border-strong bg-surface-panel shadow-[0_22px_70px_rgba(0,0,0,0.45)]",
+    "pointer-events-auto fixed left-1/2 top-1/2 flex min-h-0 min-w-0 flex-col overflow-hidden border border-border-strong bg-surface-elevated shadow-(--shadow-window)",
     sizing.value.className,
     props.inactive ? "window-inactive" : "opacity-100",
   ].join(" "),
@@ -669,7 +669,7 @@ function handleFocusIn() {
       @pointerdown="handleHeaderPointerDown"
     >
       <div class="min-w-0 flex-1">
-        <div class="truncate text-ui font-medium text-text-secondary">
+        <div class="truncate text-ui font-medium text-text-primary">
           {{ window.definition.title }}
         </div>
         <div
