@@ -15,18 +15,28 @@ import type { WorkbenchStatusbarItem, WorkbenchTopbarMenu } from "./chrome";
 import type { WorkbenchNavItem } from "./navigation";
 import type { WorkbenchView } from "./types";
 
-const props = defineProps<{
-  runtime: WorkbenchRuntime;
-  view: WorkbenchView;
-  navItems: readonly WorkbenchNavItem[];
-  activeNavItemId: string;
-  topbarMenus: WorkbenchTopbarMenu[];
-  statusbarItems: WorkbenchStatusbarItem[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    runtime: WorkbenchRuntime;
+    view: WorkbenchView;
+    navItems: readonly WorkbenchNavItem[];
+    activeNavItemId: string;
+    topbarMenus: WorkbenchTopbarMenu[];
+    hideEmptyTopbar?: boolean;
+    statusbarItems: WorkbenchStatusbarItem[];
+  }>(),
+  {
+    hideEmptyTopbar: true,
+  },
+);
 
 const emit = defineEmits<{
   navigate: [itemId: string];
 }>();
+
+const showTopbar = computed(
+  () => !props.hideEmptyTopbar || props.topbarMenus.length > 0,
+);
 
 const primarySidebar = computed(() => props.view.areas.primarySidebar);
 const mainArea = computed(() => props.view.areas.mainArea);
@@ -141,8 +151,11 @@ function resetDesktopAreaResize(areaId: DesktopAreaId) {
   <div
     class="relative flex h-full w-full overflow-hidden bg-surface-app text-text-primary"
   >
-    <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <TopBar :menus="topbarMenus" />
+    <div
+      class="flex min-h-0 flex-1 flex-col overflow-hidden"
+      :class="{ 'pt-[env(safe-area-inset-top,0px)]': !showTopbar }"
+    >
+      <TopBar v-if="showTopbar" :menus="topbarMenus" />
       <div class="flex min-h-0 flex-1 overflow-hidden">
         <WorkbenchActivityBar
           :nav-items="navItems"

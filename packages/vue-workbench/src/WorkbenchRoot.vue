@@ -16,11 +16,15 @@ type WorkbenchRootProps = {
   activeNavItemId: string;
   /** 顶部菜单定义。 */
   topbarMenus: WorkbenchTopbarMenu[];
+  /** 顶部菜单为空时隐藏顶栏（仅桌面端生效）。默认启用。 */
+  hideEmptyTopbar?: boolean;
   /** 状态栏组件项。 */
   statusbarItems: WorkbenchStatusbarItem[];
 };
 
-const props = defineProps<WorkbenchRootProps>();
+const props = withDefaults(defineProps<WorkbenchRootProps>(), {
+  hideEmptyTopbar: true,
+});
 
 const emit = defineEmits<{
   navigate: [itemId: string];
@@ -36,6 +40,7 @@ const emit = defineEmits<{
         :nav-items="navItems"
         :active-nav-item-id="activeNavItemId"
         :topbar-menus="topbarMenus"
+        :hide-empty-topbar="props.hideEmptyTopbar"
         :statusbar-items="statusbarItems"
         @navigate="emit('navigate', $event)"
       />

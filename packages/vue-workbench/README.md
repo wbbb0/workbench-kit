@@ -222,6 +222,8 @@ const navItems = [
 
 `WorkbenchRoot` 会创建 controller，并挂载 `WorkbenchShell`、`MenuHost`、`ToastViewport` 和 `WindowHost`。业务项目通常不需要直接挂载这些内部 host。
 
+`WorkbenchRoot` 和 `WorkbenchShell` 提供可选的 `hideEmptyTopbar`（默认 `true`），在桌面端 `topbarMenus` 为空时隐藏顶栏（同时保留顶部安全区内边距）；需要始终显示空顶栏时可显式传入 `:hide-empty-topbar="false"`。移动端顶栏仍会显示页面标题与工作台菜单。
+
 ## View contract
 
 每个 view 至少包含 `id`、`title` 和 `areas.mainArea`：

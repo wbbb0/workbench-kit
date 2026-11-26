@@ -119,7 +119,7 @@ If the page uses `WorkbenchRoot`, the root shell already owns the workbench-size
 
 Use the lightest workbench component that matches the application shape:
 
-- Use `WorkbenchRoot` for full workbench-style apps that need activity navigation, workbench areas, topbar menus, statusbar items, and multi-window behavior. Mizune-core is the reference shape for this root.
+- Use `WorkbenchRoot` for full workbench-style apps that need activity navigation, workbench areas, topbar menus, statusbar items, and multi-window behavior. Mizune-core is the reference shape for this root. By default (`hideEmptyTopbar: true`), `WorkbenchRoot` and `WorkbenchShell` hide the desktop topbar when `topbarMenus` is empty; pass `:hide-empty-topbar="false"` to keep an empty desktop topbar.
 - Use `WorkbenchPageRoot` for ordinary route-based admin pages that still need runtime services such as `useWorkbenchWindows()` or toasts.
 - Use `WorkbenchRuntimeRoot` directly only when building another shell wrapper inside `workbench-kit`.
 - Use `WorkbenchCompactPage`, `WorkbenchCardStack`, `WorkbenchFeatureCard`, `WorkbenchCard`, and primitives inside a root. `WorkbenchCompactPage` is a visual layout helper, not a runtime provider.

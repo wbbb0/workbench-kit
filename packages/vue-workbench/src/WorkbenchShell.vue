@@ -7,14 +7,20 @@ import type { WorkbenchRuntime } from "./runtime/workbenchRuntime";
 import { useWorkbenchViewport } from "./runtime/workbenchViewport";
 import type { WorkbenchView } from "./types";
 
-const props = defineProps<{
-  runtime: WorkbenchRuntime;
-  view: WorkbenchView;
-  navItems: readonly WorkbenchNavItem[];
-  activeNavItemId: string;
-  topbarMenus: WorkbenchTopbarMenu[];
-  statusbarItems: WorkbenchStatusbarItem[];
-}>();
+const props = withDefaults(
+  defineProps<{
+    runtime: WorkbenchRuntime;
+    view: WorkbenchView;
+    navItems: readonly WorkbenchNavItem[];
+    activeNavItemId: string;
+    topbarMenus: WorkbenchTopbarMenu[];
+    hideEmptyTopbar?: boolean;
+    statusbarItems: WorkbenchStatusbarItem[];
+  }>(),
+  {
+    hideEmptyTopbar: true,
+  },
+);
 
 const { isMobile } = useWorkbenchViewport();
 
@@ -31,6 +37,7 @@ const emit = defineEmits<{
     :nav-items="navItems"
     :active-nav-item-id="activeNavItemId"
     :topbar-menus="topbarMenus"
+    :hide-empty-topbar="props.hideEmptyTopbar"
     :statusbar-items="statusbarItems"
     @navigate="emit('navigate', $event)"
   />
