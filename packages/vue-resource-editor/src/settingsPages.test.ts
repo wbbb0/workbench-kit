@@ -83,3 +83,24 @@ it("已删除的 record、失效的 union 子页与标量多余后缀回到最�
   expect(extra.valid).toBe(false);
   expect(extra.focusPath).toBeUndefined();
 });
+
+it("关闭的 toggleField 对象仍可被搜索命中，导航时停在对象页并聚焦开关", async () => {
+  const { defineBoolean, defineObject, defineString } = await import("@workbench-kit/schema");
+  const { searchSettings } = await import("./settingsPages");
+  const toggleSchema = defineObject("设置", {
+    browser: defineObject(
+      "浏览器",
+      {
+        enabled: defineBoolean("启用浏览器", false),
+        proxy: defineString("代理"),
+      },
+      { toggleField: "enabled" },
+    ),
+  });
+  const hits = searchSettings(toggleSchema, { browser: { enabled: false } }, "代理");
+  expect(hits.map((h) => h.path)).toContainEqual(["browser", "proxy"]);
+  const resolved = resolveSettingsPage(toggleSchema, { browser: { enabled: false } }, ["browser", "proxy"]);
+  expect(resolved.valid).toBe(true);
+  expect(resolved.path).toEqual(["browser"]);
+  expect(resolved.focusPath).toEqual(["browser", "enabled"]);
+});

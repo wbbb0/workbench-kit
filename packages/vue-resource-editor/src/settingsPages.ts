@@ -1,71 +1,44 @@
-import type { SchemaMeta } from "./types";
+import {
+  evaluateSchemaPreview,
+  initialValueForSchema,
+  isObjectToggleActive,
+  ownProperty,
+  resolveObjectFields,
+  resolveSchemaBranch,
+  schemaAtPath,
+  valueAtPath,
+} from "@workbench-kit/schema";
+import type { SchemaMeta } from "./types.js";
+
 export const settingKey = (path: string[]) => JSON.stringify(path);
+
 export function settingValue(root: unknown, path: string[]): unknown {
-  for (const key of path) {
-    if (!root || typeof root !== "object" || !Object.hasOwn(root, key))
-      return undefined;
-    root = (root as Record<string, unknown>)[key];
-  }
-  return root;
+  return valueAtPath(root, path);
 }
+
 export function settingBranch(schema: SchemaMeta, value: unknown): SchemaMeta {
   if (schema.kind !== "union") return schema;
-  return (
-    schema.options?.find((option) =>
-      schema.discriminator
-        ? option.fields?.[schema.discriminator!]?.schema.value ===
-          settingValue(value, [schema.discriminator!])
-        : option.kind ===
-          (value && typeof value === "object" && !Array.isArray(value)
-            ? "object"
-            : typeof value),
-    ) ??
-    schema.options?.[0] ??
-    schema
-  );
+  const resolved = resolveSchemaBranch(schema, value);
+  return resolved === schema ? (schema.options?.[0] ?? schema) : resolved;
 }
+
 export function settingAt(
   root: SchemaMeta,
   values: unknown,
   path: string[],
 ): SchemaMeta | undefined {
-  let schema: SchemaMeta | undefined = root;
-  for (let i = 0; i < path.length; i++) {
-    schema = settingBranch(schema, settingValue(values, path.slice(0, i)));
-    schema =
-      schema.kind === "array" && /^(0|[1-9]\d*)$/.test(path[i]!)
-        ? schema.item
-        : schema.kind === "record"
-          ? schema.recordValue
-          : schema.fields?.[path[i]!]?.schema;
-    if (!schema) return;
-  }
-  return schema;
+  return schemaAtPath(root, values, path);
 }
+
 /** 仅构造新项所需结构；已有默认值继续由宿主解析，秘密通过独立入口写入。 */
 export function initialSettingValue(schema: SchemaMeta): unknown {
-  if (schema.secret) return undefined;
-  if (schema.kind === "union") return initialSettingValue(schema.options![0]!);
-  if (schema.kind === "object")
-    return Object.fromEntries(
-      Object.entries(schema.fields ?? {}).flatMap(([key, field]) => {
-        if (
-          field.schema.secret ||
-          field.schema.optional ||
-          (field.schema.hasDefault && field.schema.kind !== "literal")
-        )
-          return [];
-        return [[key, initialSettingValue(field.schema)]];
-      }),
-    );
-  if (schema.kind === "literal") return schema.value;
-  if (schema.hasDefault) return JSON.parse(JSON.stringify(schema.defaultValue));
-  if (schema.kind === "record") return {};
-  if (schema.kind === "array" || schema.kind === "enum-set") return [];
-  if (schema.kind === "number") return schema.min ?? 0;
-  if (schema.kind === "boolean") return false;
-  return "";
+  return initialValueForSchema(schema);
 }
+
+export function settingPreview(schema: SchemaMeta, value: unknown): string {
+  return evaluateSchemaPreview(schema, value);
+}
+
 export function searchSettings(
   schema: SchemaMeta,
   values: unknown,
@@ -82,20 +55,24 @@ export function searchSettings(
         .includes(needle)
     )
       results.push({ path, title: node.title ?? path.at(-1)! });
-    const branch = settingBranch(node, settingValue(values, path));
-    if (branch.kind === "array")
-      for (const key of Object.keys(
-        (settingValue(values, path) ?? []) as object,
-      ))
+    const value = settingValue(values, path);
+    const branch = settingBranch(node, value);
+    if (branch.kind === "array") {
+      for (const key of Object.keys((value ?? []) as object))
         walk(branch.item!, [...path, key]);
-    else if (branch.kind === "record")
-      for (const key of Object.keys(
-        (settingValue(values, path) ?? {}) as object,
-      ))
+    } else if (branch.kind === "record") {
+      for (const key of Object.keys((value ?? {}) as object))
         walk(branch.recordValue!, [...path, key]);
-    else
+    } else if (branch.kind === "object") {
+      for (const [key, field] of Object.entries(
+        resolveObjectFields(branch, value),
+      )) {
+        walk(field.schema, [...path, key]);
+      }
+    } else {
       for (const [key, field] of Object.entries(branch.fields ?? {}))
         walk(field.schema, [...path, key]);
+    }
   }
   walk(schema, []);
   return results;
@@ -103,11 +80,13 @@ export function searchSettings(
 
 export const isSettingPage = (schema: SchemaMeta) =>
   ["object", "record", "union", "array"].includes(schema.kind);
+
 export interface SettingsPageLocation {
   path: string[];
   title: string;
 }
-/** 将字段目标解析到包含它的页面；record 条目必须实际存在。 */
+
+/** 将字段目标解析到包含它的页面；record 条目必须实际存在，关闭的 toggleField 对象停在该对象页并聚焦开关。 */
 export function resolveSettingsPage(
   schema: SchemaMeta,
   values: unknown,
@@ -123,7 +102,20 @@ export function resolveSettingsPage(
   for (let i = 0; i < target.length; i++) {
     const key = target[i]!;
     const branch = settingBranch(node, value);
-    const field = branch.fields?.[key];
+    if (
+      branch.kind === "object" &&
+      branch.toggleField &&
+      !isObjectToggleActive(branch, value) &&
+      key !== branch.toggleField
+    ) {
+      focusPath = [...target.slice(0, i), branch.toggleField];
+      break;
+    }
+    const fields =
+      branch.kind === "object"
+        ? resolveObjectFields(branch, value)
+        : branch.fields;
+    const field = ownProperty(fields, key);
     const child =
       branch.kind === "array" && /^(0|[1-9]\d*)$/.test(key)
         ? branch.item
@@ -143,12 +135,17 @@ export function resolveSettingsPage(
       pages.push({
         path,
         title:
-          branch.kind === "record" ? key : (field?.title ?? child.title ?? key),
+          branch.kind === "record"
+            ? key
+            : (field?.title ?? child.title ?? key),
       });
     } else {
       valid = i === target.length - 1;
       if (valid)
-        focusPath = node.discriminator === key ? path.slice(0, -1) : path;
+        focusPath =
+          node.discriminator === key || branch.variantBy === key
+            ? path.slice(0, -1)
+            : path;
       break;
     }
     node = child;

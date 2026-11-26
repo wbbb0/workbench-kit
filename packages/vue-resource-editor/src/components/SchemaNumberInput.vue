@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
+import { DURATION_SCALES, DURATION_UNITS } from "@workbench-kit/schema";
 import type { SchemaMeta } from "../types";
 const props = defineProps<{
   schema: SchemaMeta;
@@ -11,16 +12,16 @@ const props = defineProps<{
   preserveRawNumber?: boolean;
 }>();
 const emit = defineEmits<{ "update:modelValue": [value: unknown] }>();
-const units = [
-  { label: "毫秒", scale: 1 },
-  { label: "秒", scale: 1000 },
-  { label: "分钟", scale: 60000 },
-  { label: "小时", scale: 3600000 },
-  { label: "天", scale: 86400000 },
-];
-const scales = { ms: 1, s: 1000, min: 60000, h: 3600000, d: 86400000 };
+const units = DURATION_UNITS;
+const scales = DURATION_SCALES;
 const duration = computed(() => props.schema.format === "duration");
 const scale = ref(duration.value ? scales[props.schema.timescale ?? "ms"] : 1);
+watch(
+  () => [props.schema.format, props.schema.timescale] as const,
+  () => {
+    scale.value = duration.value ? scales[props.schema.timescale ?? "ms"] : 1;
+  },
+);
 const display = computed(() =>
   typeof props.modelValue === "number"
     ? props.modelValue / scale.value

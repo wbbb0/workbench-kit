@@ -144,3 +144,64 @@ it("非法数组草稿保留输入并显示路径错误，可显式重置，不�
   expect(values.pricing).toBe("尚未完成的输入");
   w.unmount();
 });
+
+it("紧凑表单支持 toggleField、variantBy、preview 与秘密字段", async () => {
+  const { defineBoolean, defineEnum, defineObject, defineOptional, defineString, defineVariantObject } = await import("@workbench-kit/schema");
+  const schema = defineObject("根", {
+    auth: defineObject(
+      "认证",
+      {
+        enabled: defineBoolean("启用认证", true),
+        username: defineString("用户名"),
+        password: defineString("密码", undefined, { secret: true }),
+      },
+      {
+        toggleField: "enabled",
+        preview: (p) => p.ref("username"),
+      },
+    ),
+    thinking: defineOptional(
+      defineVariantObject(
+        "思考",
+        { mode: defineEnum("模式", ["off", "level"] as const) },
+        {
+          variantBy: "mode",
+          variants: {
+            off: { title: "关闭" },
+            level: { title: "等级", fields: { level: defineEnum("等级", ["low", "high"] as const) } },
+          },
+        },
+      ),
+    ),
+  });
+  const w = mount(SchemaSectionForm, {
+    props: {
+      schema,
+      values: { auth: { enabled: true, username: "alice" } },
+      overrides: { auth: { username: "alice" } },
+      secrets: { '["auth","password"]': true },
+      secretInputs: {},
+    },
+  });
+  expect(w.text()).toContain("alice");
+  expect(w.find('input[autocomplete="off"]').exists()).toBe(true);
+  await w.get('select').setValue("level");
+  expect(w.emitted("edit")?.at(-1)).toEqual([["thinking"], { mode: "level" }]);
+  await w.setProps({ values: { auth: { enabled: false, username: "alice" } }, overrides: { auth: { enabled: false, username: "alice" } } });
+  expect(w.find('[data-setting-path=\'["auth","username"]\']').exists()).toBe(false);
+  w.unmount();
+
+  const directSecretSchema = defineObject("直接模式密钥", {
+    token: defineString("令牌", undefined, { secret: true }),
+  });
+  const directForm = mount(SchemaSectionForm, {
+    props: {
+      schema: directSecretSchema,
+      values: { token: "plain-secret" },
+      overrides: { token: "plain-secret" },
+    },
+  });
+  await directForm.get("button").trigger("click");
+  expect(directForm.emitted("reset")?.at(-1)).toEqual([["token"]]);
+  directForm.unmount();
+});

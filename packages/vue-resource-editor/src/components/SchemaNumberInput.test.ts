@@ -50,6 +50,9 @@ it("timescale 决定显示单位，切换单位不修改存储，输入和清空
     props: { schema: { ...number, format: "duration" }, modelValue: 120000 },
   });
   expect((defaults.get("select").element as HTMLSelectElement).value).toBe("1");
+  await defaults.setProps({ schema: { ...number, format: "duration", timescale: "s" } });
+  expect((defaults.get("select").element as HTMLSelectElement).value).toBe("1000");
+  expect((defaults.get('input[inputmode="decimal"]').element as HTMLInputElement).value).toBe("120");
   defaults.unmount();
 });
 it.each(["date", "time", "datetime-local", "email", "url"])(

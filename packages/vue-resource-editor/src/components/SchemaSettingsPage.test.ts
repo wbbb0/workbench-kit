@@ -321,3 +321,71 @@ it("结构编辑失败或抛错时，类型选择仍和生效分支一致", asyn
     w.unmount();
   }
 });
+
+it("支持 object.toggleField、object.variantBy 与 preview 展示", async () => {
+  const { defineBoolean, defineEnum, defineObject, defineString, defineVariantObject } = await import("@workbench-kit/schema");
+  const richSchema = defineObject("设置", {
+    auth: defineObject(
+      "认证",
+      {
+        enabled: defineBoolean("启用认证", false),
+        username: defineString("用户名"),
+        password: defineString("密码", undefined, { secret: true }),
+      },
+      {
+        toggleField: "enabled",
+        preview: (p) => p.ref("username", { fallback: "已启用" }),
+      },
+    ),
+    provider: defineVariantObject(
+      "供应商",
+      {
+        type: defineEnum("供应商类型", ["openai", "vertex"] as const),
+        common: defineString("公共标签"),
+      },
+      {
+        variantBy: "type",
+        variants: {
+          openai: { title: "OpenAI", fields: { apiKey: defineString("API Key", undefined, { secret: true }) } },
+          vertex: { title: "Vertex", fields: { projectId: defineString("项目 ID") } },
+        },
+        preview: (p) => p.join(" · ", p.ref("type"), p.ref("common")),
+      },
+    ),
+  });
+  const applyStructure = vi.fn().mockResolvedValue(true);
+  const w = mount(SchemaSettingsPage, {
+    props: {
+      schema: richSchema,
+      values: { auth: { enabled: false, username: "alice" }, provider: { type: "openai", common: "主通道" } },
+      overrides: {},
+      path: [],
+      defaultsAsPlaceholders: true,
+      applyStructure,
+    },
+  });
+  // 父页入口行：auth 关闭时禁入，右侧复选框独立在 button 外
+  const authEntry = w.findAll("button[data-setting-entry]").find((b) => b.text().includes("认证"))!;
+  expect((authEntry.element as HTMLButtonElement).disabled).toBe(true);
+  expect(authEntry.find('input[type="checkbox"]').exists()).toBe(false);
+  const providerEntry = w.findAll("button[data-setting-entry]").find((b) => b.text().includes("供应商"))!;
+  expect(providerEntry.text()).toContain("openai · 主通道");
+
+  // 进入 auth 页：顶部有开关，关闭态隐藏子项
+  await w.setProps({ path: ["auth"] });
+  expect(w.find('[data-setting-path=\'["auth","username"]\']').exists()).toBe(false);
+  await w.setProps({ values: { auth: { enabled: true, username: "alice" }, provider: { type: "openai", common: "主通道" } } });
+  expect(w.find('[data-setting-path=\'["auth","username"]\']').exists()).toBe(true);
+
+  // 进入 provider 页：使用自定义标题下拉框并切换 variant
+  await w.setProps({ path: ["provider"] });
+  expect(w.find('[data-setting-path=\'["provider","apiKey"]\']').exists()).toBe(true);
+  expect(w.find('[data-setting-path=\'["provider","projectId"]\']').exists()).toBe(false);
+  await w.get('select[aria-label="供应商类型"]').setValue("vertex");
+  expect(applyStructure).toHaveBeenCalledWith({
+    type: "set",
+    path: ["provider", "type"],
+    value: "vertex",
+  });
+  w.unmount();
+});

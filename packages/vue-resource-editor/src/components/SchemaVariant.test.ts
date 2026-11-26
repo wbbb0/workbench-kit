@@ -2,7 +2,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { expect, it } from "vitest";
 import SchemaNode from "./SchemaNode.vue";
 import { projectSchemaVariant } from "../schemaVariant";
-import type { UiNode, EditorFeatures } from "../types";
+import type { UiNode, EditorFeatures, SchemaMeta } from "../types";
 const text: UiNode = { kind: "field", schema: { kind: "string", optional: true, hasDefault: false } };
 const group = (children: Record<string, UiNode>): UiNode => ({ kind: "group", schema: { kind: "object", optional: false, hasDefault: false }, children: Object.fromEntries(Object.entries(children).map(([key, node]) => [key, { field: { schema: node.schema }, node }])) });
 const variant = (type: string, extra: string) => group({ type: { kind: "field", schema: { kind: "literal", value: type, optional: false, hasDefault: true, defaultValue: type } }, address: text, secret: text, entries: { kind: "record", schema: { kind: "record", optional: false, hasDefault: true, defaultValue: {} }, key: text, value: group({ name: text }) }, [extra]: text });
@@ -186,4 +186,104 @@ it("切换供应商后实际表单使用目标分支默认值，而不是第一�
   expect(values).toEqual(expect.arrayContaining([...Object.values(defaults), "test-key"]));
   expect(values).not.toContain("old-endpoint");
   wrapper.unmount();
+});
+
+it("buildUiTree 与 SchemaNode 支持 toggleField、variantBy、preview 与 readOnly 秘密脱敏", async () => {
+  const { defineBoolean, defineEnum, defineObject, defineString, defineVariantObject } = await import("@workbench-kit/schema");
+  const { buildUiTree } = await import("../types");
+  const schema = defineObject("根", {
+    auth: defineObject(
+      "认证",
+      {
+        enabled: defineBoolean("启用", true),
+        username: defineString("用户名"),
+        password: defineString("密码", undefined, { secret: true }),
+      },
+      {
+        toggleField: "enabled",
+        preview: (p) => p.ref("username"),
+      },
+    ),
+    provider: defineVariantObject(
+      "供应商",
+      {
+        type: defineEnum("供应商类型", ["openai", "vertex"] as const),
+        label: defineString("标签"),
+      },
+      {
+        variantBy: "type",
+        variants: {
+          openai: { title: "OpenAI", fields: { apiKey: defineString("密钥", undefined, { secret: true }) } },
+          vertex: { title: "Vertex", fields: { projectId: defineString("项目") } },
+        },
+      },
+    ),
+  });
+  const tree = buildUiTree(schema);
+  const w = mount(SchemaNode, {
+    props: {
+      node: tree,
+      modelValue: {
+        auth: { enabled: true, username: "alice", password: "top-secret-password" },
+        provider: { type: "openai", label: "主", apiKey: "sk-secret" },
+      },
+    },
+  });
+  expect(w.text()).toContain("alice");
+  await w.findAll("button").find((b) => b.text().includes("认证"))!.trigger("click");
+  await w.findAll("button").find((b) => b.text().includes("供应商"))!.trigger("click");
+  await w.get('select[aria-label="供应商类型"]').setValue("vertex");
+  expect(w.emitted("update:modelValue")?.at(-1)?.[0]).toEqual({
+    auth: { enabled: true, username: "alice", password: "top-secret-password" },
+    provider: { type: "vertex", label: "主" },
+  });
+  await w.setProps({ readOnly: true });
+  expect(w.text()).not.toContain("top-secret-password");
+  expect(w.text()).not.toContain("sk-secret");
+  expect(w.text()).toContain("已设置");
+  w.unmount();
+
+  const layeredSchema: SchemaMeta = {
+    kind: "object",
+    title: "根节点",
+    optional: false,
+    hasDefault: false,
+    fields: {
+      service: {
+        schema: {
+          kind: "object",
+          title: "服务",
+          optional: false,
+          hasDefault: true,
+          toggleField: "enabled",
+          variantBy: "type",
+          fields: {
+            enabled: { schema: { kind: "boolean", title: "启用", optional: false, hasDefault: true, defaultValue: true } },
+            type: { schema: { kind: "enum", title: "类型", optional: false, hasDefault: false, values: ["a", "b"] } },
+            host: { schema: { kind: "string", title: "主机", optional: false, hasDefault: false } },
+          },
+          variants: {
+            a: { title: "A 分支", preview: { ref: ["host"] } },
+            b: { title: "B 分支" },
+          },
+        },
+      },
+    },
+  };
+  const layered = mount(SchemaNode, {
+    props: {
+      node: buildUiTree(layeredSchema),
+      modelValue: { service: { host: "10.0.0.1" } },
+      effectiveValue: { service: { enabled: false, type: "a", host: "10.0.0.1" } },
+    },
+  });
+  expect(layered.find("input[placeholder]").exists()).toBe(false);
+  expect((layered.get('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(false);
+  await layered.setProps({
+    effectiveValue: { service: { enabled: true, type: "a", host: "10.0.0.1" } },
+  });
+  expect(layered.text()).toContain("10.0.0.1");
+  await layered.findAll("button").find((b) => b.text().includes("服务"))!.trigger("click");
+  expect((layered.get('select[aria-label="类型"]').element as HTMLSelectElement).value).toBe("a");
+  layered.unmount();
 });

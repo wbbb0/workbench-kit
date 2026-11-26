@@ -1,4 +1,20 @@
-import type { ActivationPolicy } from "@workbench-kit/schema";
+import type {
+  ActivationPolicy,
+  DurationTimescale,
+  ObjectFieldMeta,
+  ObjectVariantMeta,
+  SchemaMeta,
+  SchemaPreview,
+} from "@workbench-kit/schema";
+
+export type {
+  ActivationPolicy,
+  DurationTimescale,
+  ObjectFieldMeta,
+  ObjectVariantMeta,
+  SchemaMeta,
+  SchemaPreview,
+};
 
 /** Resource list 中的一条资源摘要。 */
 export interface EditorResourceSummary {
@@ -13,46 +29,11 @@ export interface EditorResourceSummary {
   editable: boolean;
 }
 
-/** 后端 schema 转换后的元数据。SchemaNode 依赖它渲染字段和默认值提示。 */
-export interface ObjectFieldMeta {
+export interface UiVariantBranch {
   title?: string;
   description?: string;
-  schema: SchemaMeta;
-}
-
-export interface SchemaMeta extends ActivationPolicy {
-  kind: string;
-  title?: string;
-  description?: string;
-  optional: boolean;
-  /** 分支仍可展示当前值，但不能作为新的选择。 */
   disabled?: boolean;
-  hasDefault: boolean;
-  defaultValue?: unknown;
-  fields?: Record<string, ObjectFieldMeta>;
-  unknownKeys?: string;
-  item?: SchemaMeta;
-  key?: SchemaMeta;
-  recordValue?: SchemaMeta;
-  options?: SchemaMeta[];
-  discriminator?: string;
-  values?: unknown[];
-  valueLabels?: Record<string, string>;
-  /** string 格式控制原生输入类型；未知格式仍用普通文本。 */
-  format?: string;
-  step?: number;
-  /** format=duration 的默认显示单位；数值存储为毫秒，缺省显示毫秒。 */
-  timescale?: "ms" | "s" | "min" | "h" | "d";
-  control?: "number" | "range";
-  integer?: boolean;
-  min?: number;
-  max?: number;
-  value?: unknown;
-  dynamicRef?: string;
-  /** 页面式设置编辑的通用字段展示信息。 */
-  secret?: boolean;
-  multiline?: boolean;
-  reference?: { path: string[]; label: string };
+  children?: Record<string, { field: ObjectFieldMeta; node: UiNode }>;
 }
 
 /** SchemaNode 使用的递归 UI 树。 */
@@ -62,10 +43,75 @@ export type UiNode =
       kind: "group";
       schema: SchemaMeta;
       children: Record<string, { field: ObjectFieldMeta; node: UiNode }>;
+      variants?: Record<string, UiVariantBranch>;
     }
   | { kind: "array"; schema: SchemaMeta; item: UiNode }
   | { kind: "record"; schema: SchemaMeta; key: UiNode; value: UiNode }
   | { kind: "union"; schema: SchemaMeta; options: UiNode[] };
+
+function mapFields(
+  fields: Record<string, ObjectFieldMeta> | undefined,
+): Record<string, { field: ObjectFieldMeta; node: UiNode }> {
+  return Object.fromEntries(
+    Object.entries(fields ?? {}).map(([key, field]) => [
+      key,
+      { field, node: buildUiTree(field.schema) },
+    ]),
+  );
+}
+
+/** 从 SchemaMeta 构造供 SchemaNode 使用的递归 UI 树。 */
+export function buildUiTree(schema: SchemaMeta): UiNode {
+  if (schema.kind === "object") {
+    const variants = schema.variants
+      ? Object.fromEntries(
+          Object.entries(schema.variants).map(([key, variant]) => [
+            key,
+            {
+              ...(variant.title !== undefined ? { title: variant.title } : {}),
+              ...(variant.description !== undefined
+                ? { description: variant.description }
+                : {}),
+              ...(variant.disabled !== undefined
+                ? { disabled: variant.disabled }
+                : {}),
+              ...(variant.fields !== undefined
+                ? { children: mapFields(variant.fields) }
+                : {}),
+            },
+          ]),
+        )
+      : undefined;
+    return {
+      kind: "group",
+      schema,
+      children: mapFields(schema.fields),
+      ...(variants ? { variants } : {}),
+    };
+  }
+  if (schema.kind === "array" && schema.item) {
+    return { kind: "array", schema, item: buildUiTree(schema.item) };
+  }
+  if (schema.kind === "record" && schema.recordValue) {
+    return {
+      kind: "record",
+      schema,
+      key: {
+        kind: "field",
+        schema: schema.key ?? { kind: "string", optional: false, hasDefault: false },
+      },
+      value: buildUiTree(schema.recordValue),
+    };
+  }
+  if (schema.kind === "union" && schema.options) {
+    return {
+      kind: "union",
+      schema,
+      options: schema.options.map(buildUiTree),
+    };
+  }
+  return { kind: "field", schema };
+}
 
 /** 由消费方注入的节点操作；组件库不解释业务路径与行为。 */
 export interface EditorNodeAction {

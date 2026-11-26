@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { applyVariantChange, ownProperty } from "@workbench-kit/schema";
 import { WorkbenchButton } from "@workbench-kit/vue-workbench";
 import SchemaField from "./SchemaField.vue";
+import SchemaSecretInput from "./SchemaSecretInput.vue";
 import type { SchemaMeta } from "../types";
 import {
   initialSettingValue,
@@ -10,22 +12,34 @@ import {
   settingBranch,
 } from "../settingsPages";
 import { schemaSectionRows, type SectionRow } from "../schemaSections";
+
 const props = withDefaults(
   defineProps<{
     schema: SchemaMeta;
     values: Record<string, unknown>;
     overrides?: Record<string, unknown>;
+    secrets?: Record<string, boolean>;
+    secretInputs?: Record<string, string>;
+    referenceOptions?: Record<
+      string,
+      { value: string; label?: string; group?: string }[]
+    >;
     disabled?: boolean;
     issues?: { path: string[]; message: string }[];
     defaultsAsPlaceholders?: boolean;
   }>(),
   { defaultsAsPlaceholders: true },
 );
+
 const emit = defineEmits<{
   edit: [path: string[], value: unknown];
   reset: [path: string[]];
+  secretInput: [path: string[], value: string];
+  secret: [path: string[], action: "set" | "clear", value?: string];
 }>();
+
 const rows = computed(() => schemaSectionRows(props.schema, props.values));
+
 function arrayItems(path: string[]) {
   const value = settingValue(props.values, path);
   return Array.isArray(value) ? [...value] : [];
@@ -51,6 +65,19 @@ function move(row: SectionRow, offset: number) {
   emit("edit", path, items);
 }
 function variant(row: SectionRow, event: Event) {
+  if (row.variant) {
+    const next = (event.target as HTMLSelectElement).value;
+    if (!next) {
+      emit("reset", row.path);
+      return;
+    }
+    emit(
+      "edit",
+      row.path,
+      applyVariantChange(row.schema, settingValue(props.values, row.path), next),
+    );
+    return;
+  }
   emit(
     "edit",
     row.path,
@@ -58,6 +85,41 @@ function variant(row: SectionRow, event: Event) {
       row.schema.options![Number((event.target as HTMLSelectElement).value)]!,
     ),
   );
+}
+function referenceList(schema: SchemaMeta, path: string[]) {
+  return (
+    props.referenceOptions?.[settingKey(path)] ??
+    props.referenceOptions?.[settingKey([...path.slice(0, -1), "*"])] ??
+    Object.keys(
+      (settingValue(props.values, schema.reference?.path ?? []) ?? {}) as object,
+    ).map((value) => ({
+      value,
+      label: value,
+      group: undefined as string | undefined,
+    }))
+  );
+}
+function toggleChecked(toggle: NonNullable<SectionRow["toggle"]>): boolean {
+  const raw = settingValue(props.overrides ?? props.values, toggle.path);
+  if (raw !== undefined) return raw === true;
+  if (props.defaultsAsPlaceholders) return false;
+  return toggle.active;
+}
+function toggleIndeterminate(toggle: NonNullable<SectionRow["toggle"]>): boolean {
+  return (
+    props.defaultsAsPlaceholders &&
+    settingValue(props.overrides ?? props.values, toggle.path) === undefined
+  );
+}
+function fieldValue(path: string[]) {
+  return settingValue(props.overrides ?? props.values, path);
+}
+function editField(path: string[], value: unknown) {
+  if (props.defaultsAsPlaceholders && (value === "" || value === undefined)) {
+    emit("reset", path);
+  } else {
+    emit("edit", path, value);
+  }
 }
 const issuesFor = (path: string[]) =>
   props.issues?.filter(
@@ -79,7 +141,38 @@ const issuesFor = (path: string[]) =>
         v-if="row.kind === 'heading' || row.kind === 'array'"
         class="flex flex-wrap items-center gap-2"
       >
-        <h3 class="min-w-0 flex-1 text-sm font-medium">{{ row.title }}</h3>
+        <input
+          v-if="row.toggle"
+          :id="'section-' + settingKey(row.toggle.path)"
+          type="checkbox"
+          class="cursor-pointer accent-accent"
+          :aria-label="row.title + ' 开关'"
+          :checked="toggleChecked(row.toggle)"
+          :indeterminate="toggleIndeterminate(row.toggle)"
+          :title="row.toggle.title"
+          :disabled="disabled"
+          @change="
+            emit(
+              'edit',
+              row.toggle.path,
+              ($event.target as HTMLInputElement).checked,
+            )
+          "
+        />
+        <div class="min-w-0 flex-1">
+          <h3 class="truncate text-sm font-medium">{{ row.title }}</h3>
+          <p v-if="row.preview" class="truncate text-xs text-text-muted">
+            {{ row.preview }}
+          </p>
+        </div>
+        <WorkbenchButton
+          v-if="row.toggle"
+          label="恢复默认"
+          size="sm"
+          variant="secondary"
+          :disabled="disabled"
+          @click="emit('reset', row.toggle.path)"
+        />
         <template v-if="row.arrayEntry"
           ><WorkbenchButton
             label="上移"
@@ -118,11 +211,62 @@ const issuesFor = (path: string[]) =>
           >{{ row.title }}</label
         >
         <div class="min-w-[min(100%,12rem)] flex-1">
+          <SchemaSecretInput
+            v-if="row.schema.secret && secrets !== undefined"
+            redacted
+            :input-id="'section-' + settingKey(row.path)"
+            :is-set="ownProperty(secrets, settingKey(row.path))"
+            :draft-value="secretInputs?.[settingKey(row.path)]"
+            :disabled="disabled"
+            @update:draft-value="(value) => emit('secretInput', row.path, value)"
+            @commit="(value) => emit('secret', row.path, 'set', value)"
+            @clear="emit('secret', row.path, 'clear')"
+          />
+          <SchemaSecretInput
+            v-else-if="row.schema.secret"
+            :input-id="'section-' + settingKey(row.path)"
+            :model-value="fieldValue(row.path)"
+            :disabled="disabled"
+            @update:model-value="(value) => editField(row.path, value)"
+          />
+          <select
+            v-else-if="row.schema.reference"
+            :id="'section-' + settingKey(row.path)"
+            class="input-base w-full min-w-0 px-2 py-1"
+            :value="fieldValue(row.path) ?? ''"
+            :disabled="disabled"
+            @change="
+              editField(row.path, ($event.target as HTMLSelectElement).value)
+            "
+          >
+            <option value="">未选择</option>
+            <template
+              v-for="(option, index) in referenceList(row.schema, row.path)"
+              :key="option.value"
+            >
+              <option
+                v-if="
+                  option.group &&
+                  index > 0 &&
+                  option.group !==
+                    referenceList(row.schema, row.path)[index - 1]?.group
+                "
+                disabled
+                value="__group_separator__"
+              >
+                ──────── {{ option.group }} ────────
+              </option>
+              <option :value="option.value">
+                {{ option.label ?? option.value }}
+              </option>
+            </template>
+          </select>
           <SchemaField
+            v-else
             :schema="row.schema"
             :single-line="!row.schema.multiline"
             :input-id="'section-' + settingKey(row.path)"
-            :model-value="settingValue(overrides ?? values, row.path)"
+            :model-value="fieldValue(row.path)"
             :inherited="
               defaultsAsPlaceholders
                 ? undefined
@@ -134,10 +278,11 @@ const issuesFor = (path: string[]) =>
             :default-presentation="
               defaultsAsPlaceholders ? 'placeholder' : 'value'
             "
-            @update:model-value="(value) => emit('edit', row.path, value)"
+            @update:model-value="(value) => editField(row.path, value)"
           />
         </div>
         <WorkbenchButton
+          v-if="!row.schema.secret"
           label="恢复默认"
           size="sm"
           variant="secondary"
@@ -145,6 +290,27 @@ const issuesFor = (path: string[]) =>
           @click="emit('reset', row.path)"
         />
       </div>
+      <label
+        v-else-if="row.kind === 'variant' && row.variant"
+        class="flex items-center gap-3 text-sm"
+        >{{ row.variant.label
+        }}<select
+          class="input-base min-w-0 flex-1 px-2 py-1"
+          :disabled="disabled"
+          :value="row.variant.current ?? ''"
+          @change="variant(row, $event)"
+        >
+          <option v-if="row.variant.optional" value="">未设置</option>
+          <option
+            v-for="option in row.variant.options"
+            :key="option.value"
+            :value="option.value"
+            :disabled="option.disabled && row.variant.current !== option.value"
+          >
+            {{ option.label }}
+          </option>
+        </select></label
+      >
       <label
         v-else-if="row.kind === 'variant'"
         class="flex items-center gap-3 text-sm"
@@ -194,6 +360,16 @@ const issuesFor = (path: string[]) =>
               : row.schema.kind
         }}，请使用页面式编辑器。
       </p>
+      <template v-if="row.toggle">
+        <p
+          v-for="issue in issuesFor(row.toggle.path)"
+          :key="issue.message"
+          role="alert"
+          class="mt-1 text-xs text-danger"
+        >
+          {{ issue.message }}
+        </p>
+      </template>
       <p
         v-for="issue in issuesFor(row.path)"
         :key="issue.message"

@@ -1,5 +1,16 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
+import {
+  applyVariantChange,
+  cloneJsonValue,
+  evaluateSchemaPreview,
+  initialValueForSchema,
+  isObjectToggleActive,
+  isPlainObject,
+  ownProperty,
+  resolveObjectVariantKey,
+  resolveObjectVariantMeta,
+} from "@workbench-kit/schema";
 import { Plus, Trash2, ArrowUp, ArrowDown, Pencil, Check, Undo2, Copy, Play } from "lucide-vue-next";
 import { projectSchemaVariant } from "../schemaVariant";
 import SchemaField from "./SchemaField.vue";
@@ -108,8 +119,72 @@ const showNodeHeader = computed(() => {
   }
   return label.value.trim().length > 0 || mergedHeaderActions.value.length > 0 || headerMeta.value !== undefined;
 });
-const showGroupHeader = computed(() => depth.value > 0 && showNodeHeader.value);
+const showGroupHeader = computed(() => (depth.value > 0 || !!groupToggleChild.value) && showNodeHeader.value);
 const showFieldHeader = computed(() => showNodeHeader.value);
+const groupBaseValue = computed(() =>
+  props.effectiveValue !== undefined
+    ? props.effectiveValue
+    : props.inherited !== undefined
+      ? props.inherited
+      : props.defaultValue
+);
+const groupCurrentValue = computed(() => {
+  if (props.modelValue === undefined) return groupBaseValue.value;
+  if (isPlainObject(props.modelValue) && isPlainObject(groupBaseValue.value)) {
+    return { ...groupBaseValue.value, ...props.modelValue };
+  }
+  return props.modelValue;
+});
+const nodePreview = computed(() => evaluateSchemaPreview(props.node.schema, groupCurrentValue.value));
+const groupToggleKey = computed(() =>
+  props.node.kind === "group" ? props.node.schema.toggleField : undefined
+);
+const groupToggleChild = computed(() =>
+  groupToggleKey.value && props.node.kind === "group"
+    ? props.node.children[groupToggleKey.value]
+    : undefined
+);
+const groupToggleActive = computed(() =>
+  !groupToggleKey.value || isObjectToggleActive(props.node.schema, groupCurrentValue.value, props.modelValue)
+);
+const groupVariantKey = computed(() =>
+  props.node.kind === "group" && props.node.schema.variantBy
+    ? resolveObjectVariantKey(props.node.schema, groupCurrentValue.value)
+    : undefined
+);
+const groupVariantInfo = computed(() => {
+  if (props.node.kind !== "group" || !groupToggleActive.value) return undefined;
+  return resolveObjectVariantMeta(props.node.schema, groupCurrentValue.value);
+});
+const visibleGroupChildren = computed(() => {
+  if (props.node.kind !== "group") return {};
+  if (groupToggleKey.value && !groupToggleActive.value) return {};
+  if (props.node.schema.variantBy && props.node.schema.optional && groupCurrentValue.value === undefined) {
+    return {};
+  }
+  const branch = groupVariantKey.value
+    ? ownProperty(props.node.variants, groupVariantKey.value)
+    : undefined;
+  const merged = branch?.children ? { ...props.node.children, ...branch.children } : props.node.children;
+  return Object.fromEntries(
+    Object.entries(merged).filter(
+      ([key]) => key !== groupToggleKey.value && key !== props.node.schema.variantBy,
+    ),
+  );
+});
+const hasGroupBody = computed(() =>
+  !!groupVariantInfo.value || Object.keys(visibleGroupChildren.value).length > 0
+);
+function onGroupVariantSelect(event: Event) {
+  if (interactionsDisabled.value || props.node.kind !== "group") return;
+  const next = (event.target as HTMLSelectElement).value || undefined;
+  if (next === undefined) {
+    emit("update:modelValue", undefined);
+    return;
+  }
+  const base = props.modelValue !== undefined ? props.modelValue : props.effectiveValue;
+  emit("update:modelValue", applyVariantChange(props.node.schema, base, next));
+}
 const headerEditDraft = ref(props.headerEditValue ?? label.value);
 
 watch(
@@ -280,9 +355,12 @@ function onArrayItemUpdate(index: number, childValue: unknown) {
 }
 
 function initialNodeValue(node: UiNode): unknown {
-  if (props.editorFeatures?.initializeFromDefaults && node.schema.hasDefault) return jsonClone(node.schema.defaultValue);
+  if (props.editorFeatures?.initializeFromDefaults && node.schema.hasDefault) return cloneJsonValue(node.schema.defaultValue);
+  if (node.kind === "group" && node.schema.variantBy && node.schema.variants) {
+    return initialValueForSchema(node.schema);
+  }
   if (node.kind !== "union" || !node.schema.discriminator) return null;
-  if (node.schema.hasDefault) return jsonClone(node.schema.defaultValue);
+  if (node.schema.hasDefault) return cloneJsonValue(node.schema.defaultValue);
   return node.options[0] ? projectSchemaVariant(node.options[0], {}) : null;
 }
 
@@ -306,13 +384,9 @@ function moveArrayItem(index: number, offset: -1 | 1) {
   emit("update:modelValue", next);
 }
 
-function jsonClone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
-}
-
 function duplicateArrayItem(index: number) {
   const next = [...displayedItems.value];
-  const copy = jsonClone(next[index]);
+  const copy = cloneJsonValue(next[index]);
   next.splice(index + 1, 0, copy);
   emit("update:modelValue", next);
 }
@@ -374,7 +448,7 @@ async function removeRecordEntry(key: string) {
 
 function duplicateRecordEntry(key: string) {
   const next = cloneRecord(displayedRecord.value);
-  const copy = jsonClone(next[key]);
+  const copy = cloneJsonValue(next[key]);
   let newKey = `${key}_copy`;
   let suffix = 2;
   while (newKey in next) {
@@ -602,10 +676,6 @@ function groupNodeMatchesValue(node: Extract<UiNode, { kind: "group" }>, value: 
   return discriminantChildren.every(([key, child]) => nodeMatchesValue(child.node, value[key]));
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
-}
-
 const activeUnionNode = computed(() => {
   const node = unionOptions.value[activeUnionIdx.value];
   const discriminator = props.node.schema.discriminator;
@@ -645,7 +715,7 @@ function onUnionSelect(event: Event) {
   selectedUnionIdx.value = index;
   emit("update:modelValue", props.node.schema.discriminator
     ? projectSchemaVariant(option, displayedUnionValue.value ?? {})
-    : props.editorFeatures?.initializeFromDefaults && option.schema.hasDefault ? jsonClone(option.schema.defaultValue) : null);
+    : props.editorFeatures?.initializeFromDefaults && option.schema.hasDefault ? cloneJsonValue(option.schema.defaultValue) : null);
 }
 </script>
 
@@ -759,7 +829,24 @@ function onUnionSelect(event: Event) {
   </div>
 
   <div v-else-if="node.kind === 'group'" :class="nodeClasses">
-    <TreeNodeShell v-if="showGroupHeader" collapsible :expanded="open" :meta="headerMeta" :child-inset="false" @toggle="open = !open">
+    <TreeNodeShell
+      v-if="showGroupHeader"
+      :collapsible="hasGroupBody"
+      :expanded="hasGroupBody && open"
+      :child-inset="false"
+      @toggle="open = !open"
+    >
+      <template v-if="groupToggleChild" #leading>
+        <input
+          type="checkbox"
+          class="cursor-pointer accent-accent"
+          :aria-label="(groupToggleChild.field.title ?? groupToggleChild.node.schema.title ?? label) + ' 开关'"
+          :checked="groupToggleActive"
+          :disabled="interactionsDisabled"
+          @click.stop
+          @change="onGroupChildUpdate(groupToggleKey!, ($event.target as HTMLInputElement).checked)"
+        />
+      </template>
       <template #label>
         <template v-if="headerEditing">
           <input
@@ -778,6 +865,10 @@ function onUnionSelect(event: Event) {
           <span v-if="currentPathDirty" class="editor-dirty-dot" aria-hidden="true"></span>
         </span>
       </template>
+      <template v-if="nodePreview || headerMeta !== undefined" #meta>
+        <span v-if="nodePreview" class="tree-meta max-w-48 truncate text-text-muted" :title="nodePreview">{{ nodePreview }}</span>
+        <span v-if="headerMeta !== undefined" class="tree-meta">{{ headerMeta }}</span>
+      </template>
       <template #actions>
         <button
           v-for="action in mergedHeaderActions"
@@ -793,9 +884,29 @@ function onUnionSelect(event: Event) {
         </button>
       </template>
 
-      <div class="ml-1.5 border-l border-border-default pl-4">
+      <div v-if="hasGroupBody" class="ml-1.5 border-l border-border-default pl-4">
+        <div v-if="groupVariantInfo" class="flex items-center gap-2 py-1">
+          <span class="text-small text-text-muted">{{ groupVariantInfo.label }}</span>
+          <select
+            class="input-base min-h-6 max-w-60 px-1.5 py-0.5 text-small"
+            :aria-label="groupVariantInfo.label"
+            :value="groupVariantInfo.currentKey ?? ''"
+            :disabled="interactionsDisabled"
+            @change="onGroupVariantSelect"
+          >
+            <option v-if="groupVariantInfo.optional" value="">未设置</option>
+            <option
+              v-for="opt in groupVariantInfo.options"
+              :key="opt.value"
+              :value="opt.value"
+              :disabled="opt.disabled"
+            >
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
         <SchemaNode
-          v-for="(child, key) in node.children"
+          v-for="(child, key) in visibleGroupChildren"
           :key="key"
           :node="child.node"
           :field-key="key"
@@ -812,15 +923,35 @@ function onUnionSelect(event: Event) {
           :disabled="disabled"
           :read-only="readOnly"
           :before-record-mutation="beforeRecordMutation"
-            :node-actions="nodeActions"
+          :node-actions="nodeActions"
           @update:model-value="onGroupChildUpdate(key, $event)"
         />
       </div>
     </TreeNodeShell>
 
     <div v-else>
+      <div v-if="groupVariantInfo" class="flex items-center gap-2 py-1">
+        <span class="text-small text-text-muted">{{ groupVariantInfo.label }}</span>
+        <select
+          class="input-base min-h-6 max-w-60 px-1.5 py-0.5 text-small"
+          :aria-label="groupVariantInfo.label"
+          :value="groupVariantInfo.currentKey ?? ''"
+          :disabled="interactionsDisabled"
+          @change="onGroupVariantSelect"
+        >
+          <option v-if="groupVariantInfo.optional" value="">未设置</option>
+          <option
+            v-for="opt in groupVariantInfo.options"
+            :key="opt.value"
+            :value="opt.value"
+            :disabled="opt.disabled"
+          >
+            {{ opt.label }}
+          </option>
+        </select>
+      </div>
       <SchemaNode
-        v-for="(child, key) in node.children"
+        v-for="(child, key) in visibleGroupChildren"
         :key="key"
         :node="child.node"
         :field-key="key"
@@ -837,7 +968,7 @@ function onUnionSelect(event: Event) {
         :disabled="disabled"
         :read-only="readOnly"
         :before-record-mutation="beforeRecordMutation"
-            :node-actions="nodeActions"
+        :node-actions="nodeActions"
         @update:model-value="onGroupChildUpdate(key, $event)"
       />
     </div>

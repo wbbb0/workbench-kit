@@ -9,6 +9,14 @@ import {
   onMounted,
 } from "vue";
 import {
+  applyVariantChange,
+  evaluateSchemaPreview,
+  isObjectToggleActive,
+  ownProperty,
+  resolveObjectFields,
+  resolveObjectVariantMeta,
+} from "@workbench-kit/schema";
+import {
   ChevronRight,
   ArrowLeft,
   Plus,
@@ -27,6 +35,7 @@ import {
   type SettingsPageState,
 } from "../settingsPageState";
 import SchemaField from "./SchemaField.vue";
+import SchemaSecretInput from "./SchemaSecretInput.vue";
 import type { SchemaMeta } from "../types";
 import {
   initialSettingValue,
@@ -39,6 +48,7 @@ import {
   isSettingPage,
   type SettingsStructureEdit,
 } from "../settingsPages";
+
 const props = withDefaults(
   defineProps<{
     schema: SchemaMeta;
@@ -84,6 +94,7 @@ const emit = defineEmits<{
   secret: [path: string[], action: "set" | "clear", value?: string];
   rename: [path: string[], name: string];
 }>();
+
 const ui = props.pageState ?? createSettingsPageState();
 const query = computed({
   get: () => ui.query,
@@ -109,17 +120,22 @@ function focusField() {
   const path = props.focusPath ?? props.returnPath;
   if (!path || !content.value) return;
   const key = settingKey(path);
-  const row = Array.from(content.value.querySelectorAll<HTMLElement>("[data-setting-path]"))
-    .find((element) => element.dataset.settingPath === key);
-  const variant = content.value.querySelector<HTMLSelectElement>("[data-setting-variant]");
-  const target = props.focusPath && variant?.dataset.settingVariant === key &&
-    (original.value?.discriminator || !row)
-    ? variant
-    : row?.querySelector<HTMLElement>(
-      props.returnPath && !props.focusPath
-        ? "[data-setting-entry]"
-        : "[id], [data-setting-entry]",
-    ) ?? row;
+  const row = Array.from(
+    content.value.querySelectorAll<HTMLElement>("[data-setting-path]"),
+  ).find((element) => element.dataset.settingPath === key);
+  const variant = content.value.querySelector<HTMLSelectElement>(
+    "[data-setting-variant]",
+  );
+  const target =
+    props.focusPath &&
+    variant?.dataset.settingVariant === key &&
+    (original.value?.discriminator || current.value?.variantBy || !row)
+      ? variant
+      : (row?.querySelector<HTMLElement>(
+          props.returnPath && !props.focusPath
+            ? "[data-setting-entry]"
+            : "[id], [data-setting-entry]",
+        ) ?? row);
   target?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   target?.focus({ preventScroll: true });
 }
@@ -151,6 +167,7 @@ const current = computed(() =>
     ? settingBranch(original.value, settingValue(props.values, props.path))
     : undefined,
 );
+const currentValue = computed(() => settingValue(props.values, props.path));
 const parent = computed(() =>
   props.path.length
     ? settingAt(props.schema, props.values, props.path.slice(0, -1))
@@ -161,39 +178,106 @@ const title = computed(() =>
     ? props.path.at(-1)
     : (original.value?.title ?? props.path.at(-1) ?? "设置"),
 );
-const rows = computed(() => {
+
+function toggleInfo(schema: SchemaMeta, path: string[]) {
+  if (schema.kind !== "object" || !schema.toggleField) return undefined;
+  const field = ownProperty(schema.fields, schema.toggleField);
+  if (!field) return undefined;
+  const value = settingValue(props.values, path);
+  const override = settingValue(props.overrides, path);
+  return {
+    key: schema.toggleField,
+    path: [...path, schema.toggleField],
+    schema: field.schema,
+    title: field.title ?? field.schema.title ?? schema.toggleField,
+    active: isObjectToggleActive(schema, value, override),
+  };
+}
+
+const currentToggle = computed(() =>
+  current.value ? toggleInfo(current.value, props.path) : undefined,
+);
+
+const currentObjectVariant = computed(() => {
+  const node = current.value;
+  if (!node || (currentToggle.value && !currentToggle.value.active)) {
+    return undefined;
+  }
+  return resolveObjectVariantMeta(node, currentValue.value);
+});
+
+type PageRow = {
+  key: string;
+  schema: SchemaMeta;
+  path: string[];
+  title: string;
+  preview?: string;
+  toggle?: ReturnType<typeof toggleInfo>;
+  entry: boolean;
+};
+
+const rows = computed<PageRow[]>(() => {
   const node = current.value;
   if (!node) return [];
+  if (currentToggle.value && !currentToggle.value.active) return [];
   if (node.kind === "array")
-    return ((settingValue(props.values, props.path) ?? []) as unknown[]).map(
-      (value, index) => ({
+    return ((currentValue.value ?? []) as unknown[]).map((value, index) => {
+      const itemSchema = node.item!;
+      const preview = evaluateSchemaPreview(itemSchema, value);
+      return {
         key: String(index),
-        schema: node.item!,
+        schema: itemSchema,
         path: [...props.path, String(index)],
-        title: `${index + 1}. ${node.item?.title ?? "条目"}`,
+        title: preview
+          ? `${index + 1}. ${preview}`
+          : `${index + 1}. ${itemSchema.title ?? "条目"}`,
         entry: true,
-      }),
-    );
-  if (node.kind === "record")
-    return Object.keys(
-      (settingValue(props.values, props.path) ?? {}) as object,
-    ).map((key) => ({
-      key,
-      schema: node.recordValue!,
-      path: [...props.path, key],
-      title: key,
-      entry: true,
-    }));
-  if (node.kind === "object")
-    return Object.entries(node.fields ?? {})
-      .filter(([key]) => key !== original.value?.discriminator)
-      .map(([key, field]) => ({
+      };
+    });
+  if (node.kind === "record") {
+    const recordObj = (currentValue.value ?? {}) as Record<string, unknown>;
+    return Object.keys(recordObj).map((key) => {
+      const preview = evaluateSchemaPreview(node.recordValue!, recordObj[key]);
+      return {
         key,
-        schema: field.schema,
+        schema: node.recordValue!,
         path: [...props.path, key],
-        title: field.title ?? field.schema.title ?? key,
-        entry: false,
-      }));
+        title: key,
+        ...(preview ? { preview } : {}),
+        entry: true,
+      };
+    });
+  }
+  if (node.kind === "object") {
+    if (node.variantBy && node.variants && node.optional && currentValue.value === undefined) {
+      return [];
+    }
+    const fields = resolveObjectFields(node, currentValue.value);
+    return Object.entries(fields)
+      .filter(
+        ([key]) =>
+          key !== original.value?.discriminator &&
+          key !== node.toggleField &&
+          key !== node.variantBy,
+      )
+      .map(([key, field]) => {
+        const childPath = [...props.path, key];
+        const childValue = settingValue(props.values, childPath);
+        const preview = isSettingPage(field.schema)
+          ? evaluateSchemaPreview(field.schema, childValue)
+          : "";
+        const toggle = toggleInfo(field.schema, childPath);
+        return {
+          key,
+          schema: field.schema,
+          path: childPath,
+          title: field.title ?? field.schema.title ?? key,
+          ...(preview ? { preview } : {}),
+          ...(toggle ? { toggle } : {}),
+          entry: false,
+        };
+      });
+  }
   return [
     {
       key: props.path.at(-1) ?? "value",
@@ -215,6 +299,7 @@ const breadcrumbs = computed(() =>
 );
 const options = (schema: SchemaMeta, path: string[]) =>
   props.referenceOptions?.[settingKey(path)] ??
+  props.referenceOptions?.[settingKey([...path.slice(0, -1), "*"])] ??
   Object.keys(
     (settingValue(props.values, schema.reference?.path ?? []) ?? {}) as object,
   ).map((value) => ({
@@ -281,7 +366,12 @@ async function applyStructure(edit: SettingsStructureEdit) {
 async function addArrayItem() {
   const value = initialSettingValue(current.value!.item!);
   if (props.applyStructure) {
-    await applyStructure({ type: "array", path: props.path, operation: "append", value });
+    await applyStructure({
+      type: "array",
+      path: props.path,
+      operation: "append",
+      value,
+    });
     return;
   }
   const items = [
@@ -298,7 +388,12 @@ function removeEntry(path: string[]) {
     return;
   }
   if (props.applyStructure) {
-    void applyStructure({ type: "array", path: props.path, operation: "remove", index: Number(path.at(-1)) });
+    void applyStructure({
+      type: "array",
+      path: props.path,
+      operation: "remove",
+      index: Number(path.at(-1)),
+    });
     return;
   }
   const items = [
@@ -315,7 +410,13 @@ function moveEntry(path: string[], offset: number) {
     to = from + offset;
   if (to < 0 || to >= items.length) return;
   if (props.applyStructure) {
-    void applyStructure({ type: "array", path: props.path, operation: "move", from, to });
+    void applyStructure({
+      type: "array",
+      path: props.path,
+      operation: "move",
+      from,
+      to,
+    });
     return;
   }
   [items[from], items[to]] = [items[to], items[from]];
@@ -330,11 +431,48 @@ async function changeVariant(event: Event) {
     emit("edit", props.path, value);
     return;
   }
-  const currentIndex = () => original.value?.options?.indexOf(current.value!) ?? -1;
+  const currentIndex = () =>
+    original.value?.options?.indexOf(current.value!) ?? -1;
   select.value = String(currentIndex());
   await applyStructure({ type: "set", path: props.path, value });
   await nextTick();
   select.value = String(currentIndex());
+}
+async function changeObjectVariant(event: Event) {
+  const node = current.value;
+  const variant = currentObjectVariant.value;
+  if (!node || !variant) return;
+  const select = event.target as HTMLSelectElement;
+  const nextKey = select.value || undefined;
+  const beforeKey = variant.currentKey ?? "";
+  if (!props.applyStructure) {
+    if (nextKey === undefined) {
+      emit("reset", props.path);
+    } else if (currentValue.value === undefined) {
+      emit("edit", props.path, applyVariantChange(node, undefined, nextKey));
+    } else {
+      emit("edit", [...props.path, variant.key], nextKey);
+    }
+    return;
+  }
+  select.value = beforeKey;
+  if (nextKey === undefined) {
+    await applyStructure({ type: "reset", path: props.path });
+  } else if (currentValue.value === undefined) {
+    await applyStructure({
+      type: "set",
+      path: props.path,
+      value: applyVariantChange(node, undefined, nextKey),
+    });
+  } else {
+    await applyStructure({
+      type: "set",
+      path: [...props.path, variant.key],
+      value: nextKey,
+    });
+  }
+  await nextTick();
+  select.value = currentObjectVariant.value?.currentKey ?? "";
 }
 </script>
 <template>
@@ -427,6 +565,55 @@ async function changeVariant(event: Event) {
           />
         </div>
         <div
+          v-if="currentToggle"
+          :data-setting-path="settingKey(currentToggle.path)"
+          tabindex="-1"
+          class="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-border-default px-3 py-2"
+        >
+          <label
+            class="min-w-[min(100%,8rem)] flex-1 text-sm"
+            :for="fieldId(currentToggle.path)"
+            >{{ currentToggle.title }}</label
+          >
+          <WorkbenchIconButton
+            :icon="RotateCcw"
+            size="sm"
+            variant="secondary"
+            :title="'恢复默认 ' + currentToggle.title"
+            class="order-2"
+            :disabled="disabled"
+            @click="emit('reset', currentToggle.path)"
+          />
+          <div class="order-1 w-56 min-w-[min(100%,8rem)] max-w-full shrink-0">
+            <SchemaField
+              :input-id="fieldId(currentToggle.path)"
+              :schema="currentToggle.schema"
+              :default-value="placeholderFor(currentToggle.path, currentToggle.schema)"
+              :default-presentation="
+                defaultsAsPlaceholders ? 'placeholder' : 'value'
+              "
+              :model-value="inputValue(currentToggle.path)"
+              :disabled="disabled"
+              single-line
+              @update:model-value="editField(currentToggle.path, $event)"
+            />
+          </div>
+          <p
+            v-if="currentToggle.schema.description"
+            class="order-4 basis-full text-xs text-text-muted"
+          >
+            {{ currentToggle.schema.description }}
+          </p>
+          <p
+            v-for="issue in issuesFor(currentToggle.path)"
+            :key="issue.message"
+            role="alert"
+            class="order-4 basis-full text-xs text-danger"
+          >
+            {{ issue.message }}
+          </p>
+        </div>
+        <div
           v-if="original?.kind === 'union'"
           class="flex items-center gap-3 border-b border-border-default p-3"
         >
@@ -439,8 +626,37 @@ async function changeVariant(event: Event) {
             :disabled="disabled || structurePending"
             @change="changeVariant"
           >
-            <option v-for="(option, i) in original.options" :key="i" :value="i" :disabled="option.disabled">
+            <option
+              v-for="(option, i) in original.options"
+              :key="i"
+              :value="i"
+              :disabled="option.disabled"
+            >
               {{ option.title ?? option.kind }}
+            </option>
+          </select>
+        </div>
+        <div
+          v-else-if="currentObjectVariant"
+          class="flex items-center gap-3 border-b border-border-default p-3"
+        >
+          <label class="text-sm">{{ currentObjectVariant.label }}</label>
+          <select
+            :aria-label="currentObjectVariant.label"
+            :data-setting-variant="settingKey(path)"
+            class="input-base min-w-0 flex-1 px-2 py-1"
+            :value="currentObjectVariant.currentKey ?? ''"
+            :disabled="disabled || structurePending"
+            @change="changeObjectVariant"
+          >
+            <option v-if="currentObjectVariant.optional" value="">未设置</option>
+            <option
+              v-for="option in currentObjectVariant.options"
+              :key="option.value"
+              :value="option.value"
+              :disabled="option.disabled"
+            >
+              {{ option.label }}
             </option>
           </select>
         </div>
@@ -452,15 +668,55 @@ async function changeVariant(event: Event) {
           class="border-b border-border-default"
         >
           <div v-if="complex(row.schema)" class="flex items-center">
+            <input
+              v-if="row.toggle"
+              type="checkbox"
+              class="ml-3 shrink-0 cursor-pointer accent-accent"
+              :aria-label="row.title + ' 开关'"
+              :checked="
+                defaultsAsPlaceholders
+                  ? inputValue(row.toggle.path) === true
+                  : row.toggle.active
+              "
+              :indeterminate="
+                defaultsAsPlaceholders &&
+                inputValue(row.toggle.path) === undefined
+              "
+              :title="row.toggle.title"
+              :disabled="disabled"
+              @change="
+                editField(
+                  row.toggle.path,
+                  ($event.target as HTMLInputElement).checked,
+                )
+              "
+            />
             <button
-              class="flex min-w-0 flex-1 items-center justify-between gap-2 px-4 py-3 text-left text-sm hover:bg-surface-hover"
+              class="flex min-w-0 flex-1 items-center justify-between gap-2 px-4 py-3 text-left text-sm enabled:hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
               data-setting-entry
-              :class="{ 'bg-surface-selected': selectedPath && settingKey(selectedPath) === settingKey(row.path) }"
-              :aria-current="selectedPath && settingKey(selectedPath) === settingKey(row.path) ? 'true' : undefined"
+              :disabled="row.toggle && !row.toggle.active"
+              :class="{
+                'bg-surface-selected':
+                  selectedPath &&
+                  settingKey(selectedPath) === settingKey(row.path),
+              }"
+              :aria-current="
+                selectedPath &&
+                settingKey(selectedPath) === settingKey(row.path)
+                  ? 'true'
+                  : undefined
+              "
               @click="go(row.path)"
             >
-              <span class="truncate">{{ row.title }}</span
-              ><ChevronRight :size="16" />
+              <span class="min-w-0 flex-1">
+                <span class="block truncate">{{ row.title }}</span>
+                <small
+                  v-if="row.preview"
+                  class="block truncate text-xs text-text-muted"
+                  >{{ row.preview }}</small
+                >
+              </span>
+              <ChevronRight :size="16" />
             </button>
             <template v-if="current?.kind === 'array'">
               <WorkbenchIconButton
@@ -474,7 +730,11 @@ async function changeVariant(event: Event) {
                 :icon="ArrowDown"
                 title="下移条目"
                 size="sm"
-                :disabled="disabled || structurePending || Number(row.key) === rows.length - 1"
+                :disabled="
+                  disabled ||
+                  structurePending ||
+                  Number(row.key) === rows.length - 1
+                "
                 @click="moveEntry(row.path, 1)"
               />
             </template>
@@ -520,7 +780,11 @@ async function changeVariant(event: Event) {
                 :icon="ArrowDown"
                 title="下移条目"
                 size="sm"
-                :disabled="disabled || structurePending || Number(row.key) === rows.length - 1"
+                :disabled="
+                  disabled ||
+                  structurePending ||
+                  Number(row.key) === rows.length - 1
+                "
                 @click="moveEntry(row.path, 1)"
               />
             </template>
@@ -546,56 +810,19 @@ async function changeVariant(event: Event) {
                   : 'order-3 basis-full min-w-0'
               "
             >
-              <div
+              <SchemaSecretInput
                 v-if="row.schema.secret"
-                class="flex flex-wrap items-center gap-2"
-              >
-                <input
-                  :id="fieldId(row.path)"
-                  type="text"
-                  autocomplete="off"
-                  autocapitalize="off"
-                  :spellcheck="false"
-                  :placeholder="
-                    secrets?.[settingKey(row.path)]
-                      ? '已设置，输入以替换'
-                      : '未设置'
-                  "
-                  class="input-base min-w-0 flex-1 px-2 py-1 [-webkit-text-security:disc]"
-                  :value="secretInputs?.[settingKey(row.path)] ?? ''"
-                  :disabled="disabled"
-                  @input="
-                    emit(
-                      'secretInput',
-                      row.path,
-                      ($event.target as HTMLInputElement).value,
-                    )
-                  "
-                />
-                <WorkbenchButton
-                  label="替换"
-                  size="sm"
-                  :disabled="
-                    disabled ||
-                    secretInputs?.[settingKey(row.path)] === undefined
-                  "
-                  @click="
-                    emit(
-                      'secret',
-                      row.path,
-                      'set',
-                      secretInputs?.[settingKey(row.path)],
-                    )
-                  "
-                />
-                <WorkbenchButton
-                  label="清除"
-                  size="sm"
-                  variant="danger"
-                  :disabled="disabled"
-                  @click="emit('secret', row.path, 'clear')"
-                />
-              </div>
+                redacted
+                :input-id="fieldId(row.path)"
+                :is-set="ownProperty(secrets, settingKey(row.path))"
+                :draft-value="secretInputs?.[settingKey(row.path)]"
+                :disabled="disabled"
+                @update:draft-value="
+                  (value) => emit('secretInput', row.path, value)
+                "
+                @commit="(value) => emit('secret', row.path, 'set', value)"
+                @clear="emit('secret', row.path, 'clear')"
+              />
               <select
                 v-else-if="row.schema.reference"
                 :id="fieldId(row.path)"

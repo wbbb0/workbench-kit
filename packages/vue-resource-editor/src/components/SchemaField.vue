@@ -5,6 +5,7 @@
  */
 import { computed } from "vue";
 import SchemaNumberInput from "./SchemaNumberInput.vue";
+import SchemaSecretInput from "./SchemaSecretInput.vue";
 import type { SchemaMeta } from "../types";
 import { useResourceEditorOptions } from "../resourceEditorClient";
 
@@ -125,7 +126,16 @@ const readOnlyMultiline = computed(() => {
 </script>
 
 <template>
-  <template v-if="readOnly">
+  <SchemaSecretInput
+    v-if="schema.secret"
+    :input-id="inputId"
+    :model-value="displayedValue"
+    :disabled="disabled"
+    :read-only="readOnly"
+    @update:model-value="emit('update:modelValue', $event)"
+  />
+
+  <template v-else-if="readOnly">
     <pre
       v-if="readOnlyMultiline"
       class="scrollbar-thin m-0 max-h-80 overflow-auto rounded border border-border-subtle bg-surface-muted px-2 py-1.5 font-mono text-mono leading-5 text-text-primary whitespace-pre-wrap wrap-break-word"
