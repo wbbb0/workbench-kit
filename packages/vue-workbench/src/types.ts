@@ -1,4 +1,8 @@
 import type { Component } from "vue";
+import type {
+  WorkbenchSidebarListItem,
+  WorkbenchSidebarListSource,
+} from "./primitives/sidebarListTypes.js";
 
 /** Workbench 内置区域 ID。业务 view 通过这些 ID 声明 pane 内容和移动端跳转目标。 */
 export type WorkbenchAreaId =
@@ -33,9 +37,30 @@ export type WorkbenchViewLayout = {
   };
 };
 
+export type WorkbenchPrimarySidebarDescriptor<TItem = WorkbenchSidebarListItem> =
+  | {
+      list: WorkbenchSidebarListSource<TItem>;
+      component?: Component;
+    }
+  | {
+      list?: undefined;
+      component: Component;
+    };
+
+/**
+ * 主侧边栏定义：支持自定义组件、内置列表容器（`{ list }`），以及两者组合的混合模式（`{ list, component }`）。
+ */
+export type WorkbenchPrimarySidebar<TItem = WorkbenchSidebarListItem> =
+  | Component
+  | WorkbenchPrimarySidebarDescriptor<TItem>;
+
+export type WorkbenchAreaContentTarget =
+  | Component
+  | WorkbenchPrimarySidebar<any>;
+
 /** 一个业务 view 可提供的渲染区域。`mainArea` 必填，其余区域按需启用。 */
 export type WorkbenchViewAreas = {
-  primarySidebar?: Component;
+  primarySidebar?: WorkbenchPrimarySidebar<any>;
   mainArea: Component;
   secondarySidebar?: Component;
   bottomPanel?: Component;

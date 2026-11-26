@@ -4,6 +4,7 @@ import WorkbenchActivityBar from "./WorkbenchActivityBar.vue";
 import WorkbenchAreaScope from "./WorkbenchAreaScope.vue";
 import TopBar from "./TopBar.vue";
 import StatusBar from "./StatusBar.vue";
+import { hasWorkbenchPrimarySidebar } from "./sidebarArea.js";
 import { usePointerDrag } from "./composables/usePointerDrag";
 import WorkbenchSash from "./primitives/WorkbenchSash.vue";
 import {
@@ -42,7 +43,9 @@ const primarySidebar = computed(() => props.view.areas.primarySidebar);
 const mainArea = computed(() => props.view.areas.mainArea);
 const secondarySidebar = computed(() => props.view.areas.secondarySidebar);
 const bottomPanel = computed(() => props.view.areas.bottomPanel);
-const hasPrimarySidebar = computed(() => !!primarySidebar.value);
+const hasPrimarySidebar = computed(() =>
+  hasWorkbenchPrimarySidebar(primarySidebar.value),
+);
 const hasSecondarySidebar = computed(() => !!secondarySidebar.value);
 const hasBottomPanel = computed(() => !!bottomPanel.value);
 const primarySidebarStyle = computed(() =>

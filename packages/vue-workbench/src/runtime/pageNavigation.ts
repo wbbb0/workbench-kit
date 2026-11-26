@@ -1,4 +1,5 @@
 import { computed, readonly, ref, watch, type ComputedRef } from "vue";
+import { hasWorkbenchPrimarySidebar } from "../sidebarArea.js";
 import type { WorkbenchAreaId, WorkbenchView } from "../types";
 
 export interface WorkbenchPageLocation {
@@ -46,7 +47,11 @@ export function createWorkbenchPageNavigator(
     options = { replace: false },
   ): Promise<boolean> {
     const navigation = binding.value;
-    if (!navigation || pending.value || !view.value.areas[target.areaId])
+    const hasTargetArea =
+      target.areaId === "primarySidebar"
+        ? hasWorkbenchPrimarySidebar(view.value.areas.primarySidebar)
+        : Boolean(view.value.areas[target.areaId]);
+    if (!navigation || pending.value || !hasTargetArea)
       return false;
     const turn = ++generation;
     pending.value = true;

@@ -17,6 +17,7 @@ import type {
   WorkbenchDesktopAreaId,
   WorkbenchView,
 } from "../types.js";
+import { hasWorkbenchPrimarySidebar } from "../sidebarArea.js";
 
 import {
   createWorkbenchPageNavigator,
@@ -174,9 +175,16 @@ export function createWorkbenchRuntime(
   );
   const keyboardAvoidanceBoundary = computed(() => mainRegionRef.value);
 
+  function hasAreaContent(areaId: WorkbenchAreaId): boolean {
+    if (areaId === "primarySidebar") {
+      return hasWorkbenchPrimarySidebar(view.value.areas.primarySidebar);
+    }
+    return Boolean(view.value.areas[areaId]);
+  }
+
   function resolveMobileRootAreaId(): WorkbenchAreaId {
     const configuredAreaId = view.value.layout.mobile.rootArea;
-    if (configuredAreaId === "mainArea" || view.value.areas[configuredAreaId]) {
+    if (configuredAreaId === "mainArea" || hasAreaContent(configuredAreaId)) {
       return configuredAreaId;
     }
     return "mainArea";
@@ -194,7 +202,7 @@ export function createWorkbenchRuntime(
   }
 
   function resolveTargetMobileAreaId(areaId: WorkbenchAreaId): WorkbenchAreaId {
-    if (areaId === "mainArea" || view.value.areas[areaId]) {
+    if (areaId === "mainArea" || hasAreaContent(areaId)) {
       return areaId;
     }
     return mobileRootAreaId.value;

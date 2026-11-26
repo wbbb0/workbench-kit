@@ -6,7 +6,6 @@ import {
   provide,
   ref,
   watch,
-  type Component,
 } from "vue";
 import { ArrowLeft } from "lucide-vue-next";
 import { mobilePageColumns } from "./runtime/pageColumns";
@@ -75,7 +74,7 @@ const activeAreaPages = computed(() => {
   const area = (areaId: typeof root) => ({
     key: JSON.stringify([view.id, path[0]?.key, areaId]),
     areaId,
-    component: view.areas[areaId] as Component | undefined,
+    component: view.areas[areaId],
     path,
   });
   return active === root ? [area(root)] : [area(root), area(active)];

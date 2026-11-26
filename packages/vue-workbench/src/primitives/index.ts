@@ -19,6 +19,12 @@ export { default as WorkbenchIconButton } from "./WorkbenchIconButton.vue";
 export { default as WorkbenchKeyValueDetails } from "./WorkbenchKeyValueDetails.vue";
 export { default as WorkbenchListItem } from "./WorkbenchListItem.vue";
 export { default as WorkbenchSidebarListPane } from "./WorkbenchSidebarListPane.vue";
+export type {
+  WorkbenchSidebarListConfig,
+  WorkbenchSidebarListItem,
+  WorkbenchSidebarListSetup,
+  WorkbenchSidebarListSource,
+} from "./sidebarListTypes.js";
 export { default as WorkbenchDynamicTabs } from "./WorkbenchDynamicTabs.vue";
 export type { WorkbenchDynamicTabItem } from "./dynamicTabsTypes.js";
 export { default as WorkbenchTabStrip } from "./WorkbenchTabStrip.vue";

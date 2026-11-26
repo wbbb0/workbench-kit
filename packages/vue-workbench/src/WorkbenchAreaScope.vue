@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { KeepAlive, type Component } from "vue";
+import { KeepAlive } from "vue";
 import WorkbenchAreaContent from "./WorkbenchAreaContent.vue";
 import type { WorkbenchPageLocation } from "./runtime/pageNavigation.js";
-import type { WorkbenchAreaId } from "./types.js";
+import type { WorkbenchAreaContentTarget, WorkbenchAreaId } from "./types.js";
 withDefaults(
   defineProps<{
     areaId: WorkbenchAreaId;
-    component?: Component;
+    component?: WorkbenchAreaContentTarget;
     viewId?: string;
     cache?: boolean;
     cacheMax?: number;
